@@ -1,0 +1,7 @@
+{
+  "name": "pull-request-workflow",
+  "description": "GitHub PR 워크플로 — PR 생성(create-pull-request)·AI 리뷰(review-pull-request)·리뷰 반영(resolve-review-comments) 스킬 3종",
+  "version": "1.0.0",
+  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
+  "keywords": ["github", "pull-request", "review", "gh"]
+}

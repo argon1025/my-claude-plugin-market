@@ -1,0 +1,27 @@
+{
+  "name": "my-claude-plugin-market",
+  "owner": {
+    "name": "argon1025",
+    "email": "argon1025@gmail.com"
+  },
+  "metadata": {
+    "description": "argon1025의 개인 Claude Code 플러그인 마켓플레이스",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "communication-rules",
+      "source": "./communication-rules",
+      "description": "사용자 대면 산출물(최종 응답·PR 본문·문서) 작성 규칙을 세션에 자동 주입",
+      "category": "productivity",
+      "tags": ["communication", "style", "korean"]
+    },
+    {
+      "name": "pull-request-workflow",
+      "source": "./pull-request-workflow",
+      "description": "GitHub PR 워크플로 — PR 생성·AI 리뷰·리뷰 코멘트 반영 스킬 3종 (gh CLI 기반)",
+      "category": "workflow",
+      "tags": ["github", "pull-request", "code-review", "gh"]
+    }
+  ]
+}

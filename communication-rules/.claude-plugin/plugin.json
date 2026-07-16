@@ -1,0 +1,7 @@
+{
+  "name": "communication-rules",
+  "description": "커뮤니케이션 규칙 — 사용자 대면 산출물(최종 응답·PR body·문서) 작성 규칙을 세션 시작 시 자동 주입",
+  "version": "1.0.0",
+  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
+  "keywords": ["communication", "style", "산출물"]
+}
