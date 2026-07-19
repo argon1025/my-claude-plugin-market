@@ -1,0 +1,7 @@
+{
+  "name": "dev-harness",
+  "description": "개인 개발 하네스 — 프로젝트 위키(.harness/docs)·플랜 스냅샷·피드백 워크플로 규약을 세션 시작 시 자동 주입 + 스킬 6종",
+  "version": "1.0.0",
+  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
+  "keywords": ["harness", "wiki", "planning", "workflow"]
+}
