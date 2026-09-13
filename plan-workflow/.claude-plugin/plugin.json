@@ -1,0 +1,7 @@
+{
+  "name": "plan-workflow",
+  "description": "계획 워크플로 — 의도 확인·계획 스냅샷·작업 기록(feedback.md) 규약과 현재 브랜치 기록을 세션 시작 시 자동 주입 + 스킬 2종(planning·execute)",
+  "version": "1.0.0",
+  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
+  "keywords": ["planning", "workflow", "plan", "계획", "작업 기록"]
+}

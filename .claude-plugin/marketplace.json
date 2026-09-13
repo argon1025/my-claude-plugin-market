@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "argon1025의 개인 Claude Code 플러그인 마켓플레이스",
-    "version": "2.1.0"
+    "version": "2.2.0"
   },
   "plugins": [
     {
@@ -28,6 +28,17 @@
       "tags": [
         "pull-request",
         "code-review",
+        "git"
+      ]
+    },
+    {
+      "name": "plan-workflow",
+      "source": "./plan-workflow",
+      "description": "계획 워크플로 — 의도 확인·계획 스냅샷·작업 기록(feedback.md) 규약과 현재 브랜치 기록을 세션 시작 시 자동 주입 + 스킬 2종(planning·execute)",
+      "category": "workflow",
+      "tags": [
+        "planning",
+        "workflow",
         "git"
       ]
     }
