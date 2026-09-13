@@ -13,3 +13,6 @@
 - `why` 모양 폴더 5종(policy/process/domain/external/adr)을 adr/만 남기고 폐지한 이유는 원본 실측 분포가 policy에 71~73% 몰려 폴더가 검색 신호 구실을 못 했고 기존 문서 이관이 범위 밖이라 호환 부담이 없기 때문이다.
 - `constraint` 로컬 위키 검증(onestore-devcenter-front .devcenter/knowledge 128문서 2,971주장)에서 주장의 67%는 코드 grep 1~2회로 복원 가능했으나 ADR 기각 대안 58불릿·코드에 흔적 없는 외부 계약·자기 불확실성 표기·비강제 컨벤션·반파리티 경고 33%는 코드로 대체 불가하므로, llm-wiki 규약은 레포 종속 사실의 자리를 없애지 않고 description에 레포명을 넣어 프로젝트 폴더에 둔다.
 - `constraint` 같은 검증에서 최근 17커밋 미수확으로 문서 6건이 코드와 불일치하고 그중 1건은 verified 날짜가 최신인데 문서 전체가 낡아 있었으므로, llm-wiki의 낡음 신호는 verified 날짜만으로는 부족하고 레포 커서와 HEAD 거리를 세션 헤더에 표시해야 한다.
+- `why` llm-wiki의 머지 diff 머리말이 머지 커밋 메시지가 아니라 `git log {sha}^1..{sha}`로 딸린 커밋 메시지 전부(상한 20건)를 싣는 이유는 PR 머지 커밋의 메시지가 "Merged in {branch} (pull request #N)" 한 줄이라 결정 근거가 어디에도 남지 않기 때문이며, 원본 collect.py는 subject만 실어 이 손실이 있었다.
+  - evidence: llm-wiki/scripts/update.py extract_diff
+- `context` llm-wiki 실측 규모는 catalog.py 403줄·update.py 311줄·session_start.sh 180줄로 계획의 목표치(180·140·60)를 넘지만 사양은 그대로 충족했으며, 차이는 주석과 독스트링이고 원본 대비 감축(catalog 1,002줄, 스크립트 4,569줄)은 유지된다.
