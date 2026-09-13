@@ -6,29 +6,15 @@
   },
   "metadata": {
     "description": "argon1025의 개인 Claude Code 플러그인 마켓플레이스",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "plugins": [
     {
-      "name": "communication-rules",
-      "source": "./communication-rules",
-      "description": "사용자 대면 산출물(최종 응답·PR 본문·문서) 작성 규칙을 세션에 자동 주입",
+      "name": "better-communication",
+      "source": "./better-communication",
+      "description": "산출물 작성 규약 — 보고 골격·항목 구조·문장 문체를 세션 시작 시 자동 주입",
       "category": "productivity",
       "tags": ["communication", "style", "korean"]
-    },
-    {
-      "name": "pull-request-workflow",
-      "source": "./pull-request-workflow",
-      "description": "GitHub PR 워크플로 — PR 생성·AI 리뷰·리뷰 코멘트 반영 스킬 3종 (gh CLI 기반)",
-      "category": "workflow",
-      "tags": ["github", "pull-request", "code-review", "gh"]
-    },
-    {
-      "name": "dev-harness",
-      "source": "./dev-harness",
-      "description": "개인 개발 하네스 — 프로젝트 위키(.harness/docs)·플랜 스냅샷·피드백 워크플로 규약 자동 주입 + 스킬 6종",
-      "category": "workflow",
-      "tags": ["harness", "wiki", "planning", "feedback"]
     }
   ]
 }
