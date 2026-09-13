@@ -1,0 +1,7 @@
+{
+  "name": "pr-workflow",
+  "description": "PR 워크플로 — PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), gh·glab·PR 호스트 MCP 중 세션에 있는 도구 사용",
+  "version": "1.0.0",
+  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
+  "keywords": ["pull-request", "code-review", "PR", "코드리뷰", "리뷰 반영"]
+}
