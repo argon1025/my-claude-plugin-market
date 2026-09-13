@@ -1,0 +1,7 @@
+{
+  "name": "better-communication",
+  "description": "산출물 작성 규약 — 보고 골격·항목 구조·문장 문체를 세션 시작 시 자동 주입",
+  "version": "1.0.0",
+  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
+  "keywords": ["communication", "style", "산출물"]
+}
