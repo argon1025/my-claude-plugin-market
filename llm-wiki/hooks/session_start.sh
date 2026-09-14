@@ -128,6 +128,17 @@ if domain:
         elif behind == 0:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
+# 도메인 지도(index.md)는 목록이 아니라 본문 전체를 주입한다 — 레포 구성·의존 방향·역인덱스가
+# 있어야 코드 변경의 파급 레포를 답할 수 있다. 없으면 헤더에 register 안내만 남긴다.
+index_block = ""
+index_path = knowledge / domain / catalog.INDEX_NAME if domain else None
+if domain:
+    if index_path.is_file():
+        index_body = "\n".join(catalog.body_lines(index_path)).strip()
+        index_block = f"# 도메인 {domain} index.md · 약 {catalog.estimate_tokens(index_body):,}토큰\n\n{index_body}"
+    else:
+        header.append(f"# {domain}/index.md 없음 — /llm-wiki:register")
+
 # (라벨, 루트, shallow, 본문). 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수.
 # 예산을 넘으면 이 목록에서 가장 큰 것부터 한 줄로 접는다.
 spaces = []
@@ -147,6 +158,8 @@ def assemble():
     blocks = [guide]
     if header:
         blocks.append("\n".join(header))
+    if index_block:
+        blocks.append(index_block)
     blocks.extend(text for _, _, _, text in spaces)
     blocks.extend(tail)
     return "\n\n".join(blocks)
@@ -165,6 +178,12 @@ while catalog.estimate_tokens(context) > HARD_BUDGET:
     flag = " --shallow" if shallow else ""
     spaces[index] = (label, root, shallow,
                      f'# {label} {count}건 — python3 "{catalog_py}" --root "{root}"{flag} 로 전체 보기')
+    context = assemble()
+
+# 목록을 다 접어도 넘치면 index 본문을 한 줄로 접는다. 목록보다 뒤에 접는 이유는 지도가
+# 목록보다 먼저 답해야 하는 질문(어느 레포를 봐야 하는가)을 들고 있기 때문이다.
+if index_block and catalog.estimate_tokens(context) > HARD_BUDGET:
+    index_block = f"# index.md 약 {catalog.estimate_tokens(index_block):,}토큰 — Read {index_path}"
     context = assemble()
 
 if catalog.estimate_tokens(context) > SOFT_BUDGET:

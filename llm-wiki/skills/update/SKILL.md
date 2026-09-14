@@ -48,6 +48,7 @@ disable-model-invocation: true
 - **대조**: 도메인 루트 목록(`catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`)과 레포 목록(`--root {WIKI_ROOT}/knowledge/{domain}/{slug}`)의 `description` 전수와 grep으로 대상 문서를 찾음 — 후보가 둘이면 범위가 좁은 문서
 - **신규 문서**: 대상이 없는 사실은 주제로 묶어 40자 한 문장으로 덮이면 신규 1장, 덮이지 않으면 나누고 그래도 서지 않으면 `기각 — 한 주제 아님`
 - **배치 내 상충**: 같은 주제에 값이 다른 사실 둘은 둘 다 `inbox.md`
+- **index.md 배정**: 신규 문서가 생기면 그 업무 영역·레포를 `## 역인덱스` 행으로, diff에서 레포 역할·의존(빌드 파일의 모듈 의존·Feign·AMQP 발신)·접근 좌표(호스트·환경 이름)가 확정되면 `## 레포 구성`·`## 의존 방향`·`## 접근 좌표` 보강으로 도메인 `index.md`에 배정 — index.md도 문서 1장으로 4장 에이전트 1회
 - **배정표**: `{스크래치}/assign.json`에 문서별 사실 목록·신규 여부를 씀 — `--dry-run`이면 배정표를 보고하고 종료
 
 ## 4. 반영 fan-out — 문서 1장 = 에이전트 1회
@@ -59,7 +60,7 @@ disable-model-invocation: true
 
 - 배정: {assign_path}의 "{doc}" 항목을 읽으세요 — 문서 경로·신규 여부·사실 행(fact·topic·code·quote·slug·sha·머지 날짜).
 - 입력 집합은 이 파일이 전부입니다. 코드 저장소를 조회하지 말고 사전 지식으로 채우지 마세요. 오늘은 {today}입니다.
-- 규약 전문을 Read {doc_contract_path}로 읽고 4·5·7장을 그대로 적용하세요.
+- 규약 전문을 Read {doc_contract_path}로 읽고 4·5·7장을 그대로 적용하세요. 문서가 index.md면 9장 템플릿 안에서만 행을 더하고 사실 불릿을 넣지 마세요.
 
 기존 문서: 본문을 열어 사실마다 값 단위로 판정하세요.
 - 동일 — 본문 유지, frontmatter verified만 {today}. code가 그 값 자체를 짚었을 때만이며 주제가 겹친다는 이유로 올리지 마세요.

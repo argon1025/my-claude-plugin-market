@@ -201,11 +201,15 @@ def check_location(path: Path, root: Path, registry: dict | None = None) -> list
             "knowledge/{조직}-{도메인}/ 루트 또는 그 아래 {레포 slug}/ 평면과 각각의 adr/만, "
             "파일명은 kebab-case"
         ]
-    if not registry:
-        return []
-
     errors: list[str] = []
     domain, repo = match.group("domain"), match.group("repo")
+    # index.md는 도메인 지도로 예약된 이름이다. 레포 폴더나 adr/에 같은 이름이 있으면
+    # 훅이 어느 것을 본문으로 주입할지 정할 수 없다.
+    if path.name == INDEX_NAME and relative.count("/") > 1:
+        errors.append("index.md는 도메인 루트에만")
+    if not registry:
+        return errors
+
     if domain not in (registry.get("domains") or {}):
         errors.append(f"도메인 {domain}가 registry.json에 없음 — /llm-wiki:register")
     if repo:
@@ -320,9 +324,22 @@ def selected_names(root: Path, paths: list[str]) -> set[str] | None:
     return names
 
 
+def missing_indexes(root: Path) -> list[tuple[str, str]]:
+    """도메인 폴더마다 index.md가 있는지 본다. 도메인 지도가 없으면 훅이 주입할 본문이 없다."""
+    findings: list[tuple[str, str]] = []
+    for folder in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith((".", "_"))):
+        if not (folder / INDEX_NAME).is_file():
+            findings.append((f"{folder.name}/{INDEX_NAME}", f"{folder.name}/{INDEX_NAME} 없음 — /llm-wiki:register가 생성"))
+    return findings
+
+
 def check(root: Path, today: date, only: set[str] | None = None) -> int:
     files = docs(root)
-    if not files:
+    index_errors = [
+        (name, message) for name, message in missing_indexes(root)
+        if only is None or any(item.startswith(name.split("/", 1)[0] + "/") for item in only)
+    ]
+    if not files and not index_errors:
         print(f"# 검사할 문서가 없음: {root}")
         return 0
 
@@ -331,7 +348,7 @@ def check(root: Path, today: date, only: set[str] | None = None) -> int:
     if not isinstance(registry, dict):
         registry = None
 
-    errors: list[tuple[str, str]] = []
+    errors: list[tuple[str, str]] = list(index_errors)
     for path in files:
         name = path.relative_to(root).as_posix()
         if only is not None and name not in only:

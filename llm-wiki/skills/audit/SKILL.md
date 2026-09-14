@@ -9,6 +9,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
 - **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`의 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장 — `!` 낡음·60자 초과·description 중복이 여기서 나옴
+- **index.md**: 스코프 도메인의 `index.md`는 대상에 포함하며 템플릿 이탈만 봄 — 참조·한 주제 신호는 면제
 - **인박스**: `inbox.md`의 해당 스코프 행 수를 세고 "처리는 `/llm-wiki:add`" 안내
 - **묶음**: 대상 문서를 폴더별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 붙임 — 메인은 문서 본문을 열지 않음
 
@@ -20,7 +21,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 위키 문서를 진단하는 작업입니다. 판정만 하고 문서를 고치지 마세요. 커밋하지 마세요.
 
 - 대상: {절대 경로 5~6건}. 목록 전체는 {catalog.md}. 힌트: {문서별 --check 에러 — 없으면 "없음"}.
-- 읽을 수 있는 것은 대상 문서·목록·규약 `sed -n '/^## 1\./,/^## 7\./p' {doc_contract_path}`뿐입니다. 코드 저장소 조회 금지, 사전 지식으로 공백 채우기 금지.
+- 읽을 수 있는 것은 대상 문서·목록·규약 `sed -n '/^## 1\./,/^## 7\./p;/^## 9\./,$p' {doc_contract_path}`뿐입니다. 코드 저장소 조회 금지, 사전 지식으로 공백 채우기 금지.
 - 오늘은 {today}입니다.
 
 문서마다 아래 신호를 판정하고 조치 행을 쓰세요. 값이 어긋나는 불릿 쌍은 통합하지 않고 `충돌`로 적으세요.
@@ -30,7 +31,8 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 | 같은 문서 안에서 같은 주장을 하는 불릿 둘 | `통합` — 전: 두 줄 원문, 후: 조건·수치·근거를 합집합한 한 줄 |
 | 코드 검색 한 번으로 참이 확인되는 불릿 | `삭제` — 후 비움, 비고에 확인 위치 |
 | 변경 서사 불릿("A에서 B로", "추후", "폐기") | 현재 상태로 다시 쓸 수 있으면 `재작성`, 없으면 `삭제` |
-| 다른 위키 문서 링크·이름 참조 | 접점 사실로 `재작성`, 남는 것이 "다른 곳에 있다"뿐이면 `삭제` |
+| 다른 위키 문서 링크·이름 참조(index.md 면제) | 접점 사실로 `재작성`, 남는 것이 "다른 곳에 있다"뿐이면 `삭제` |
+| index.md에 템플릿 밖 절 또는 사실 불릿(규약 9장) | `이동` — 후: 도메인 루트 일반 문서 경로와 절, 비고에 옮길 원문 |
 | description 60자 초과·"때" 미종결·범주어만 | `설명` — 후: 새 문장. 한 주제로 60자에 안 덮이면 `분할 후보` |
 | 40줄 미만이고 목록의 다른 문서 description이 이미 그 주제를 덮음(조각) | `흡수` — 후: 소유 문서 경로와 절, 비고에 옮길 불릿 원문 |
 | 절 제목과 다른 질문에 답하는 불릿 | `이동` — 후: 대상 절 |
