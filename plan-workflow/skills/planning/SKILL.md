@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Use when requirements are unclear or a non-trivial feature is being planned in plan mode ("계획 세워줘", "플랜 모드", "기능 설계") — intent gate, request intake, coverage axes, minimum-code ladder per new unit, self-contained plan, approval snapshot commit to .ai-docs/workspace/{slug}/plan.md. NOT for executing a saved plan (that is /plan-workflow:execute's job).
+description: Use when requirements are unclear or a non-trivial feature is being planned in plan mode ("계획 세워줘", "플랜 모드", "기능 설계") — intent gate, request intake, coverage axes, minimum-code ladder per new unit, self-contained plan, approval snapshot commit to .ai-docs/workspace/{slug}/plan.md, appending a `## 추가 계획` section instead of overwriting when a plan already exists. NOT for executing a saved plan (that is /plan-workflow:execute's job).
 ---
 
 플랜 모드의 기본 흐름(탐색 → 질문 → 계획 → 승인) 위에 얹는 절차입니다. 기록 위치·slug·feedback.md 규칙은 세션에 주입된 작업 기록 규약과 `## 현재 워크스페이스` 블록을 따릅니다. 요청은 사양이 아닌 의도이므로 사양을 쓰는 것은 에이전트의 일이고, 트레이드오프를 제시한 뒤의 최종 결정은 사용자의 것입니다.
@@ -52,11 +52,15 @@ description: Use when requirements are unclear or a non-trivial feature is being
 - **의도 첫 절**: `## 의도`를 첫 절로 두고 1절의 확인 문장을 그대로 담음
 - **계약 인라인**: 검증된 외부 계약은 계획 안에 적으며 `위에서 말한`·`논의한 대로` 같은 대화 참조를 쓰지 않음
 - **작업 표**: 파일별 변경과 새 단위별 사다리 단, 설계 결정과 근거, 커밋 분해와 커밋별 검증, 사용자가 확인한 결정 원문을 담음
+- **추가 절 자기완결**: 추가 절도 그 절만 읽고 실행할 수 있어야 하며, 앞 절과 겹치는 계약은 문서 안의 절 이름으로 참조하되 대화 참조는 쓰지 않음
 - **대조**: 최종화 전에 계획을 확인된 결정과 대조함
 
 ## 7. 핸드오프
 
 - **slug**: 세션 워크스페이스 블록의 slug를 쓰고, 미확정이면 작업 주제로 slug를 정해 사용자에게 알림
-- **충돌**: `.ai-docs/workspace/{slug}/plan.md`가 이미 있고 이번 작업의 스냅샷이 아니면 덮어쓰지 않고 충돌을 보고한 뒤 정지함
-- **스냅샷 커밋**: 승인 시 승인된 계획을 그대로 `plan.md`에 쓰고 의도 `context` 항목을 `feedback.md`에 남긴 뒤 한 커밋으로 남김
+- **모드 판정**: `.ai-docs/workspace/{slug}/plan.md`가 이미 있으면 추가 모드로 전환한다고 사용자에게 알리고, 없을 때만 신규로 씀
+- **충돌**: 기존 `plan.md`가 이번 작업과 무관한 다른 주제의 계획이면 덧붙이지 않고 충돌을 보고한 뒤 정지함
+- **추가 절**: 추가 모드에서는 승인된 계획을 `## 추가 계획 YYYY-MM-DD — {한 줄 계기}` 절로 파일 끝에 덧붙이며 앞 절은 한 글자도 고치거나 지우지 않음
+- **폐기 선언**: 앞 절의 결정이 무효가 되면 그 대목을 지우는 대신 추가 절 첫 불릿에 `폐기: {절 이름 또는 항목}`과 근거를 적어 실행이 건너뛰게 함
+- **스냅샷 커밋**: 승인 시 신규는 `plan.md`에 그대로 쓰고 추가는 파일 끝에 덧붙인 뒤, 의도 `context` 항목을 `feedback.md`에 남겨 한 커밋으로 남김
 - **정지**: 새 세션에서 `/plan-workflow:execute`로 시작하도록 안내하고 구현을 시작하지 않음

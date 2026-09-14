@@ -35,7 +35,7 @@ if slug:
     feedback_path = os.path.join(workspace, "feedback.md")
 
     if os.path.isfile(plan_path):
-        lines.append("- **plan.md**: 있음 — 코드를 고치기 전에 `/plan-workflow:execute`를 로드함")
+        lines.append("- **plan.md**: 있음 — 구현은 `/plan-workflow:execute`, 추가 계획은 `/plan-workflow:planning`으로 기존 계획 끝에 덧붙임")
     else:
         lines.append("- **plan.md**: 없음")
 
