@@ -1,7 +1,7 @@
 {
   "name": "llm-wiki",
-  "description": "LLM 위키 — 별도 git 저장소의 공통·프로젝트 문서 목록을 세션 시작 시 주입 + 스킬 4종(init·update·add·audit)",
-  "version": "1.0.0",
+  "description": "LLM 위키 — 별도 git 저장소의 도메인 index.md 본문과 도메인 루트·현재 레포 문서 목록을 세션 시작 시 주입 + 스킬 5종(init·register·update·add·audit)",
+  "version": "2.0.0",
   "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
   "keywords": ["wiki", "knowledge", "위키", "지식"]
 }

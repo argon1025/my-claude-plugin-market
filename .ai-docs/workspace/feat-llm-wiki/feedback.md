@@ -30,3 +30,6 @@
 - `why` llm-wiki registry.json의 domains 값을 빈 객체로 두는 이유는 도메인 설명이 index.md 본문으로 옮겨져 값이 비었지만 보류 항목(always 도메인)의 키 자리를 배열로는 남길 수 없기 때문이다.
 - `constraint` llm-wiki update.py의 묶음 바이트 경계(기본 500,000)는 diff 1건이 400,000바이트에서 절단되므로 단독 diff로는 넘지 않고, 앞선 diff 합계가 100KB를 넘은 묶음에 대형 diff가 들어올 때만 새 묶음을 연다 — 계획 V12의 "500KB 파일 머지가 단독 묶음" 기대는 기본값에서는 성립하지 않으며 `--batch-bytes 300000`에서 성립한다.
   - evidence: llm-wiki/scripts/update.py DIFF_MAX_BYTES·batches
+- `why` llm-wiki catalog.py --check가 index.md 부재를 검사 대상 경로가 가리키는 도메인에만 적용하는 이유는 update·add가 문서 1장만 지정해 검사할 때 무관한 도메인의 index.md 부재로 그 커밋이 막히지 않게 하려는 것이며, 경로 없이 전체 검사할 때는 모든 도메인을 본다.
+  - evidence: llm-wiki/scripts/catalog.py check·missing_indexes
+- `context` llm-wiki 2.0.0 실측 규모는 catalog.py 459줄·update.py 317줄·session_start.sh 215줄이며 스킬 5종(init·register·update·add·audit), 규약 9장이다. 계획 V17(머지 후 실사용 init→register→세션 재시작→update)은 마켓 갱신 뒤 사용자 세션에서 수행해야 한다.
