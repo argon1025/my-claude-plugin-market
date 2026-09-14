@@ -28,3 +28,5 @@
 - `why` llm-wiki update의 추출 묶음(머지 5건 또는 diff 500KB) 경계를 스킬이 아니라 update.py pending이 work.json batches로 내는 이유는 diff 실제 바이트가 파일을 쓴 뒤에만 알 수 있고 스킬이 묶으면 실행마다 경계가 달라지기 때문이다.
   - evidence: llm-wiki/scripts/update.py
 - `why` llm-wiki registry.json의 domains 값을 빈 객체로 두는 이유는 도메인 설명이 index.md 본문으로 옮겨져 값이 비었지만 보류 항목(always 도메인)의 키 자리를 배열로는 남길 수 없기 때문이다.
+- `constraint` llm-wiki update.py의 묶음 바이트 경계(기본 500,000)는 diff 1건이 400,000바이트에서 절단되므로 단독 diff로는 넘지 않고, 앞선 diff 합계가 100KB를 넘은 묶음에 대형 diff가 들어올 때만 새 묶음을 연다 — 계획 V12의 "500KB 파일 머지가 단독 묶음" 기대는 기본값에서는 성립하지 않으며 `--batch-bytes 300000`에서 성립한다.
+  - evidence: llm-wiki/scripts/update.py DIFF_MAX_BYTES·batches

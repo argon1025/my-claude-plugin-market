@@ -9,6 +9,9 @@ force-push 검사·diff 절단·제외 pathspec을 에이전트가 bash 여러 �
 꺼낸 뒤 work.json 경로를 마지막 줄에 낸다. 종료 코드는 0(작업 있음 또는 부트스트랩),
 10(미처리 없음), 1(오류)이다.
 
+추출 묶음(batches)도 여기서 자른다 — 머지 5건 또는 diff 파일 합계 500KB 중 먼저 닿는 쪽.
+diff의 실제 바이트는 파일을 쓴 뒤에만 알 수 있고, 스킬이 묶으면 실행마다 경계가 달라진다.
+
 `advance`는 state/{slug}.json의 커서를 전진시킨다. 커서 파일을 레포별로 나눈 것은 여러
 사람과 여러 머신이 서로 다른 레포를 갱신할 때 같은 파일에서 충돌하지 않게 하려는 것이다.
 레포별 상태 표는 여기 없다 — registry.json·state/*.json·.local/paths.json 3파일을 읽으면
@@ -28,6 +31,9 @@ from pathlib import Path
 DEFAULT_WIKI = os.environ.get("LLM_WIKI_ROOT", "~/.ai-docs/wiki")
 DEFAULT_MAX_MERGES = 20
 DIFF_MAX_BYTES = 400_000
+# 추출 에이전트 1회가 읽는 묶음의 상한. 건수는 사실 병합의 품질, 바이트는 컨텍스트 예산이다.
+DEFAULT_BATCH_MERGES = 5
+DEFAULT_BATCH_BYTES = 500_000
 # 머지 머리말에 싣는 딸린 커밋 수 상한. 대형 머지에서 머리말이 diff를 밀어내지 않게 한다.
 MESSAGE_MAX_COMMITS = 20
 
@@ -131,7 +137,25 @@ def extract_diff(path: str, slug: str, row: dict, out_dir: Path) -> dict:
     )
     target.write_text(header + body, encoding="utf-8")
     row["diff_path"] = str(target)
+    row["bytes"] = target.stat().st_size
     return row
+
+
+def batches(rows: list[dict], max_merges: int, max_bytes: int) -> list[dict]:
+    """rows를 순서대로 묶는다. 현재 묶음이 건수 상한에 닿았거나, 비어 있지 않은데 바이트 합계가
+    상한을 넘게 되면 새 묶음을 연다 — 단독으로 상한을 넘는 diff도 묶음 하나는 차지한다."""
+    result: list[dict] = []
+    current: list[dict] = []
+    total = 0
+    for row in rows:
+        if current and (len(current) >= max_merges or total + row["bytes"] > max_bytes):
+            result.append({"id": f"b{len(result) + 1:02d}", "shas": [r["sha"][:7] for r in current], "bytes": total})
+            current, total = [], 0
+        current.append(row)
+        total += row["bytes"]
+    if current:
+        result.append({"id": f"b{len(result) + 1:02d}", "shas": [r["sha"][:7] for r in current], "bytes": total})
+    return result
 
 
 def baseline_before(path: str, ref: str, days: int) -> str | None:
@@ -205,6 +229,7 @@ def cmd_pending(args) -> int:
             "cursor": cursor,
             "bootstrapped": bootstrapped,
             "commits": rows,
+            "batches": batches(rows, args.batch_merges, args.batch_bytes),
             "remaining": remaining,
             "notes": notes,
         }
@@ -217,7 +242,7 @@ def cmd_pending(args) -> int:
     for slug, entry in sorted(work["repos"].items()):
         tail = f" · 예산 밖 {entry['remaining']}건" if entry["remaining"] else ""
         mark = " · 부트스트랩" if entry["bootstrapped"] else ""
-        print(f"{slug}: 머지 {len(entry['commits'])}건{tail}{mark}")
+        print(f"{slug}: 머지 {len(entry['commits'])}건 · 묶음 {len(entry['batches'])}개{tail}{mark}")
 
     if not any(entry["commits"] or entry["bootstrapped"] for entry in work["repos"].values()):
         print("(미처리 없음)")
@@ -273,6 +298,10 @@ def main() -> int:
                          help=f"레포별 머지 예산 (기본값: {DEFAULT_MAX_MERGES})")
     pending.add_argument("--baseline-days", metavar="N", type=int,
                          help="커서 없는 레포를 며칠 전부터 소급할지")
+    pending.add_argument("--batch-merges", metavar="N", type=int, default=DEFAULT_BATCH_MERGES,
+                         help=f"추출 묶음 하나의 머지 상한 (기본값: {DEFAULT_BATCH_MERGES})")
+    pending.add_argument("--batch-bytes", metavar="N", type=int, default=DEFAULT_BATCH_BYTES,
+                         help=f"추출 묶음 하나의 diff 파일 합계 상한 (기본값: {DEFAULT_BATCH_BYTES})")
     pending.set_defaults(func=cmd_pending)
 
     advance = sub.add_parser("advance", parents=[common], help="레포 커서를 전진시킨다")
