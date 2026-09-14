@@ -1,0 +1,35 @@
+# feat-llm-wiki 작업 기록
+
+- `context` 사내 devcenter-wiki는 팀 위키·Bitbucket PR 게이트·무인 파이프라인에 묶여 개인 레포에서 못 쓰고 규약 690줄과 스킬 9종의 프롬프트 과부하가 크며, 사용자 본인이 서로 무관한 여러 사이드 프로젝트를 오가며 개발할 때 세션마다 코드에 없는 지식을 다시 설명하는 비용을 겪고, 개인 마켓에 최소 기능(위키 초기화·세션 주입·무인 갱신·정리)만 가진 플러그인이 설치되어 동작하고 프롬프트가 better-communication 문체로 재작성되며 제외 기능이 기록되면 끝난다.
+  - source: 사용자 확인 2026-09-14
+- `context` 사용자 원문 "주로 harvest 스킬보다는, 무인 업데이트 스킬인 auto-* 스킬들을 주로 이용하는편임 이후 문서정리 스킬 사용" — llm-wiki의 주 사용 경로는 update(무인 갱신) → audit(정리)이고 add(대화형 반영)는 부차 경로다.
+  - source: 사용자 확인 2026-09-14
+- `context` 사용자 원문 "훅이 자동 관리, 여러 사용자(팀원) 가 공유해도 가능하도록.. 그리고 기존과 달리 지식 베이스는 플러그인 레포 내가 아니라 별도 레포지토리에서 관리되도록 구성" — llm-wiki의 위키는 플러그인 레포 밖 별도 git 저장소(원격 필수)이고 SessionStart 훅이 60분 게이트로 pull하며, 팀원 공유를 전제로 레포별 커서 파일(state/{slug}.json)을 사람 편집 파일(registry.json)과 분리한다.
+  - source: 사용자 확인 2026-09-14
+- `context` 사용자 확인으로 확정된 범위 — 스킬은 init·update·add·audit 4종, 기존 사내 위키 문서(그룹 172건·레포 128건) 이관은 범위 밖, 폴더는 knowledge/common + knowledge/projects/{p} 2층, 플러그인명 llm-wiki·기본 경로 ~/.ai-docs/wiki·환경변수 LLM_WIKI_ROOT, UserPromptSubmit 리마인더 훅은 제외.
+  - source: 사용자 확인 2026-09-14
+- `context` llm-wiki v1의 의도적 단순화 — 낡음 신호는 레포 커서 지연과 verified 180일만 쓰고 문서별 anchor·watch는 두지 않음(업그레이드 조건: 커서가 최신인데 낡은 문서가 관측될 때), 무인 갱신은 .local/paths.json에 로컬 경로가 있는 레포만 처리하고 클론·미러를 하지 않음(업그레이드 조건: 다른 머신에서 갱신이 필요할 때), 프로젝트 폴더는 평면이며 repos/{slug}/ 하위 층을 두지 않음(업그레이드 조건: 한 프로젝트의 레포 종속 문서 30건 초과), 테스트 파일을 두지 않고 픽스처 수동 검증으로 대체함(업그레이드 조건: catalog.py 두 번째 수정 시 원본 BuildContract 7개 이식).
+- `why` 원본의 auto-collect→auto-publish 2단계(facts/ 원자재 대장·원장·샤드·PR 본문)를 update 한 스킬로 접은 이유는 그 분리가 팀 PR 게이트와 재소비를 위한 구조였고 개인·소규모 공유 위키에서는 게이트가 git 커밋 하나이기 때문이며, 대안이던 원자재 층 유지는 저장소 크기가 머지 수에 비례하고 스크립트 3벌을 유지해야 해 기각했다.
+- `why` 모양 폴더 5종(policy/process/domain/external/adr)을 adr/만 남기고 폐지한 이유는 원본 실측 분포가 policy에 71~73% 몰려 폴더가 검색 신호 구실을 못 했고 기존 문서 이관이 범위 밖이라 호환 부담이 없기 때문이다.
+- `constraint` 로컬 위키 검증(onestore-devcenter-front .devcenter/knowledge 128문서 2,971주장)에서 주장의 67%는 코드 grep 1~2회로 복원 가능했으나 ADR 기각 대안 58불릿·코드에 흔적 없는 외부 계약·자기 불확실성 표기·비강제 컨벤션·반파리티 경고 33%는 코드로 대체 불가하므로, llm-wiki 규약은 레포 종속 사실의 자리를 없애지 않고 description에 레포명을 넣어 프로젝트 폴더에 둔다.
+- `constraint` 같은 검증에서 최근 17커밋 미수확으로 문서 6건이 코드와 불일치하고 그중 1건은 verified 날짜가 최신인데 문서 전체가 낡아 있었으므로, llm-wiki의 낡음 신호는 verified 날짜만으로는 부족하고 레포 커서와 HEAD 거리를 세션 헤더에 표시해야 한다.
+- `why` llm-wiki의 머지 diff 머리말이 머지 커밋 메시지가 아니라 `git log {sha}^1..{sha}`로 딸린 커밋 메시지 전부(상한 20건)를 싣는 이유는 PR 머지 커밋의 메시지가 "Merged in {branch} (pull request #N)" 한 줄이라 결정 근거가 어디에도 남지 않기 때문이며, 원본 collect.py는 subject만 실어 이 손실이 있었다.
+  - evidence: llm-wiki/scripts/update.py extract_diff
+- `context` llm-wiki 실측 규모는 catalog.py 403줄·update.py 311줄·session_start.sh 180줄로 계획의 목표치(180·140·60)를 넘지만 사양은 그대로 충족했으며, 차이는 주석과 독스트링이고 원본 대비 감축(catalog 1,002줄, 스크립트 4,569줄)은 유지된다.
+- `context` llm-wiki 리뷰 반영 개정 의도 — 사용자 원문 "2026-09-14 리뷰 세션에서 아래 결정이 확정되었다. 결정 자체는 다시 묻지 말고, 결정이 코드·규약에 어떻게 내려가는지만 계획한다." 결정 요지: knowledge/{조직}-{도메인}/ 루트 + {레포 slug}/ 2층 고정, init·register 분리(초기화 판정은 registry.json 유무), 도메인 index.md 필수·훅 본문 주입, 주입 범위 도메인 루트+현재 레포, update 묶음 추출·도메인 루트 직접 보강, registry/state 축소·review.md→inbox.md, 훅 pull 600초·startup·resume 한정.
+  - source: 사용자 확인 2026-09-14
+- `correction` v1 계획의 "프로젝트 폴더는 평면이며 repos/{slug}/ 하위 층을 두지 않음(업그레이드 조건: 한 프로젝트의 레포 종속 문서 30건 초과)"은 폐기되었다 — llm-wiki 구조는 knowledge/{조직}-{도메인}/(도메인 루트) + {레포 slug}/ 2층 고정이고 위치 판정은 "이 레포를 지워도 참인가" 한 단계이며 knowledge/common 같은 회사 전체 공통 폴더는 두지 않는다.
+  - source: 사용자 확인 2026-09-14
+- `context` llm-wiki 보류 항목 — 다중 위키, 조직·도메인 무관 사실의 자리(always: true 도메인), 레포 다중 도메인, frontmatter keywords와 agent-guide "grep -ril 1회 후 결정" 규칙(검색 보강)은 사용 후 재검토한다. 사용자 원문 "일단 프론트메터 키워드 추가 계획은 제외 검색 보강은 이후 좀 사용해보고 다시".
+  - source: 사용자 확인 2026-09-14
+- `why` llm-wiki index.md에 토큰 상한을 두지 않고 절 5개 고정 템플릿(레포 구성·의존 방향·역인덱스·접근 좌표·제외 레포)으로 크기를 다루는 이유는 사용자 판단 "인덱스 상한은 둬도 의미가 없을 듯 큰 회사 도메인인 경우 그럼 누락될 가능성이 있으니 그냥 내부 본문 템플릿을 정하고 필요한 내용만 기재되도록 가이드"에 따른 것이며, 대안이던 --check 상한 1,500토큰은 대형 도메인에서 레포 행 누락으로 작동해 기각했다. 원형 system-repository-map.md는 약 9,200토큰이나 사실 불릿·제외 표를 빼면 약 5,500토큰이고 도메인 분할 시 도메인당 2,000~2,500토큰이다.
+  - source: 사용자 확인 2026-09-14
+- `constraint` llm-wiki index.md의 역인덱스·의존 방향 절은 다른 도메인 레포를 {domain}/{slug} 꼴로 적을 수 있다 — 회사 전체 공통 폴더가 없어 도메인을 나누면 도메인 간 변경 파급(예: 로그인이 devcenter-api와 dcsapp-gateway에 걸침)을 적을 자리가 이 면제 외에는 없다.
+- `why` llm-wiki update의 추출 묶음(머지 5건 또는 diff 500KB) 경계를 스킬이 아니라 update.py pending이 work.json batches로 내는 이유는 diff 실제 바이트가 파일을 쓴 뒤에만 알 수 있고 스킬이 묶으면 실행마다 경계가 달라지기 때문이다.
+  - evidence: llm-wiki/scripts/update.py
+- `why` llm-wiki registry.json의 domains 값을 빈 객체로 두는 이유는 도메인 설명이 index.md 본문으로 옮겨져 값이 비었지만 보류 항목(always 도메인)의 키 자리를 배열로는 남길 수 없기 때문이다.
+- `constraint` llm-wiki update.py의 묶음 바이트 경계(기본 500,000)는 diff 1건이 400,000바이트에서 절단되므로 단독 diff로는 넘지 않고, 앞선 diff 합계가 100KB를 넘은 묶음에 대형 diff가 들어올 때만 새 묶음을 연다 — 계획 V12의 "500KB 파일 머지가 단독 묶음" 기대는 기본값에서는 성립하지 않으며 `--batch-bytes 300000`에서 성립한다.
+  - evidence: llm-wiki/scripts/update.py DIFF_MAX_BYTES·batches
+- `why` llm-wiki catalog.py --check가 index.md 부재를 검사 대상 경로가 가리키는 도메인에만 적용하는 이유는 update·add가 문서 1장만 지정해 검사할 때 무관한 도메인의 index.md 부재로 그 커밋이 막히지 않게 하려는 것이며, 경로 없이 전체 검사할 때는 모든 도메인을 본다.
+  - evidence: llm-wiki/scripts/catalog.py check·missing_indexes
+- `context` llm-wiki 2.0.0 실측 규모는 catalog.py 459줄·update.py 317줄·session_start.sh 215줄이며 스킬 5종(init·register·update·add·audit), 규약 9장이다. 계획 V17(머지 후 실사용 init→register→세션 재시작→update)은 마켓 갱신 뒤 사용자 세션에서 수행해야 한다.
