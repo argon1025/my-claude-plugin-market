@@ -11,6 +11,8 @@ force-push 검사·diff 절단·제외 pathspec을 에이전트가 bash 여러 �
 
 `advance`는 state/{slug}.json의 커서를 전진시킨다. 커서 파일을 레포별로 나눈 것은 여러
 사람과 여러 머신이 서로 다른 레포를 갱신할 때 같은 파일에서 충돌하지 않게 하려는 것이다.
+레포별 상태 표는 여기 없다 — registry.json·state/*.json·.local/paths.json 3파일을 읽으면
+되는 일이라 register 스킬이 직접 조립한다.
 """
 
 from __future__ import annotations
@@ -143,7 +145,7 @@ def cmd_pending(args) -> int:
     registry = load_json(wiki / "registry.json", {})
     repos = registry.get("repos", {}) if isinstance(registry, dict) else {}
     if not repos:
-        print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:init", file=sys.stderr)
+        print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:register", file=sys.stderr)
         return 1
 
     paths = load_json(wiki / ".local" / "paths.json", {})
@@ -195,7 +197,7 @@ def cmd_pending(args) -> int:
             extract_diff(path, slug, row, out_dir / slug)
 
         work["repos"][slug] = {
-            "project": info.get("project"),
+            "domain": info.get("domain"),
             "path": path,
             "branch": branch,
             "ref": ref,
@@ -245,33 +247,13 @@ def cmd_advance(args) -> int:
 
     state_path = wiki / "state" / f"{args.slug}.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
+    # 커서 파일은 cursor·at 2키만 둔다. 머지·문서 건수는 커밋 메시지가 말하고 branch는
+    # registry.json이 정본이라 여기 복제하면 두 값이 어긋날 자리만 생긴다.
     state_path.write_text(json.dumps({
         "cursor": args.sha,
-        "branch": branch,
         "at": date.today().isoformat(),
-        "merges": args.merges,
-        "docs": args.docs,
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"{args.slug} 커서 {args.sha[:7]} · 머지 {args.merges}건 · 문서 {args.docs}건")
-    return 0
-
-
-def cmd_status(args) -> int:
-    wiki = Path(args.wiki).expanduser()
-    registry = load_json(wiki / "registry.json", {})
-    repos = registry.get("repos", {}) if isinstance(registry, dict) else {}
-    paths = load_json(wiki / ".local" / "paths.json", {})
-    if not repos:
-        print(f"# 등록된 레포가 없음: {wiki}/registry.json")
-        return 0
-
-    print("| 레포 | 프로젝트 | 커서 | 갱신일 | 로컬 경로 |")
-    print("|---|---|---|---|---|")
-    for slug, info in sorted(repos.items()):
-        state = load_json(wiki / "state" / f"{slug}.json", {})
-        cursor = (state.get("cursor") or "")[:7] if isinstance(state, dict) else ""
-        print(f"| {slug} | {info.get('project', '')} | {cursor or '없음'} | "
-              f"{state.get('at', '') if isinstance(state, dict) else ''} | {paths.get(slug, '없음')} |")
+    print(f"{args.slug} 커서 {args.sha[:7]}")
     return 0
 
 
@@ -296,12 +278,7 @@ def main() -> int:
     advance = sub.add_parser("advance", parents=[common], help="레포 커서를 전진시킨다")
     advance.add_argument("slug")
     advance.add_argument("sha")
-    advance.add_argument("--merges", metavar="N", type=int, default=0)
-    advance.add_argument("--docs", metavar="N", type=int, default=0)
     advance.set_defaults(func=cmd_advance)
-
-    status = sub.add_parser("status", parents=[common], help="레포별 커서와 로컬 경로를 표로 낸다")
-    status.set_defaults(func=cmd_status)
 
     args = parser.parse_args()
     return args.func(args)

@@ -1,10 +1,10 @@
 ---
 name: update
-description: Use when merged code in registered repos must be reflected into the wiki without questions ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --repo/--range) — walks every registered repo from its cursor, fans out one subagent per first-parent merge to extract facts, assigns facts to docs against the catalog, fans out one subagent per doc to apply, runs --check, commits per doc, advances the cursor, pushes. 관찰-tier only: confirms and adds, never overwrites; conflicts and common-space candidates go to review.md. NOT for material the user hands over (that is /llm-wiki:add's job) and NOT for sweeping existing docs (that is /llm-wiki:audit's job).
+description: Use when merged code in registered repos must be reflected into the wiki without questions ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --repo/--range) — walks every registered repo from its cursor, fans out one subagent per first-parent merge to extract facts, assigns facts to docs against the catalog, fans out one subagent per doc to apply, runs --check, commits per doc, advances the cursor, pushes. 관찰-tier only: confirms and adds, never overwrites; conflicts go to inbox.md. NOT for material the user hands over (that is /llm-wiki:add's job) and NOT for sweeping existing docs (that is /llm-wiki:audit's job).
 disable-model-invocation: true
 ---
 
-등록된 레포의 머지된 코드를 사용자 응답 없이 프로젝트 폴더에 반영합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`가 정본이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. 이 스킬은 `관찰` 출처만 만들므로 기존 값을 지우거나 바꾸지 않고, `common/`을 고치지 않습니다.
+등록된 레포의 머지된 코드를 사용자 응답 없이 도메인 루트와 레포 폴더에 반영합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`가 정본이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. 이 스킬은 `관찰` 출처만 만들므로 기존 값을 지우거나 바꾸지 않습니다.
 
 인자: `--repo {slug}`(대상 한정), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(레포별 예산, 기본 20), `--baseline-days N`(커서 없는 레포 소급), `--dry-run`(3장까지).
 
@@ -44,10 +44,10 @@ disable-model-invocation: true
 
 - **입력**: `{facts_dir}/**/*.json`을 전부 읽음 — 사실 문장이 메인을 지나는 유일한 지점
 - **중복 병합**: 같은 레포에서 같은 주장을 하는 사실은 하나로 합침
-- **위치**: 규약 3장 위치 판정에서 공통으로 가는 사실은 편입하지 않고 `review.md`에 `공통 후보` 행으로 기재
-- **대조**: 현재 프로젝트 목록(`catalog.py --root {WIKI_ROOT}/knowledge/projects/{p}`)의 `description` 전수와 grep으로 대상 문서를 찾음 — 후보가 둘이면 범위가 좁은 문서
+- **위치**: 규약 3장 위치 판정 "이 레포를 지워도 참인가"를 사실마다 한 번 물어 도메인 루트와 레포 폴더를 가르고 둘 다 직접 편집
+- **대조**: 도메인 루트 목록(`catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`)과 레포 목록(`--root {WIKI_ROOT}/knowledge/{domain}/{slug}`)의 `description` 전수와 grep으로 대상 문서를 찾음 — 후보가 둘이면 범위가 좁은 문서
 - **신규 문서**: 대상이 없는 사실은 주제로 묶어 40자 한 문장으로 덮이면 신규 1장, 덮이지 않으면 나누고 그래도 서지 않으면 `기각 — 한 주제 아님`
-- **배치 내 상충**: 같은 주제에 값이 다른 사실 둘은 둘 다 `review.md`
+- **배치 내 상충**: 같은 주제에 값이 다른 사실 둘은 둘 다 `inbox.md`
 - **배정표**: `{스크래치}/assign.json`에 문서별 사실 목록·신규 여부를 씀 — `--dry-run`이면 배정표를 보고하고 종료
 
 ## 4. 반영 fan-out — 문서 1장 = 에이전트 1회
@@ -65,8 +65,8 @@ disable-model-invocation: true
 - 동일 — 본문 유지, frontmatter verified만 {today}. code가 그 값 자체를 짚었을 때만이며 주제가 겹친다는 이유로 올리지 마세요.
 - 보강 — 해당 절 끝에 불릿 추가, updated·verified {today}. 문서 전체 재작성 금지.
 - 충돌 — 기존 값과 다르면 본문을 고치지 말고 excluded에 {기존 값(절), 기존 출처 줄 전사, 새 값, code}를 적으세요. 관찰은 기존 값을 지우지 못합니다.
-신규 문서: description은 40자 목표·60자 상한·"때" 종결·이 문서에서만 참인 낱말 1개, 한 레포에서만 참이면 레포명 포함,
-채울 사실 없는 절은 두지 않고, 제목은 사실이 실제로 답하는 범위로만 — 조각에 주제 이름을 붙이지 마세요.
+신규 문서: description은 40자 목표·60자 상한·"때" 종결·이 문서에서만 참인 낱말 1개, 
+채울 사실 없는 절은 두지 않고, 제목은 사실이 실제로 답하는 범위로만 — 조각에 주제 이름을 붙이지 마세요. 레포 폴더 문서의 description에 레포명을 넣지 마세요.
 
 공통: 다른 위키 문서 이름·링크 금지, 변경 서사 금지, 업무 낱말 먼저. 업무 낱말을 붙일 수 없는 식별자만 남는 행은 blocked "내부 동작 서술".
 출처 줄: 블록 끝에 `> 출처: 관찰 — {slug} @{sha7} 머지, {머지 날짜}`를 두고 같은 레포의 옛 관찰 줄은 이 줄로 대체하세요.
@@ -81,14 +81,14 @@ disable-model-invocation: true
 
 - **전수 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` — 이번에 손대지 않은 문서의 에러는 고치지 않고 보고에 남김
 - **되돌림**: `blocked`·`check: fail` 문서는 `git -C {WIKI_ROOT} checkout -- {경로}`로 원복하고 그 사실은 보고의 `기각`, 되돌린 머지가 있으면 커서는 그 머지 직전까지만
-- **review.md**: `excluded`·`공통 후보`·배치 내 상충 행을 `- [{날짜}] [{project}] {주제} — 기존 {값} ({파일:절}, {출처}) / 새 {값} ({slug} @{sha7} {code})` 형식으로 append
-- **커밋**: 문서마다 `docs({project}): {파일명} {요약}`, 그 뒤 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" advance {slug} {sha} --wiki {WIKI_ROOT} --merges N --docs M`로 `state/{slug}.json` 갱신 + `review.md`를 `chore(update): {slug} 커서 {sha7} · 머지 N건 · 문서 M건` 한 커밋 — 사실 0건 머지도 전진, 예산으로 잘린 머지 앞에서 멈춤, `--range` 실행은 커서 불변
+- **inbox.md**: `excluded`(충돌)·배치 내 상충 행만 `- [{날짜}] [{domain}] {주제} — 기존 {값} ({파일:절}, {출처}) / 새 {값} ({slug} @{sha7} {code})` 형식으로 append
+- **커밋**: 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} {요약}`, 그 뒤 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" advance {slug} {sha} --wiki {WIKI_ROOT}`로 `state/{slug}.json` 갱신 + `inbox.md`를 `chore(update): {slug} 커서 {sha7} · 머지 N건 · 문서 M건` 한 커밋 — 사실 0건 머지도 전진, 예산으로 잘린 머지 앞에서 멈춤, `--range` 실행은 커서 불변
 - **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 재시도 2회, 실패는 로컬 커밋 상태와 함께 보고
 
 ## 6. 보고
 
 - **레포별**: 처리 머지 수·사실 수·커서 전후·건너뜀 사유
 - **문서**: 생성·수정 목록과 동일·보강 건수
-- **확인 필요**: `review.md`에 남긴 행 전부 — 이 실행이 사람에게 남기는 판정 요청이며 `/llm-wiki:add`로 집음
+- **확인 필요**: `inbox.md`에 남긴 행 전부 — 이 실행이 사람에게 남기는 판정 요청이며 `/llm-wiki:add`로 집음
 - **기각**: 사유별 건수(담지 않는 것·한 주제 아님·내부 동작 서술·검사 실패)
 - **후속**: 신규 문서 목록과 `/llm-wiki:audit` 권고

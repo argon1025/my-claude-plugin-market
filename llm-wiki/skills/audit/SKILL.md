@@ -3,14 +3,14 @@ name: audit
 description: Use when the wiki must be swept after unattended updates or on a schedule ("위키 정리", "위키 감사", "문서 정리", "중복 정리", "낡은 문서 확인") — measures the wiki with catalog.py --check, fans out subagents over 5–6 docs per batch to flag fragments, duplicate facts, stale docs, over-long descriptions and contract violations, presents one approval table with before/after lines, applies per doc, re-checks, commits and pushes. Adds no new facts. NOT for landing new material or merged code (that is /llm-wiki:add and /llm-wiki:update's job).
 ---
 
-기존 문서만 고치고 새 사실을 들이지 않습니다. 규약은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`가 정본이며 서브에이전트에게는 절대 경로로 넘깁니다. 인자: `--scope common|{project}`(기본 공통 + 현재 프로젝트), `--docs {경로...}`(지목 문서만).
+기존 문서만 고치고 새 사실을 들이지 않습니다. 규약은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`가 정본이며 서브에이전트에게는 절대 경로로 넘깁니다. 인자: `--scope {domain}|{domain}/{slug}`(기본 현재 도메인 루트 + 현재 레포), `--docs {경로...}`(지목 문서만).
 
 ## 1. 측정
 
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
-- **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`의 에러와 `catalog.py --root {스페이스 루트}` 목록을 `{스크래치}/catalog.md`로 저장 — `!` 낡음·60자 초과·description 중복이 여기서 나옴
-- **인박스**: `review.md`의 해당 스코프 행 수를 세고 "처리는 `/llm-wiki:add`" 안내
-- **묶음**: 대상 문서를 스페이스별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 붙임 — 메인은 문서 본문을 열지 않음
+- **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`의 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장 — `!` 낡음·60자 초과·description 중복이 여기서 나옴
+- **인박스**: `inbox.md`의 해당 스코프 행 수를 세고 "처리는 `/llm-wiki:add`" 안내
+- **묶음**: 대상 문서를 폴더별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 붙임 — 메인은 문서 본문을 열지 않음
 
 ## 2. 진단 fan-out — 묶음 1개 = 에이전트 1회
 
@@ -43,7 +43,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 
 - **승인 대상**: `삭제`·`통합`·`흡수`·`이동`·`분할 후보` 행 — 번호·조치·문서:절·전·후를 채팅에 그대로 싣고, 사용자가 제외한 번호 외는 전부 승인
 - **승인 불필요**: `재작성`·`설명`·`검증`은 `{스크래치}/approval-{날짜}.md`에만 두고 적용
-- **충돌·확인 필요**: 적용하지 않고 `review.md`에 append
+- **충돌·확인 필요**: 적용하지 않고 `inbox.md`에 append
 - **0행**: 승인 대상이 없으면 표를 제시하지 않고 4장으로
 
 ## 4. 적용 fan-out — 문서 1장 = 에이전트 1회
@@ -65,11 +65,11 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 ## 5. 검증·커밋
 
 - **전수 검사**: 삭제·흡수 뒤 `catalog.py --check --root {WIKI_ROOT}/knowledge` 재실행 — description 충돌은 문서 단위 검사가 보지 못함
-- **커밋**: 본문이 바뀐 문서마다 `docs({space}): {파일명} audit {조치 요약}`, `verified`만 바뀐 문서는 `docs: verified 갱신 N건 (audit)` 한 커밋, `git pull --rebase && git push`
+- **커밋**: 본문이 바뀐 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} audit {조치 요약}`, `verified`만 바뀐 문서는 `docs: verified 갱신 N건 (audit)` 한 커밋, `git pull --rebase && git push`
 
 ## 6. 보고
 
 - **처리**: 문서 수·조치별 건수·삭제 파일
 - **승인**: 승인 행 수·제외 번호
-- **충돌·확인 필요·분할 후보**: 문서와 내용 — `review.md`에 남긴 다음 작업
+- **충돌·확인 필요·분할 후보**: 문서와 내용 — `inbox.md`에 남긴 다음 작업
 - **검사**: 남은 에러와 그 문서

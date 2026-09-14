@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """위키 카탈로그 — 문서의 frontmatter를 읽어 세션 주입용 목록을 만들고 규약 위반을 검사한다.
 
-스페이스(`knowledge/common`, `knowledge/projects/{p}`)마다 목록을 따로 만들고, 검사는
-`knowledge/` 전체를 한 번에 본다. 어느 쪽을 볼지는 --root가 정한다.
+목록은 도메인 루트(`knowledge/{조직}-{도메인}`, --shallow로 레포 폴더 제외)와 레포 폴더
+(`knowledge/{도메인}/{slug}`)마다 따로 만들고, 검사는 `knowledge/` 전체를 한 번에 본다.
+어느 쪽을 볼지는 --root가 정한다.
 
 목록 모드의 핵심 규칙: 어떤 경우에도 문서를 목록에서 빼지 않는다. frontmatter 파싱에
 실패하면 설명 자리에 실패 이유를 적고 행을 남긴다. 머리의 문서 수는 frontmatter가 아니라
@@ -28,7 +29,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 DEFAULT_ROOT = "knowledge"
-DEFAULT_LABEL = "스페이스"
+DEFAULT_LABEL = "위키"
 # 마지막 확인이 이 일수를 넘으면 목록에 `!`가 붙는다. 낡음 기준의 유일한 출처다.
 STALE_DAYS = 180
 
@@ -42,7 +43,12 @@ STALENESS_FIELDS = ("verified", "updated")
 DESCRIPTION_LIMIT = 60
 
 # 규약이 허용하는 위치. knowledge/ 루트 기준 상대 경로가 이 꼴이어야 한다.
-LOCATION_RE = re.compile(r"^(common|projects/[a-z0-9-]+)(/adr)?/[a-z0-9-]+\.md$")
+# 도메인 폴더는 `{조직}-{도메인}`이라 하이픈이 1개 이상이고, 그 아래 레포 폴더 1층만 허용한다.
+# `adr/`은 도메인 루트와 레포 폴더 양쪽에 둘 수 있으며 레포 폴더 이름으로는 쓸 수 없다.
+LOCATION_RE = re.compile(
+    r"^(?P<domain>[a-z0-9]+-[a-z0-9-]+)(?:/(?!adr/)(?P<repo>[a-z0-9-]+))?(?:/adr)?/[a-z0-9-]+\.md$"
+)
+INDEX_NAME = "index.md"
 
 # 목록이 쓰는 토큰을 어림잡는 나눗셈 값. 한국어 섞인 목록에서 실측에 가깝다.
 CHARS_PER_TOKEN = 1.8
@@ -121,9 +127,17 @@ def body_lines(path: Path) -> list[str]:
     return []
 
 
-def docs(root: Path) -> list[Path]:
-    """목록·검사 대상 문서. `_`로 시작하는 파일은 초안이라 제외한다."""
-    files = [p for p in root.rglob("*.md") if not p.name.startswith("_")]
+def docs(root: Path, shallow: bool = False) -> list[Path]:
+    """목록·검사 대상 문서. `_`로 시작하는 파일은 초안이라 제외한다.
+
+    shallow는 도메인 루트 목록용이다 — `root/*.md`와 `root/adr/*.md`만 모으고 레포 폴더는
+    제외하며, `index.md`는 본문이 따로 주입되므로 목록에서 뺀다.
+    """
+    if shallow:
+        files = [p for p in list(root.glob("*.md")) + list(root.glob("adr/*.md")) if p.name != INDEX_NAME]
+    else:
+        files = list(root.rglob("*.md"))
+    files = [p for p in files if not p.name.startswith("_")]
     return sorted(files, key=lambda p: sort_key(p, root))
 
 
@@ -137,9 +151,10 @@ def estimate_tokens(text: str) -> int:
     return round(len(text) / CHARS_PER_TOKEN / 100) * 100
 
 
-def build(root: Path, today: date, label: str = DEFAULT_LABEL, stale_days: int = STALE_DAYS) -> str:
-    """스페이스 하나의 목록 텍스트. 경로는 스페이스 루트 기준 상대 경로다."""
-    files = docs(root)
+def build(root: Path, today: date, label: str = DEFAULT_LABEL, stale_days: int = STALE_DAYS,
+          shallow: bool = False) -> str:
+    """폴더 하나의 목록 텍스트. 경로는 그 폴더 기준 상대 경로다."""
+    files = docs(root, shallow)
 
     rows: list[str] = []
     for path in files:
@@ -172,15 +187,32 @@ def build(root: Path, today: date, label: str = DEFAULT_LABEL, stale_days: int =
     return "\n".join([header, "", body])
 
 
-def check_location(path: Path, root: Path) -> list[str]:
-    """knowledge/ 루트 기준 경로가 규약이 허용하는 꼴인지 본다."""
+def check_location(path: Path, root: Path, registry: dict | None = None) -> list[str]:
+    """knowledge/ 루트 기준 경로가 규약이 허용하는 꼴인지 본다.
+
+    registry가 주어지면 도메인 폴더가 `domains`에, 레포 폴더가 `repos`에 있고 그 domain이
+    폴더와 같은지도 본다. registry.json이 없거나 깨졌으면 정규식 검사만 한다.
+    """
     relative = path.relative_to(root).as_posix()
-    if LOCATION_RE.match(relative):
+    match = LOCATION_RE.match(relative)
+    if not match:
+        return [
+            f"위치가 규약에 없음 ({relative}) — "
+            "knowledge/{조직}-{도메인}/ 루트 또는 그 아래 {레포 slug}/ 평면과 각각의 adr/만, "
+            "파일명은 kebab-case"
+        ]
+    if not registry:
         return []
-    return [
-        f"위치가 규약에 없음 ({relative}) — "
-        "common/ 또는 projects/{프로젝트}/ 평면과 그 adr/ 하위만, 파일명은 kebab-case"
-    ]
+
+    errors: list[str] = []
+    domain, repo = match.group("domain"), match.group("repo")
+    if domain not in (registry.get("domains") or {}):
+        errors.append(f"도메인 {domain}가 registry.json에 없음 — /llm-wiki:register")
+    if repo:
+        info = (registry.get("repos") or {}).get(repo)
+        if not isinstance(info, dict) or info.get("domain") != domain:
+            errors.append(f"레포 폴더 {repo}가 registry.json에 없거나 도메인이 다름")
+    return errors
 
 
 def check_body(path: Path) -> list[str]:
@@ -225,8 +257,8 @@ def check_fields(fields: dict[str, str], today: date) -> list[str]:
     return errors
 
 
-def inspect(path: Path, root: Path, today: date) -> list[str]:
-    errors = check_location(path, root)
+def inspect(path: Path, root: Path, today: date, registry: dict | None = None) -> list[str]:
+    errors = check_location(path, root, registry)
     fields, reason, broken = parse_frontmatter(path)
 
     if broken:
@@ -294,12 +326,17 @@ def check(root: Path, today: date, only: set[str] | None = None) -> int:
         print(f"# 검사할 문서가 없음: {root}")
         return 0
 
+    # registry.json은 knowledge/의 형제다. 읽지 못하면 폴더-등록 대조는 건너뛴다.
+    registry = load_json(root.parent / "registry.json", None)
+    if not isinstance(registry, dict):
+        registry = None
+
     errors: list[tuple[str, str]] = []
     for path in files:
         name = path.relative_to(root).as_posix()
         if only is not None and name not in only:
             continue
-        errors.extend((name, message) for message in inspect(path, root, today))
+        errors.extend((name, message) for message in inspect(path, root, today, registry))
 
     for name, involved, message in inspect_across(files, root):
         if only is None or only & set(involved):
@@ -336,7 +373,7 @@ def slug_from_remote(url: str) -> str:
 
 
 def resolve_repo(registry: dict, remote: str, common_dir: str) -> tuple[str, str | None]:
-    """(slug, project)를 돌려준다. 등록되지 않았으면 project가 None이다.
+    """(slug, domain)을 돌려준다. 등록되지 않았으면 domain이 None이다.
 
     등록 매칭은 정규화한 remote가 `remotes` 배열 중 하나와 같은지로 하고, 못 찾으면
     slug로 한 번 더 본다. owner를 slug에 넣지 않기 때문에 포크와 원본이 같은 slug로
@@ -349,7 +386,7 @@ def resolve_repo(registry: dict, remote: str, common_dir: str) -> tuple[str, str
         for slug, info in repos.items():
             for candidate in info.get("remotes", []) or []:
                 if normalize_remote(candidate) == target:
-                    return slug, info.get("project")
+                    return slug, info.get("domain")
         slug = slug_from_remote(remote)
     elif common_dir:
         slug = re.sub(r"[^a-z0-9-]", "-", Path(common_dir).parent.name.lower()).strip("-")
@@ -357,7 +394,7 @@ def resolve_repo(registry: dict, remote: str, common_dir: str) -> tuple[str, str
         return "", None
 
     info = repos.get(slug)
-    return slug, info.get("project") if info else None
+    return slug, info.get("domain") if info else None
 
 
 def load_json(path: Path, fallback):
@@ -375,7 +412,9 @@ def main() -> int:
     parser.add_argument("--root", metavar="PATH", default=DEFAULT_ROOT,
                         help=f"문서 디렉토리 (기본값: {DEFAULT_ROOT})")
     parser.add_argument("--label", metavar="TEXT", default=DEFAULT_LABEL,
-                        help=f"목록 머리에 붙는 스페이스 이름 (기본값: {DEFAULT_LABEL})")
+                        help=f"목록 머리에 붙는 이름 (기본값: {DEFAULT_LABEL})")
+    parser.add_argument("--shallow", action="store_true",
+                        help="도메인 루트 목록: --root 바로 아래 *.md와 adr/*.md만, index.md와 레포 폴더 제외")
     parser.add_argument("--stale-days", metavar="N", type=int, default=STALE_DAYS,
                         help=f"마지막 확인이 며칠 넘으면 낡은 것으로 볼지 (기본값: {STALE_DAYS})")
     parser.add_argument("--check", action="store_true",
@@ -395,7 +434,7 @@ def main() -> int:
     if args.check:
         return check(root, date.today(), selected_names(root, args.paths))
 
-    print(build(root, date.today(), args.label, args.stale_days))
+    print(build(root, date.today(), args.label, args.stale_days, args.shallow))
     return 0
 
 

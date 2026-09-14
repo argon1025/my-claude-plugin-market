@@ -29,40 +29,38 @@
 
 ## 동작 방식
 
-- **SessionStart**: 규약(`rules/agent-guide.md`)과 공통·현재 프로젝트 목록을 주입하며, matcher가 없어 startup·resume·clear·compact 모두에서 다시 실행됨
-- **주입 범위**: `knowledge/common/` 전수 + 현재 레포가 속한 프로젝트 전수, 다른 프로젝트는 이름 한 줄 — 목록이 소프트 8,000토큰을 넘으면 정리 권고가 붙고 하드 12,000토큰을 넘으면 가장 큰 스페이스가 전체 보기 명령 한 줄로 접힘
-- **레포 판정**: origin(없으면 upstream) URL을 정규화해 `registry.json`과 맞추고 실패하면 URL 마지막 경로 요소를 slug로 씀 — 미등록이면 공통 목록과 등록 안내만 주입
+- **SessionStart**: 규약(`rules/agent-guide.md`)과 도메인 루트·현재 레포 목록을 주입하며, matcher가 없어 startup·resume·clear·compact 모두에서 다시 실행됨
+- **주입 범위**: 현재 레포가 속한 도메인 루트 전수(레포 폴더 제외) + 현재 레포 폴더 전수, 형제 레포와 다른 도메인은 이름 한 줄 — 목록이 소프트 8,000토큰을 넘으면 정리 권고가 붙고 하드 12,000토큰을 넘으면 가장 큰 목록이 전체 보기 명령 한 줄로 접힘
+- **레포 판정**: origin(없으면 upstream) URL을 정규화해 `registry.json`과 맞추고 실패하면 URL 마지막 경로 요소를 slug로 씀 — 미등록이면 규약과 등록 안내(`/llm-wiki:register`)만 주입
 - **낡음 신호**: 마지막 확인이 180일을 넘은 문서에 `!`가 붙고, 레포 커서가 HEAD보다 뒤처지면 몇 커밋 뒤인지가 헤더에 표시됨
 - **동기화**: 위키에 원격이 있고 마지막 fetch가 60분을 넘었으면 백그라운드로 `pull --ff-only`를 걸고 3초까지 기다리며, 지연·실패는 헤더 한 줄로 알림
-- **확인 필요 인박스**: 무인 갱신이 판정하지 못한 충돌은 `review.md`에 쌓이고 세션 헤더에 건수가 표시되며 `/llm-wiki:add`가 처리함
+- **확인 필요 인박스**: 무인 갱신이 판정하지 못한 충돌은 `inbox.md`에 쌓이고 세션 헤더에 건수가 표시되며 `/llm-wiki:add`가 소비함
 
 ## 위키 구조
 
 ```
-~/.ai-docs/wiki/                # LLM_WIKI_ROOT. 별도 git 저장소
-├── registry.json               # 사람·init이 편집: 프로젝트와 레포 등록
-├── state/{slug}.json           # update만 편집: 레포별 커서
-├── review.md                   # update가 남긴 확인 필요 인박스
-├── .gitignore                  # .local/
-├── .local/paths.json           # 머신별 로컬 경로 (미추적, 훅이 기록)
+~/.ai-docs/wiki/                    # LLM_WIKI_ROOT. 별도 git 저장소
+├── registry.json                   # register가 편집: 도메인과 레포 등록. 있으면 위키가 초기화된 것
+├── state/{slug}.json               # update만 편집: {"cursor", "at"}
+├── inbox.md                        # update가 남긴 확인 필요 인박스, add가 소비
+├── .gitignore                      # .local/
+├── .local/paths.json               # 머신별 로컬 경로 (미추적, 훅·register가 기록)
 └── knowledge/
-    ├── common/                 # 전 프로젝트 공통 — 라이브러리 함정·설계 원칙·개인 컨벤션
-    │   └── adr/                # 선택
-    └── projects/{project}/     # 프로젝트 = 레포 1~N개의 도메인 묶음
-        └── adr/                # 선택
+    └── {조직}-{도메인}/             # 도메인 루트 — 레포를 지워도 참인 사실
+        ├── index.md                # 예약·필수: 레포 구성·의존 방향·역인덱스·접근 좌표
+        ├── adr/                    # 선택
+        └── {레포 slug}/            # 레포 종속 — 이 레포를 지우면 거짓이 되는 사실
+            └── adr/                # 선택
 ```
+
+위치 판정은 "이 레포를 지워도 참인가" 한 단계이며, 회사 전체 공통 폴더는 두지 않고 레포는 한 도메인에만 속합니다.
 
 ```json
 {
-  "projects": { "trendlog": { "summary": "개인 사이드 — 트렌드 로그 서비스" } },
+  "domains": { "onestore-devcenter": {}, "personal-trendlog": {} },
   "repos": {
-    "trendlog-backend": {
-      "project": "trendlog",
-      "remotes": ["github.com/argon1025/trendlog-backend"],
-      "branch": "main",
-      "stack": "NestJS 11",
-      "summary": "트렌드 수집·집계 API"
-    }
+    "devcenter-api": { "domain": "onestore-devcenter", "remotes": ["bitbucket.example.com/cms/devcenter-api"], "branch": "develop" },
+    "trendlog-backend": { "domain": "personal-trendlog", "remotes": ["github.com/argon1025/trendlog-backend"], "branch": "main" }
   }
 }
 ```
@@ -73,7 +71,7 @@
 
 - **대상**: `.local/paths.json`에 로컬 경로가 있는 등록 레포만 — 그 레포에서 세션을 한 번 열면 훅이 경로를 기록함
 - **범위**: 커서부터 대상 브랜치까지의 first-parent 커밋, 레포별 기본 20건
-- **권한**: `관찰` 출처만 만들어 기존 값을 덮지 않고 보강만 하며, `common/`을 고치지 않고 공통 후보는 `review.md`로 보냄
+- **권한**: `관찰` 출처만 만들어 기존 값을 덮지 않고 보강만 하며, 도메인 루트와 레포 폴더를 모두 직접 보강하고 충돌만 `inbox.md`로 보냄
 
 ## 미이전 기능
 

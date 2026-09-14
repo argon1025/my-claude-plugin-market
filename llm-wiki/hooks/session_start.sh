@@ -1,5 +1,5 @@
 #!/bin/bash
-# 위키 규약(rules/agent-guide.md)과 문서 목록(공통 + 현재 프로젝트)을 세션 컨텍스트로 주입한다.
+# 위키 규약(rules/agent-guide.md)과 문서 목록(도메인 루트 + 현재 레포)을 세션 컨텍스트로 주입한다.
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact 모두에서 다시 돈다.
 # 어떤 실패에서도 종료 코드 0으로 끝난다 — 0이 아닌 값을 내면 주입이 조용히 사라진다.
 set -uo pipefail
@@ -10,7 +10,7 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 command -v python3 >/dev/null 2>&1 || exit 0
 
-if [ ! -d "$WIKI/knowledge" ]; then
+if [ ! -f "$WIKI/registry.json" ]; then
   python3 -B -c 'import json,sys;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":sys.argv[1]}},ensure_ascii=False))' \
     "LLM-WIKI: 위키가 $WIKI 에 없음 — /llm-wiki:init 으로 clone 하거나 새로 만들 것" 2>/dev/null
   exit 0
@@ -71,11 +71,11 @@ guide = guide.replace("{WIKI_ROOT}", wiki)
 registry = catalog.load_json(wiki_root / "registry.json", {})
 if not isinstance(registry, dict):
     registry = {}
-slug, project = catalog.resolve_repo(registry, remote, common_dir)
+slug, domain = catalog.resolve_repo(registry, remote, common_dir)
 repos = registry.get("repos", {}) or {}
 
 # 무인 갱신은 이 파일에 경로가 있는 레포만 처리한다 — 그 레포에서 세션을 한 번 여는 것이 등록이다.
-if project and toplevel:
+if domain and toplevel:
     local = wiki_root / ".local" / "paths.json"
     paths = catalog.load_json(local, {})
     if not isinstance(paths, dict):
@@ -89,31 +89,27 @@ header = []
 if sync_note:
     header.append(sync_note)
 
-if project:
-    siblings = [
-        f"{name}: {info.get('summary', '')}".strip().rstrip(":")
-        for name, info in sorted(repos.items())
-        if info.get("project") == project and name != slug
-    ]
-    line = f"# 위키 — 프로젝트 {project} · 레포 {slug}"
+if domain:
+    siblings = sorted(name for name, info in repos.items() if info.get("domain") == domain and name != slug)
+    line = f"# 위키 — 도메인 {domain} · 레포 {slug}"
     if siblings:
         line += " · 형제: " + " · ".join(siblings)
     header.append(line)
 elif slug:
-    header.append(f"# 미등록 레포 {slug} — /llm-wiki:init 으로 등록하면 프로젝트 목록이 함께 주입됨")
+    header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 도메인 목록이 함께 주입됨")
 
-review = wiki_root / "review.md"
-if review.is_file():
+inbox = wiki_root / "inbox.md"
+if inbox.is_file():
     try:
-        rows = sum(1 for line in review.read_text(encoding="utf-8").splitlines() if line.startswith("- ["))
+        rows = sum(1 for line in inbox.read_text(encoding="utf-8").splitlines() if line.startswith("- ["))
     except OSError:
         rows = 0
     if rows:
-        header.append(f"# 확인 필요 {rows}건 — review.md, /llm-wiki:add 로 처리")
+        header.append(f"# 확인 필요 {rows}건 — inbox.md, /llm-wiki:add 로 처리")
 
 # 낡음 신호의 절반은 문서 날짜가 아니라 커서와 HEAD의 거리다. 커서가 뒤처져 있으면
 # 목록이 최신으로 보여도 반영되지 않은 머지가 있다는 뜻이다.
-if project:
+if domain:
     state = catalog.load_json(wiki_root / "state" / f"{slug}.json", {})
     cursor = state.get("cursor") if isinstance(state, dict) else None
     if not cursor:
@@ -132,25 +128,26 @@ if project:
         elif behind == 0:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
-# (라벨, 루트, 본문). 예산을 넘으면 이 목록에서 가장 큰 것부터 한 줄로 접는다.
+# (라벨, 루트, shallow, 본문). 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수.
+# 예산을 넘으면 이 목록에서 가장 큰 것부터 한 줄로 접는다.
 spaces = []
-if (knowledge / "common").is_dir():
-    spaces.append(("공통", knowledge / "common", catalog.build(knowledge / "common", today, "공통")))
-if project and (knowledge / "projects" / project).is_dir():
-    root = knowledge / "projects" / project
-    spaces.append((f"프로젝트 {project}", root, catalog.build(root, today, f"프로젝트 {project}")))
+if domain and (knowledge / domain).is_dir():
+    root = knowledge / domain
+    spaces.append((f"도메인 {domain}", root, True, catalog.build(root, today, f"도메인 {domain}", shallow=True)))
+    if (root / slug).is_dir():
+        spaces.append((f"레포 {slug}", root / slug, False, catalog.build(root / slug, today, f"레포 {slug}")))
 
-others = sorted(name for name in (registry.get("projects", {}) or {}) if name != project)
+others = sorted(name for name in (registry.get("domains", {}) or {}) if name != domain)
 tail = []
 if others:
-    tail.append(f"# 다른 프로젝트 {len(others)}개: " + " · ".join(others) + " — 목록은 주입하지 않음")
+    tail.append(f"# 다른 도메인 {len(others)}개: " + " · ".join(others) + " — 목록은 주입하지 않음")
 
 
 def assemble():
     blocks = [guide]
     if header:
         blocks.append("\n".join(header))
-    blocks.extend(text for _, _, text in spaces)
+    blocks.extend(text for _, _, _, text in spaces)
     blocks.extend(tail)
     return "\n\n".join(blocks)
 
@@ -161,11 +158,13 @@ while catalog.estimate_tokens(context) > HARD_BUDGET:
     candidates = [index for index in range(len(spaces)) if index not in folded]
     if not candidates:
         break
-    index = max(candidates, key=lambda i: len(spaces[i][2]))
+    index = max(candidates, key=lambda i: len(spaces[i][3]))
     folded.add(index)
-    label, root, _ = spaces[index]
-    count = len(catalog.docs(root))
-    spaces[index] = (label, root, f'# {label} {count}건 — python3 "{catalog_py}" --root "{root}" 로 전체 보기')
+    label, root, shallow, _ = spaces[index]
+    count = len(catalog.docs(root, shallow))
+    flag = " --shallow" if shallow else ""
+    spaces[index] = (label, root, shallow,
+                     f'# {label} {count}건 — python3 "{catalog_py}" --root "{root}"{flag} 로 전체 보기')
     context = assemble()
 
 if catalog.estimate_tokens(context) > SOFT_BUDGET:
