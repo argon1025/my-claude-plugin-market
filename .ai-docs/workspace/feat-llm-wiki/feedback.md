@@ -16,3 +16,15 @@
 - `why` llm-wiki의 머지 diff 머리말이 머지 커밋 메시지가 아니라 `git log {sha}^1..{sha}`로 딸린 커밋 메시지 전부(상한 20건)를 싣는 이유는 PR 머지 커밋의 메시지가 "Merged in {branch} (pull request #N)" 한 줄이라 결정 근거가 어디에도 남지 않기 때문이며, 원본 collect.py는 subject만 실어 이 손실이 있었다.
   - evidence: llm-wiki/scripts/update.py extract_diff
 - `context` llm-wiki 실측 규모는 catalog.py 403줄·update.py 311줄·session_start.sh 180줄로 계획의 목표치(180·140·60)를 넘지만 사양은 그대로 충족했으며, 차이는 주석과 독스트링이고 원본 대비 감축(catalog 1,002줄, 스크립트 4,569줄)은 유지된다.
+- `context` llm-wiki 리뷰 반영 개정 의도 — 사용자 원문 "2026-09-14 리뷰 세션에서 아래 결정이 확정되었다. 결정 자체는 다시 묻지 말고, 결정이 코드·규약에 어떻게 내려가는지만 계획한다." 결정 요지: knowledge/{조직}-{도메인}/ 루트 + {레포 slug}/ 2층 고정, init·register 분리(초기화 판정은 registry.json 유무), 도메인 index.md 필수·훅 본문 주입, 주입 범위 도메인 루트+현재 레포, update 묶음 추출·도메인 루트 직접 보강, registry/state 축소·review.md→inbox.md, 훅 pull 600초·startup·resume 한정.
+  - source: 사용자 확인 2026-09-14
+- `correction` v1 계획의 "프로젝트 폴더는 평면이며 repos/{slug}/ 하위 층을 두지 않음(업그레이드 조건: 한 프로젝트의 레포 종속 문서 30건 초과)"은 폐기되었다 — llm-wiki 구조는 knowledge/{조직}-{도메인}/(도메인 루트) + {레포 slug}/ 2층 고정이고 위치 판정은 "이 레포를 지워도 참인가" 한 단계이며 knowledge/common 같은 회사 전체 공통 폴더는 두지 않는다.
+  - source: 사용자 확인 2026-09-14
+- `context` llm-wiki 보류 항목 — 다중 위키, 조직·도메인 무관 사실의 자리(always: true 도메인), 레포 다중 도메인, frontmatter keywords와 agent-guide "grep -ril 1회 후 결정" 규칙(검색 보강)은 사용 후 재검토한다. 사용자 원문 "일단 프론트메터 키워드 추가 계획은 제외 검색 보강은 이후 좀 사용해보고 다시".
+  - source: 사용자 확인 2026-09-14
+- `why` llm-wiki index.md에 토큰 상한을 두지 않고 절 5개 고정 템플릿(레포 구성·의존 방향·역인덱스·접근 좌표·제외 레포)으로 크기를 다루는 이유는 사용자 판단 "인덱스 상한은 둬도 의미가 없을 듯 큰 회사 도메인인 경우 그럼 누락될 가능성이 있으니 그냥 내부 본문 템플릿을 정하고 필요한 내용만 기재되도록 가이드"에 따른 것이며, 대안이던 --check 상한 1,500토큰은 대형 도메인에서 레포 행 누락으로 작동해 기각했다. 원형 system-repository-map.md는 약 9,200토큰이나 사실 불릿·제외 표를 빼면 약 5,500토큰이고 도메인 분할 시 도메인당 2,000~2,500토큰이다.
+  - source: 사용자 확인 2026-09-14
+- `constraint` llm-wiki index.md의 역인덱스·의존 방향 절은 다른 도메인 레포를 {domain}/{slug} 꼴로 적을 수 있다 — 회사 전체 공통 폴더가 없어 도메인을 나누면 도메인 간 변경 파급(예: 로그인이 devcenter-api와 dcsapp-gateway에 걸침)을 적을 자리가 이 면제 외에는 없다.
+- `why` llm-wiki update의 추출 묶음(머지 5건 또는 diff 500KB) 경계를 스킬이 아니라 update.py pending이 work.json batches로 내는 이유는 diff 실제 바이트가 파일을 쓴 뒤에만 알 수 있고 스킬이 묶으면 실행마다 경계가 달라지기 때문이다.
+  - evidence: llm-wiki/scripts/update.py
+- `why` llm-wiki registry.json의 domains 값을 빈 객체로 두는 이유는 도메인 설명이 index.md 본문으로 옮겨져 값이 비었지만 보류 항목(always 도메인)의 키 자리를 배열로는 남길 수 없기 때문이다.
