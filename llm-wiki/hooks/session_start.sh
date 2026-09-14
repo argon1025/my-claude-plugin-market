@@ -1,6 +1,8 @@
 #!/bin/bash
 # 위키 규약(rules/agent-guide.md)과 문서 목록(도메인 루트 + 현재 레포)을 세션 컨텍스트로 주입한다.
-# hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact 모두에서 다시 돈다.
+# hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 돈다.
+# 주입은 전 이벤트에서 하고, 원격 pull은 stdin의 source가 startup·resume일 때만 한다 —
+# clear·compact는 같은 세션의 재주입이고 fork는 부모가 이미 당겼다.
 # 어떤 실패에서도 종료 코드 0으로 끝난다 — 0이 아닌 값을 내면 주입이 조용히 사라진다.
 set -uo pipefail
 
@@ -10,21 +12,31 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 command -v python3 >/dev/null 2>&1 || exit 0
 
+INPUT=""
+[ -t 0 ] || INPUT="$(cat 2>/dev/null || true)"
+SOURCE="$(printf '%s' "$INPUT" | python3 -B -c 'import json,sys;print(json.load(sys.stdin).get("source") or "startup")' 2>/dev/null || echo startup)"
+[ -n "$SOURCE" ] || SOURCE=startup
+
+# pull 주기. LLM_WIKI_SYNC_MINUTES(분)로 덮어쓰고, 정수가 아니면 기본 10분.
+SYNC_MINUTES="${LLM_WIKI_SYNC_MINUTES:-10}"
+case "$SYNC_MINUTES" in ''|*[!0-9]*) SYNC_MINUTES=10 ;; esac
+SYNC_SECONDS=$(( SYNC_MINUTES * 60 ))
+
 if [ ! -f "$WIKI/registry.json" ]; then
   python3 -B -c 'import json,sys;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":sys.argv[1]}},ensure_ascii=False))' \
     "LLM-WIKI: 위키가 $WIKI 에 없음 — /llm-wiki:init 으로 clone 하거나 새로 만들 것" 2>/dev/null
   exit 0
 fi
 
-# 원격 동기화. FETCH_HEAD가 60분 넘게 오래됐을 때만 당기고, 3초 안에 안 끝나면 이전 사본으로 간다.
-# 세션 시작을 붙잡지 않는 것이 최신 목록보다 중요하다.
+# 원격 동기화. startup·resume에서 FETCH_HEAD가 주기보다 오래됐을 때만 당기고, 3초 안에 안 끝나면
+# 이전 사본으로 간다. 세션 시작을 붙잡지 않는 것이 최신 목록보다 중요하다.
 SYNC_NOTE=""
 GIT_DIR="$(git -C "$WIKI" rev-parse --absolute-git-dir 2>/dev/null || true)"
-if [ -n "$GIT_DIR" ] && git -C "$WIKI" remote get-url origin >/dev/null 2>&1; then
+if { [ "$SOURCE" = startup ] || [ "$SOURCE" = resume ]; } && [ -n "$GIT_DIR" ] && git -C "$WIKI" remote get-url origin >/dev/null 2>&1; then
   FRESH=0
   if [ -f "$GIT_DIR/FETCH_HEAD" ]; then
     MTIME="$(stat -f %m "$GIT_DIR/FETCH_HEAD" 2>/dev/null || stat -c %Y "$GIT_DIR/FETCH_HEAD" 2>/dev/null || echo 0)"
-    [ "$(( $(date +%s) - MTIME ))" -lt 3600 ] && FRESH=1
+    [ "$(( $(date +%s) - MTIME ))" -lt "$SYNC_SECONDS" ] && FRESH=1
   fi
   if [ "$FRESH" -eq 0 ]; then
     GIT_TERMINAL_PROMPT=0 git -C "$WIKI" pull --ff-only --quiet >/dev/null 2>&1 &
@@ -90,7 +102,12 @@ if sync_note:
     header.append(sync_note)
 
 if domain:
-    siblings = sorted(name for name, info in repos.items() if info.get("domain") == domain and name != slug)
+    # 형제 레포는 이름과 문서 건수만 — 목록은 주입하지 않으므로 건수가 "볼 게 있는가"의 유일한 신호다.
+    siblings = [
+        f"{name} {len(catalog.docs(knowledge / domain / name)) if (knowledge / domain / name).is_dir() else 0}건"
+        for name, info in sorted(repos.items())
+        if info.get("domain") == domain and name != slug
+    ]
     line = f"# 위키 — 도메인 {domain} · 레포 {slug}"
     if siblings:
         line += " · 형제: " + " · ".join(siblings)
