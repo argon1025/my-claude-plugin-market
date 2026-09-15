@@ -1,5 +1,6 @@
 #!/bin/bash
-# 위키 규약(rules/agent-guide.md)과 문서 목록(도메인 루트 + 현재 레포)을 세션 컨텍스트로 주입한다.
+# 위키 규약(rules/agent-guide.md)과 3층(도메인 목록·의존 간선 → 도메인 index.md 본문 →
+# 목록(도메인 루트 + 현재 레포))을 세션 컨텍스트로 주입한다.
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 돈다.
 # 주입은 전 이벤트에서 하고, 원격 pull은 stdin의 source가 startup·resume일 때만 한다 —
 # clear·compact는 같은 세션의 재주입이고 fork는 부모가 이미 당겼다.
@@ -145,7 +146,47 @@ if domain:
         elif behind == 0:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
-# 도메인 지도(index.md)는 목록이 아니라 본문 전체를 주입한다 — 레포 구성·의존 방향·역인덱스가
+# 1층: 도메인 목록과 현재 도메인에 닿는 간선. 전역 index 문서를 저작하지 않고 registry.json과
+# 각 도메인 index.md 첫 줄·deps.json에서 파생한다 — 도메인 간 의존은 레포 간 의존의 요약이라
+# 세 번째 문서를 두면 같은 사실을 복제하고 갱신 규칙이 하나 더 는다.
+domains = sorted(registry.get("domains", {}) or {})
+domain_block = ""
+if domains:
+    head = f"# 도메인 {len(domains)}개"
+    if domain:
+        head += f" · 현재 {domain}"
+    rows = []
+    for name in domains:
+        index_file = knowledge / name / catalog.INDEX_NAME
+        lead = catalog.lead_line(index_file) if index_file.is_file() else "(index.md 없음 — /llm-wiki:register)"
+        rows.append(f"- {name} — {lead}" if lead else f"- {name}")
+    domain_block = "\n".join([head, *rows])
+
+# 간선은 양방향으로 준다 — 현재 레포를 to로 가진 from이 이번 변경의 파급 대상이고,
+# 그 from이 다른 도메인이면 목록이 주입되지 않으므로 여기가 유일한 신호다.
+touching: list[tuple[str, str, str]] = []
+if domain:
+    for edge in catalog.load_edges(wiki_root):
+        origin, target = edge.get("from"), edge.get("to")
+        if not isinstance(origin, str) or not isinstance(target, str):
+            continue
+        if not catalog.EDGE_RE.match(origin) or not catalog.EDGE_RE.match(target):
+            continue
+        if domain not in (origin.split("/", 1)[0], target.split("/", 1)[0]):
+            continue
+        note = edge.get("note")
+        suffix = f" — {note.strip()}" if isinstance(note, str) and note.strip() else ""
+        touching.append((origin, target, f"- {origin} → {target}{suffix}"))
+    touching.sort(key=lambda item: item[:2])
+
+edge_block = ""
+if touching:
+    edge_block = "\n".join([
+        f"# 의존 간선 {len(touching)}건 · {domain}에 닿는 것 (from → to = from이 to를 호출·참조)",
+        *(row for _, _, row in touching),
+    ])
+
+# 도메인 지도(index.md)는 목록이 아니라 본문 전체를 주입한다 — 레포 구성·역인덱스가
 # 있어야 코드 변경의 파급 레포를 답할 수 있다. 없으면 헤더에 register 안내만 남긴다.
 index_block = ""
 index_path = knowledge / domain / catalog.INDEX_NAME if domain else None
@@ -165,20 +206,17 @@ if domain and (knowledge / domain).is_dir():
     if (root / slug).is_dir():
         spaces.append((f"레포 {slug}", root / slug, False, catalog.build(root / slug, today, f"레포 {slug}")))
 
-others = sorted(name for name in (registry.get("domains", {}) or {}) if name != domain)
-tail = []
-if others:
-    tail.append(f"# 다른 도메인 {len(others)}개: " + " · ".join(others) + " — 목록은 주입하지 않음")
-
-
 def assemble():
     blocks = [guide]
     if header:
         blocks.append("\n".join(header))
+    if domain_block:
+        blocks.append(domain_block)
+    if edge_block:
+        blocks.append(edge_block)
     if index_block:
         blocks.append(index_block)
     blocks.extend(text for _, _, _, text in spaces)
-    blocks.extend(tail)
     return "\n\n".join(blocks)
 
 
@@ -197,7 +235,13 @@ while catalog.estimate_tokens(context) > HARD_BUDGET:
                      f'# {label} {count}건 — python3 "{catalog_py}" --root "{root}"{flag} 로 전체 보기')
     context = assemble()
 
-# 목록을 다 접어도 넘치면 index 본문을 한 줄로 접는다. 목록보다 뒤에 접는 이유는 지도가
+# 목록 다음으로 접는 것은 간선이다. 간선은 한 줄로 접어도 deps.json 경로가 남아 에이전트가
+# 직접 읽을 수 있지만, 도메인 블록은 어떤 도메인이 있는지 자체가 사라져 접지 않는다.
+if edge_block and catalog.estimate_tokens(context) > HARD_BUDGET:
+    edge_block = f"# 의존 간선 {len(touching)}건 — Read {wiki_root / catalog.DEPS_NAME}"
+    context = assemble()
+
+# 그래도 넘치면 index 본문을 한 줄로 접는다. 목록보다 뒤에 접는 이유는 지도가
 # 목록보다 먼저 답해야 하는 질문(어느 레포를 봐야 하는가)을 들고 있기 때문이다.
 if index_block and catalog.estimate_tokens(context) > HARD_BUDGET:
     index_block = f"# index.md 약 {catalog.estimate_tokens(index_block):,}토큰 — Read {index_path}"
