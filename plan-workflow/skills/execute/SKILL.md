@@ -8,6 +8,7 @@ description: Use when implementing an approved plan snapshot saved at .ai-docs/w
 ## 1. 사전 확인
 
 - **위치**: 세션 `## 현재 워크스페이스` 블록의 slug와 주입된 `feedback.md`를 확인하고, `.ai-docs/workspace/{slug}/plan.md` 전문을 `## 의도`부터 읽음
+- **선행 읽기**: `plan.md`에 `## 선행 읽기` 절이 있으면 그 문서를 코드보다 먼저 읽음
 - **부재 시 정지**: `plan.md`가 없으면 즉석에서 계획을 만들지 않고 멈춰서 물음
 - **실행 대상 판정**: 절이 여럿이면 앞에서부터 각 절의 커밋 분해가 git log와 코드에 이미 반영됐는지 대조해 미실행 절만 실행하고, 폐기 선언된 절과 항목은 건너뛰며, 완료 여부가 갈리면 멈춰 물음
 - **관례**: 손댈 파일 주변 코드가 세운 관례를 따름

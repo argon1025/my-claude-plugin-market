@@ -10,3 +10,7 @@
   - source: 사용자 확인 2026-09-15
 - `context` plan.md 필수 절 규정은 SKILL.md가 아니라 references/plan-format.md에 두어 record-format.md와 같은 지연 로드 방식을 유지한다 — 상시 주입되는 agent-guide.md와 스킬 본문 분량을 늘리지 않기 위함이다.
   - source: 사용자 확인 2026-09-15
+- `why` plan.md의 선택 절 `## 배경`은 `## 의도`와 `## 확정 결정` 사이에 두며, 계획 스냅샷이 같은 불릿에서 "확정 결정 앞"과 "확정 결정과 작업 사이"를 함께 적어 어긋난 것을 조사 결과를 먼저 읽고 결정을 보게 하는 쪽으로 정한 것이다 — `## 외부 계약`·`## 선행 읽기`만 확정 결정과 작업 사이에 남는다.
+  - source: 사용자 확인 2026-09-15
+- `constraint` 스킬 본문(SKILL.md)의 `{PLUGIN_ROOT}` 토큰은 치환되지 않는다 — 치환은 session_start.sh가 rules/agent-guide.md를 주입할 때만 하므로, 스킬을 읽는 에이전트는 주입된 agent-guide.md의 절대 경로나 스킬 base directory의 상위 두 단계로 직접 해석해야 한다.
+  - evidence: plan-workflow/hooks/session_start.sh
