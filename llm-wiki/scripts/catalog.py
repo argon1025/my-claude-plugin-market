@@ -50,6 +50,17 @@ LOCATION_RE = re.compile(
 )
 INDEX_NAME = "index.md"
 
+# 레포 간 의존 간선은 knowledge/ 밖 `deps.json` 한 곳에만 둔다 — 규약 10장.
+# 끝점은 `{도메인}/{레포}` 꼴이라 도메인을 나눠도 파급 조회가 끊기지 않는다.
+DEPS_NAME = "deps.json"
+EDGE_RE = re.compile(r"^(?P<domain>[a-z0-9]+-[a-z0-9-]+)/(?P<repo>[a-z0-9-]+)$")
+EDGE_KEYS = ("from", "to", "note", "source")
+EDGE_REQUIRED = ("from", "to", "source")
+# index.md 역인덱스 표에 적힌 `{도메인}/{레포}` 참조를 뽑는다. EDGE_RE와 같은 꼴이지만
+# 줄 전체가 아니라 셀 안에서 찾으므로 앵커 대신 경계를 쓴다.
+REF_RE = re.compile(r"\b[a-z0-9]+-[a-z0-9-]+/[a-z0-9-]+\b")
+REVERSE_INDEX_HEADING = "## 역인덱스"
+
 # 목록이 쓰는 토큰을 어림잡는 나눗셈 값. 한국어 섞인 목록에서 실측에 가깝다.
 CHARS_PER_TOKEN = 1.8
 
@@ -125,6 +136,30 @@ def body_lines(path: Path) -> list[str]:
         if line.strip() == "---":
             return lines[index + 1 :]
     return []
+
+
+def lead_line(index_path: Path) -> str:
+    """`# 제목` 다음의 첫 비어 있지 않은 줄. 도메인 목록에 붙일 한 줄 설명이다."""
+    lines = body_lines(index_path)
+    for index, line in enumerate(lines):
+        if line.startswith("# "):
+            for candidate in lines[index + 1 :]:
+                if candidate.strip():
+                    return candidate.strip()
+            return ""
+    return ""
+
+
+def load_edges(wiki_root: Path) -> list[dict]:
+    """deps.json의 간선 목록. 파일이 없거나 깨졌으면 빈 목록이다 — 모양 검사는 check_deps가 한다.
+
+    훅과 검사가 같은 읽기를 쓰도록 여기 둔다. 파일 부재는 간선 0건이지 에러가 아니다.
+    """
+    data = load_json(wiki_root / DEPS_NAME, {})
+    edges = data.get("edges") if isinstance(data, dict) else None
+    if not isinstance(edges, list):
+        return []
+    return [edge for edge in edges if isinstance(edge, dict)]
 
 
 def docs(root: Path, shallow: bool = False) -> list[Path]:
@@ -219,6 +254,107 @@ def check_location(path: Path, root: Path, registry: dict | None = None) -> list
     return errors
 
 
+def check_deps(wiki_root: Path, registry: dict | None = None) -> list[str]:
+    """deps.json의 간선 모양과 끝점을 본다. 파일이 없으면 검사할 것이 없다.
+
+    registry가 없으면 형식·자기 간선·중복만 본다 — 등록 대조는 registry.json이 있어야
+    참이 정해진다.
+    """
+    path = wiki_root / DEPS_NAME
+    if not path.is_file():
+        return []
+
+    data = load_json(path, None)
+    if not isinstance(data, dict) or not isinstance(data.get("edges"), list):
+        return ['JSON을 읽지 못했거나 edges가 배열이 아님 — {"edges": [...]} 꼴이어야 함']
+
+    domains = (registry.get("domains") or {}) if registry else {}
+    repos = (registry.get("repos") or {}) if registry else {}
+
+    errors: list[str] = []
+    seen: dict[tuple[str, str], int] = {}
+    for position, edge in enumerate(data["edges"], start=1):
+        if not isinstance(edge, dict):
+            errors.append(f"간선 {position}: 항목이 객체가 아님")
+            continue
+
+        ends = {}
+        for key in ("from", "to"):
+            value = edge.get(key)
+            ends[key] = value.strip() if isinstance(value, str) else ""
+        label = f"간선 {position}: {ends['from'] or '?'} → {ends['to'] or '?'}"
+
+        unknown = sorted(set(edge) - set(EDGE_KEYS))
+        if unknown:
+            errors.append(f"{label} 허용되지 않는 키: {', '.join(unknown)}")
+
+        for key in EDGE_REQUIRED:
+            value = edge.get(key)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"{label} {key} 없음")
+
+        matched: list[tuple[str, str, re.Match[str]]] = []
+        for key, value in ends.items():
+            if not value:
+                continue
+            match = EDGE_RE.match(value)
+            if not match:
+                errors.append(f"{label} {key} 형식이 아님 ({value}) — {{도메인}}/{{레포}}")
+                continue
+            matched.append((key, value, match))
+
+        if ends["from"] and ends["from"] == ends["to"]:
+            errors.append(f"{label} 자기 간선")
+
+        if registry:
+            for key, value, match in matched:
+                domain, repo = match.group("domain"), match.group("repo")
+                if domain not in domains:
+                    errors.append(f"{label} {key} 도메인 {domain}가 registry.json에 없음")
+                info = repos.get(repo)
+                if not isinstance(info, dict) or info.get("domain") != domain:
+                    errors.append(f"{label} {key} 레포 {value}가 registry.json에 없음")
+
+        if ends["from"] and ends["to"] and ends["from"] != ends["to"]:
+            pair = (ends["from"], ends["to"])
+            if pair in seen:
+                errors.append(f"{label} 중복 — 간선 {seen[pair]}과 같은 쌍")
+            else:
+                seen[pair] = position
+
+    return errors
+
+
+def check_index_refs(path: Path, registry: dict) -> list[str]:
+    """index.md 역인덱스 표의 `{도메인}/{레포}` 참조가 registry.json에 있는지 본다.
+
+    역인덱스 절의 표 행으로 한정한다 — 접근 좌표의 URL 경로가 같은 꼴로 보여 오탐된다.
+    """
+    if path.name != INDEX_NAME:
+        return []
+
+    repos = registry.get("repos") or {}
+    errors: list[str] = []
+    seen: set[str] = set()
+    inside = False
+    for line in body_lines(path):
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            inside = stripped == REVERSE_INDEX_HEADING
+            continue
+        if not inside or not stripped.startswith("|"):
+            continue
+        for token in REF_RE.findall(stripped):
+            if token in seen:
+                continue
+            seen.add(token)
+            domain, _, repo = token.partition("/")
+            info = repos.get(repo)
+            if not isinstance(info, dict) or info.get("domain") != domain:
+                errors.append(f"역인덱스 참조 {token}가 registry.json에 없음")
+    return errors
+
+
 def check_body(path: Path) -> list[str]:
     """본문 첫 줄이 # 제목인지 본다. 제목은 frontmatter가 아니라 본문에만 둔다."""
     for line in body_lines(path):
@@ -272,6 +408,8 @@ def inspect(path: Path, root: Path, today: date, registry: dict | None = None) -
 
     errors.extend(check_fields(fields, today))
     errors.extend(check_body(path))
+    if registry:
+        errors.extend(check_index_refs(path, registry))
     return errors
 
 
@@ -311,12 +449,18 @@ def selected_names(root: Path, paths: list[str]) -> set[str] | None:
         return None
 
     names: set[str] = set()
+    deps = (root.parent / DEPS_NAME).resolve()
     for raw in paths:
         candidate = Path(raw).expanduser()
         if not candidate.is_absolute():
             candidate = Path.cwd() / candidate
+        resolved = candidate.resolve()
+        # deps.json은 knowledge/ 밖이라 상대 경로 변환에서 버려진다. 이름으로 따로 받는다.
+        if resolved == deps:
+            names.add(DEPS_NAME)
+            continue
         try:
-            names.add(candidate.resolve().relative_to(root.resolve()).as_posix())
+            names.add(resolved.relative_to(root.resolve()).as_posix())
         except ValueError:
             # 검사 범위 밖의 파일은 조용히 무시한다. 커밋에는 위키 문서가 아닌
             # 파일이 함께 담기는 것이 정상이다.
@@ -339,16 +483,21 @@ def check(root: Path, today: date, only: set[str] | None = None) -> int:
         (name, message) for name, message in missing_indexes(root)
         if only is None or any(item.startswith(name.split("/", 1)[0] + "/") for item in only)
     ]
-    if not files and not index_errors:
-        print(f"# 검사할 문서가 없음: {root}")
-        return 0
-
     # registry.json은 knowledge/의 형제다. 읽지 못하면 폴더-등록 대조는 건너뛴다.
     registry = load_json(root.parent / "registry.json", None)
     if not isinstance(registry, dict):
         registry = None
 
-    errors: list[tuple[str, str]] = list(index_errors)
+    # 간선은 문서가 아니라 knowledge/의 형제 파일이라, 문서가 한 장도 없어도 검사한다.
+    deps_errors: list[tuple[str, str]] = []
+    if only is None or DEPS_NAME in only:
+        deps_errors = [(DEPS_NAME, message) for message in check_deps(root.parent, registry)]
+
+    if not files and not index_errors and not deps_errors:
+        print(f"# 검사할 문서가 없음: {root}")
+        return 0
+
+    errors: list[tuple[str, str]] = list(index_errors) + deps_errors
     for path in files:
         name = path.relative_to(root).as_posix()
         if only is not None and name not in only:
