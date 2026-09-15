@@ -201,8 +201,8 @@
 
 | # | 범위 | 검증 |
 |---|---|---|
-| 2 (기존 커밋에 흡수) | `session_start.sh` 접기 제거 | 픽스처 `wiki/knowledge/acme-dev/dev-api/`에 `for i in $(seq 1 300)`으로 frontmatter 3키를 갖춘 문서 300건 생성 후 커밋 2와 같은 훅 명령 실행 → 출력에 `doc-001` … `doc-300` 300행 전부 포함(`grep -c '^doc-' → 300`), 첫 줄이 `# 위키 목록이 약` 으로 시작, `전체 보기`·`Read ` 접기 문자열 없음, exit 0. `grep -c 'HARD_BUDGET\|folded' llm-wiki/hooks/session_start.sh` → 0 |
-| 5 (기존 커밋에 흡수) | README 주입 범위 문구 | `grep -c '접힘' llm-wiki/README.md` → 0 |
+| 6 | `session_start.sh` 접기 제거 — 커밋 1~5는 이미 브랜치에 있으므로(`4650f9a`~`eb448a4`) 새 커밋으로 | 픽스처 `wiki/knowledge/acme-dev/dev-api/`에 `for i in $(seq 1 300)`으로 frontmatter 3키를 갖춘 문서 300건 생성 후 커밋 2와 같은 훅 명령 실행 → 출력에 `doc-001` … `doc-300` 300행 전부 포함(`grep -c '^doc-' → 300`), 첫 줄이 `# 위키 목록이 약` 으로 시작, `전체 보기`·`Read ` 접기 문자열 없음, exit 0. `grep -c 'HARD_BUDGET\|folded' llm-wiki/hooks/session_start.sh` → 0 |
+| 7 | README 주입 범위 문구 | `grep -c '접힘' llm-wiki/README.md` → 0 |
 
 ### 특이 사항
 
