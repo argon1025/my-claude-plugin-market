@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "argon1025의 개인 Claude Code 플러그인 마켓플레이스",
-    "version": "2.8.0"
+    "version": "2.9.0"
   },
   "plugins": [
     {
@@ -45,7 +45,7 @@
     {
       "name": "llm-wiki",
       "source": "./llm-wiki",
-      "description": "LLM 위키 — 별도 git 저장소의 도메인 index.md 본문과 도메인 루트·현재 레포 문서 목록을 세션 시작 시 주입 + 스킬 5종(init·register·update·add·audit), 무인 갱신은 대상 도메인 확인 후 그 도메인 레포의 커서 기준 묶음 추출",
+      "description": "LLM 위키 — 별도 git 저장소의 사실을 세션 시작 시 3층(도메인 목록·의존 간선 → 도메인 index.md 본문 → 도메인 루트·현재 레포 문서 목록)으로 주입 + 스킬 5종(init·register·update·add·audit), 무인 갱신은 대상 도메인 확인 후 그 도메인 레포의 커서 기준 묶음 추출",
       "category": "knowledge",
       "tags": [
         "wiki",
