@@ -30,12 +30,13 @@
 
 ## 동작 방식
 
-- **SessionStart**: 규약(`rules/agent-guide.md`)·도메인 `index.md` 본문·도메인 루트와 현재 레포 목록을 주입하며, matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 실행됨
-- **주입 범위**: 현재 레포가 속한 도메인 루트 전수(레포 폴더 제외) + 현재 레포 폴더 전수, 형제 레포는 이름·문서 건수, 다른 도메인은 이름 한 줄 — 목록이 소프트 8,000토큰을 넘으면 정리 권고가 붙고 하드 12,000토큰을 넘으면 가장 큰 목록이 전체 보기 명령 한 줄로 접힘
+- **SessionStart**: 규약(`rules/agent-guide.md`)과 3층(도메인 목록·의존 간선 → 도메인 `index.md` 본문 → 도메인 루트와 현재 레포 목록)을 주입하며, matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 실행됨
+- **주입 범위**: 도메인 전체의 이름·한 줄 설명과 현재 도메인에 닿는 간선, 현재 레포가 속한 도메인 루트 전수(레포 폴더 제외) + 현재 레포 폴더 전수, 형제 레포는 이름·문서 건수 — 다른 도메인의 문서 목록은 주입하지 않으며, 목록은 어떤 크기에서도 줄이지 않고 소프트 8,000토큰을 넘으면 정리 권고 한 줄이 붙음
 - **레포 판정**: origin(없으면 upstream) URL을 정규화해 `registry.json`과 맞추고 실패하면 URL 마지막 경로 요소를 slug로 씀 — 미등록이면 규약과 등록 안내(`/llm-wiki:register`)만 주입
 - **낡음 신호**: 마지막 확인이 180일을 넘은 문서에 `!`가 붙고, 레포 커서가 HEAD보다 뒤처지면 몇 커밋 뒤인지가 헤더에 표시됨
 - **동기화**: startup·resume 이벤트에서만, 위키에 원격이 있고 마지막 fetch가 10분(`LLM_WIKI_SYNC_MINUTES`로 조정)을 넘었으면 백그라운드로 `pull --ff-only`를 걸고 3초까지 기다리며, 지연·실패는 헤더 한 줄로 알림
-- **도메인 지도**: 도메인 루트의 `index.md`(레포 구성·의존 방향·역인덱스·접근 좌표)는 목록이 아니라 본문 전체가 주입되어 코드 변경 시 확인할 레포를 바로 답함 — 규격은 `references/doc-contract.md` 9장
+- **도메인 지도**: 도메인 루트의 `index.md`(레포 구성·역인덱스·접근 좌표)는 목록이 아니라 본문 전체가 주입되어 코드 변경 시 어느 레포가 그 업무를 맡는지 바로 답함 — 규격은 `references/doc-contract.md` 9장
+- **의존 간선**: `deps.json`의 레포 간 간선 중 현재 도메인에 닿는 것을 양방향으로 주입하며 `--check`가 끝점을 `registry.json`과 대조함 — 다른 도메인 문서는 간선이 가리킬 때 에이전트가 직접 엶
 - **확인 필요 인박스**: 무인 갱신이 판정하지 못한 충돌과 근거를 얻지 못한 교체 요청은 `inbox.md`에 쌓이고 세션 헤더에 건수가 표시되며 `/llm-wiki:add`가 소비함
 
 ## 위키 구조
@@ -43,13 +44,14 @@
 ```
 ~/.ai-docs/wiki/                    # LLM_WIKI_ROOT. 별도 git 저장소
 ├── registry.json                   # register가 편집: 도메인과 레포 등록. 있으면 위키가 초기화된 것
+├── deps.json                       # update(관찰)·add(확인)가 편집: 레포 간 의존 간선 {from, to, note, source}
 ├── state/{slug}.json               # update만 편집: {"cursor", "at"}
 ├── inbox.md                        # update·add가 남긴 확인 필요 인박스, add가 소비
 ├── .gitignore                      # .local/
 ├── .local/paths.json               # 머신별 로컬 경로 (미추적, 훅·register가 기록)
 └── knowledge/
     └── {조직}-{도메인}/             # 도메인 루트 — 레포를 지워도 참인 사실
-        ├── index.md                # 예약·필수: 레포 구성·의존 방향·역인덱스·접근 좌표
+        ├── index.md                # 예약·필수: 레포 구성·역인덱스·접근 좌표·제외 레포
         ├── adr/                    # 선택
         └── {레포 slug}/            # 레포 종속 — 이 레포를 지우면 거짓이 되는 사실
             └── adr/                # 선택
@@ -67,7 +69,7 @@
 }
 ```
 
-문서 규격과 사실 판정 기준은 `references/doc-contract.md`에 있고 스킬 실행 시에만 읽힙니다. `scripts/catalog.py --check`가 기계로 볼 항목(frontmatter 3키·날짜·설명 60자 상한·위치·설명 중복)을 검사합니다.
+문서 규격과 사실 판정 기준은 `references/doc-contract.md`에 있고 스킬 실행 시에만 읽힙니다. `scripts/catalog.py --check`가 기계로 볼 항목(frontmatter 3키·날짜·설명 60자 상한·위치·설명 중복·간선 끝점·역인덱스 참조)을 검사합니다.
 
 ## 무인 갱신 범위
 

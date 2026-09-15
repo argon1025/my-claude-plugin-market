@@ -1,0 +1,26 @@
+# feat-wiki-deps-graph 작업 기록
+
+- `context` 사용자 원문 "향후엔 도메인이 onestore-devcenter, onestore-display 처럼 여러 개로 늘고 도메인마다 서브 프로젝트가 10개 이상인 상황이 될것으로 예상 됨 그래서 개발자센터 작업 중 제품전시 영향도를 확인할 수 있어야 함" — llm-wiki 세션 주입은 도메인 목록·의존 간선, 도메인 index·도메인 루트 목록, 현재 레포 목록의 3층으로 하고 다른 도메인 문서는 주입하지 않는다.
+  - source: 사용자 확인 2026-09-15
+- `context` 사용자 원문 "도메인, 하위 프로젝트 의존성 그래프를 들고있는게 필요하지 않을까 싶음 Index는 그럼 의존관계 보다는 각 프로젝트별 책임 등을 적는것으로" — 레포 간 의존 간선은 위키 루트 deps.json 한 곳에만 두고 index.md는 레포 구성(소관)·역인덱스·접근 좌표·제외 레포의 책임 지도로 좁힌다.
+  - source: 사용자 확인 2026-09-15
+- `why` llm-wiki에서 전역 index.md를 저작 문서로 두지 않고 훅이 registry.json·각 도메인 index.md 첫 단락·deps.json에서 1층을 파생하는 이유는 도메인 간 의존이 레포 간 의존의 요약이라 상위 문서가 같은 사실을 복제하고 register·update·add가 세 번째 문서를 갱신하는 규칙이 늘어나기 때문이며, 도메인 단위 화살표는 어느 레포 문서를 열어야 하는지 답하지 못해 두지 않는다.
+  - source: 사용자 확인 2026-09-15
+- `why` llm-wiki 의존 간선을 registry.json 안이 아니라 별도 deps.json에 두는 이유는 registry.json이 register만 편집하는 등록 파일인데 간선은 무인 update가 관찰로 보강하는 사실 파일이라 수명과 편집 주체가 다르기 때문이다.
+  - source: 사용자 확인 2026-09-15
+- `constraint` llm-wiki catalog.py --check는 경고 층 없이 에러만 내므로 index.md의 `## 의존 방향` 절 존재를 에러로 올리면 다른 사용자의 기존 위키가 즉시 커밋 불가가 된다 — 이 때문에 해당 절은 audit 신호(deps.json 이동)로만 다루고 --check는 deps.json 끝점과 역인덱스 참조의 registry 대조만 본다.
+  - evidence: llm-wiki/scripts/catalog.py `check`, llm-wiki/skills/audit/SKILL.md 2장
+- `constraint` llm-wiki 역인덱스의 `{domain}/{slug}` 참조 검사는 `## 역인덱스` 절의 표 행으로 한정한다 — 접근 좌표 절의 URL 경로(`some-host/path`)가 같은 정규식에 오탐되기 때문이다.
+  - evidence: llm-wiki/references/doc-contract.md 9장 템플릿
+- `correction` llm-wiki 플러그인 버전은 .claude-plugin/marketplace.json metadata.version(2.8.0)만 올라가고 llm-wiki/.claude-plugin/plugin.json version은 2.2.0에 머물러 있었다 — 두 파일은 별도 관리라 드리프트가 생기며 이번 v2.9.0에서 둘을 같은 값으로 맞춘다.
+  - evidence: .claude-plugin/marketplace.json, llm-wiki/.claude-plugin/plugin.json
+- `constraint` llm-wiki `rules/agent-guide.md`에 경로를 적으려면 훅이 치환하는 자리표시자만 쓸 수 있다 — `{WIKI_ROOT}`와 이번에 더한 `{CATALOG_PY}` 두 개뿐이며, 위키 루트 상대 경로로 catalog.py를 가리키면 플러그인 캐시 밖을 짚어 깨진다.
+  - evidence: llm-wiki/hooks/session_start.sh `guide.replace`
+- `context` 사용자 원문 "위키 문서 목록을 접는 기능이 있는데 이건 제외해도 되지 않을지? 결국 해당 프로젝트 수정 시 해당 문서 목록 전체를 알고 있어야함으로.. 누락되면 그게 더 위험할듯함" — llm-wiki 세션 주입은 목록·index 본문·간선을 예산과 무관하게 항상 전체 주입하고 소프트 8,000토큰 초과 시 audit 권고 한 줄만 붙인다.
+  - source: 사용자 확인 2026-09-15
+- `why` llm-wiki 훅의 하드 예산 접기를 제거하는 이유는 에이전트가 목록의 description만으로 문서를 열지 말지 정하는 구조에서 접힌 목록은 조용한 사실 누락이 되고, 하드 12,000토큰은 문서 약 200건에서 닿는 값이라 접기가 아니라 audit 분할이 답인 상태이기 때문이다 — 토큰 절감보다 잘못된 수정의 비용이 크다.
+  - source: 사용자 확인 2026-09-15
+- `why` llm-wiki 규약 10장이 audit 조치를 설명할 때 `## 의존 방향`을 그대로 적지 않고 "옛 의존 절(9장 절 고정 밖)"로 부르는 이유는 절 이름의 정본을 audit 신호 표 한 곳에만 두어 규약과 스킬이 같은 문자열을 두 벌로 들지 않게 하기 위함이다.
+  - evidence: llm-wiki/references/doc-contract.md 10장 작성 주체, llm-wiki/skills/audit/SKILL.md 2장 신호 표
+- `why` llm-wiki 세션 주입에 크기 상한을 두지 않는 이유는 에이전트가 목록의 `description`만으로 문서를 열지 말지 정하기 때문이며, 접힌 목록은 그 세션에서 없는 문서가 되고 접힘을 푸는 명령을 건너뛰어도 신호가 남지 않는다 — 상한이 다시 필요하면 접기가 아니라 누락 없는 대안(레포 목록 전체 + 도메인 루트 목록만 축약)을 검토한다.
+  - source: 사용자 확인 2026-09-15

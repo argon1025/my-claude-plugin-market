@@ -42,6 +42,7 @@ description: Use when material the user hands over or a decision settled in conv
 - **출처 줄**: `> 출처: 확인 — {그 값을 정한 자료 판본 또는 결정}, {날짜}` — 근거를 댈 수 없는 값에만 `> 출처: 확인 — 사용자 확인, {오늘}`
 - **신규 문서**: 규약 3·4장의 위치·골격·description으로 세우고 40자 한 문장으로 안 덮이면 나눔 — 생성한 문서가 다루는 업무 영역과 레포를 도메인 `index.md`의 `## 역인덱스`에 행으로 추가
 - **index.md 보강**: 접근 좌표(호스트·환경·계정 이름)·레포 소관이 자료에서 확정되면 규약 9장 템플릿 안에서 `확인` 출처로 보강 — 사실 불릿은 index.md에 두지 않고 일반 문서로
+- **deps.json**: 자료·대화에서 레포 간 의존이 확정되면 규약 10장 형식의 `확인` 간선을 추가하고 기존 간선 삭제·방향 변경은 3장 교체 판정을 거침 — 초안 승인 표에 간선 행을 `from → to — note` 꼴로 포함하고 커밋은 `docs(deps): {요약}`
 - **검사·커밋**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge {바꾼 파일}` 에러 0 확인 후 문서마다 커밋하되 기존 값을 덮은 커밋은 규약 8장 교체 사유 한 줄을 본문에 담고, `inbox.md`의 처리한 행 삭제와 4장이 새로 기재한 행을 같은 실행의 마지막 커밋에 담은 뒤 `git pull --rebase && git push`
 
 ## 6. 보고

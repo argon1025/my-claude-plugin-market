@@ -1,5 +1,6 @@
 #!/bin/bash
-# 위키 규약(rules/agent-guide.md)과 문서 목록(도메인 루트 + 현재 레포)을 세션 컨텍스트로 주입한다.
+# 위키 규약(rules/agent-guide.md)과 3층(도메인 목록·의존 간선 → 도메인 index.md 본문 →
+# 목록(도메인 루트 + 현재 레포))을 세션 컨텍스트로 주입한다.
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 돈다.
 # 주입은 전 이벤트에서 하고, 원격 pull은 stdin의 source가 startup·resume일 때만 한다 —
 # clear·compact는 같은 세션의 재주입이고 fork는 부모가 이미 당겼다.
@@ -70,7 +71,6 @@ sys.path.insert(0, os.path.join(plugin, "scripts"))
 import catalog
 
 SOFT_BUDGET = 8000
-HARD_BUDGET = 12000
 
 wiki_root = Path(wiki)
 knowledge = wiki_root / "knowledge"
@@ -78,7 +78,7 @@ catalog_py = os.path.join(plugin, "scripts", "catalog.py")
 today = date.today()
 
 guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-guide = guide.replace("{WIKI_ROOT}", wiki)
+guide = guide.replace("{WIKI_ROOT}", wiki).replace("{CATALOG_PY}", catalog_py)
 
 registry = catalog.load_json(wiki_root / "registry.json", {})
 if not isinstance(registry, dict):
@@ -145,7 +145,47 @@ if domain:
         elif behind == 0:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
-# 도메인 지도(index.md)는 목록이 아니라 본문 전체를 주입한다 — 레포 구성·의존 방향·역인덱스가
+# 1층: 도메인 목록과 현재 도메인에 닿는 간선. 전역 index 문서를 저작하지 않고 registry.json과
+# 각 도메인 index.md 첫 줄·deps.json에서 파생한다 — 도메인 간 의존은 레포 간 의존의 요약이라
+# 세 번째 문서를 두면 같은 사실을 복제하고 갱신 규칙이 하나 더 는다.
+domains = sorted(registry.get("domains", {}) or {})
+domain_block = ""
+if domains:
+    head = f"# 도메인 {len(domains)}개"
+    if domain:
+        head += f" · 현재 {domain}"
+    rows = []
+    for name in domains:
+        index_file = knowledge / name / catalog.INDEX_NAME
+        lead = catalog.lead_line(index_file) if index_file.is_file() else "(index.md 없음 — /llm-wiki:register)"
+        rows.append(f"- {name} — {lead}" if lead else f"- {name}")
+    domain_block = "\n".join([head, *rows])
+
+# 간선은 양방향으로 준다 — 현재 레포를 to로 가진 from이 이번 변경의 파급 대상이고,
+# 그 from이 다른 도메인이면 목록이 주입되지 않으므로 여기가 유일한 신호다.
+touching: list[tuple[str, str, str]] = []
+if domain:
+    for edge in catalog.load_edges(wiki_root):
+        origin, target = edge.get("from"), edge.get("to")
+        if not isinstance(origin, str) or not isinstance(target, str):
+            continue
+        if not catalog.EDGE_RE.match(origin) or not catalog.EDGE_RE.match(target):
+            continue
+        if domain not in (origin.split("/", 1)[0], target.split("/", 1)[0]):
+            continue
+        note = edge.get("note")
+        suffix = f" — {note.strip()}" if isinstance(note, str) and note.strip() else ""
+        touching.append((origin, target, f"- {origin} → {target}{suffix}"))
+    touching.sort(key=lambda item: item[:2])
+
+edge_block = ""
+if touching:
+    edge_block = "\n".join([
+        f"# 의존 간선 {len(touching)}건 · {domain}에 닿는 것 (from → to = from이 to를 호출·참조)",
+        *(row for _, _, row in touching),
+    ])
+
+# 도메인 지도(index.md)는 목록이 아니라 본문 전체를 주입한다 — 레포 구성·역인덱스가
 # 있어야 코드 변경의 파급 레포를 답할 수 있다. 없으면 헤더에 register 안내만 남긴다.
 index_block = ""
 index_path = knowledge / domain / catalog.INDEX_NAME if domain else None
@@ -156,53 +196,33 @@ if domain:
     else:
         header.append(f"# {domain}/index.md 없음 — /llm-wiki:register")
 
-# (라벨, 루트, shallow, 본문). 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수.
-# 예산을 넘으면 이 목록에서 가장 큰 것부터 한 줄로 접는다.
+# 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
+# 에이전트는 description만으로 문서를 열지 말지 정하므로 목록에서 빠진 문서는 없는 문서가 된다.
 spaces = []
 if domain and (knowledge / domain).is_dir():
     root = knowledge / domain
-    spaces.append((f"도메인 {domain}", root, True, catalog.build(root, today, f"도메인 {domain}", shallow=True)))
+    spaces.append(catalog.build(root, today, f"도메인 {domain}", shallow=True))
     if (root / slug).is_dir():
-        spaces.append((f"레포 {slug}", root / slug, False, catalog.build(root / slug, today, f"레포 {slug}")))
-
-others = sorted(name for name in (registry.get("domains", {}) or {}) if name != domain)
-tail = []
-if others:
-    tail.append(f"# 다른 도메인 {len(others)}개: " + " · ".join(others) + " — 목록은 주입하지 않음")
-
+        spaces.append(catalog.build(root / slug, today, f"레포 {slug}"))
 
 def assemble():
     blocks = [guide]
     if header:
         blocks.append("\n".join(header))
+    if domain_block:
+        blocks.append(domain_block)
+    if edge_block:
+        blocks.append(edge_block)
     if index_block:
         blocks.append(index_block)
-    blocks.extend(text for _, _, _, text in spaces)
-    blocks.extend(tail)
+    blocks.extend(spaces)
     return "\n\n".join(blocks)
 
 
 context = assemble()
-folded: set[int] = set()
-while catalog.estimate_tokens(context) > HARD_BUDGET:
-    candidates = [index for index in range(len(spaces)) if index not in folded]
-    if not candidates:
-        break
-    index = max(candidates, key=lambda i: len(spaces[i][3]))
-    folded.add(index)
-    label, root, shallow, _ = spaces[index]
-    count = len(catalog.docs(root, shallow))
-    flag = " --shallow" if shallow else ""
-    spaces[index] = (label, root, shallow,
-                     f'# {label} {count}건 — python3 "{catalog_py}" --root "{root}"{flag} 로 전체 보기')
-    context = assemble()
 
-# 목록을 다 접어도 넘치면 index 본문을 한 줄로 접는다. 목록보다 뒤에 접는 이유는 지도가
-# 목록보다 먼저 답해야 하는 질문(어느 레포를 봐야 하는가)을 들고 있기 때문이다.
-if index_block and catalog.estimate_tokens(context) > HARD_BUDGET:
-    index_block = f"# index.md 약 {catalog.estimate_tokens(index_block):,}토큰 — Read {index_path}"
-    context = assemble()
-
+# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다. 상한을 넘겼다고
+# 목록을 줄이면 누락이 조용히 생기고, 접힘을 푸는 명령을 건너뛰어도 아무 신호가 없다.
 if catalog.estimate_tokens(context) > SOFT_BUDGET:
     context = f"# 위키 목록이 약 {catalog.estimate_tokens(context):,}토큰 — /llm-wiki:audit 로 정리 권장\n\n" + context
 

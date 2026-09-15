@@ -28,9 +28,9 @@ disable-model-invocation: true
 
 ## 4. index.md와 폴더
 
-- **신규 도메인**: `knowledge/{d}/index.md`를 규약 9장 템플릿으로 생성 — 제목·한 줄 설명·`## 레포 구성` 1행(스택 초안, 접점 `—`, 소관 "아직 정해지지 않음"), 나머지 절은 두지 않음, `description`은 고정문 `{d} 레포 소관·의존 방향·변경 파급을 볼 때`
+- **신규 도메인**: `knowledge/{d}/index.md`를 규약 9장 템플릿으로 생성 — 제목·한 줄 설명·`## 레포 구성` 1행(스택 초안, 접점 `—`, 소관 "아직 정해지지 않음"), 나머지 절은 두지 않음, `description`은 고정문 `{d} 레포 소관·역인덱스·변경 파급을 볼 때`
 - **기존 도메인**: `knowledge/{d}/index.md`의 `## 레포 구성`에 행 추가 — 없으면 신규와 같이 생성
-- **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, 양쪽 index.md의 `## 레포 구성` 행을 옮기고 역인덱스 행의 slug는 `{old}/{slug}` 꼴이 되지 않게 확인
+- **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, 양쪽 index.md의 `## 레포 구성` 행을 옮기고 역인덱스 행의 slug는 `{old}/{slug}` 꼴이 되지 않게 확인, `deps.json`의 `{old}/{slug}` 끝점을 `{new}/{slug}`로 치환하고 `--check`로 대조 — 같은 커밋에 담음
 - **레포 폴더**: `knowledge/{d}/{slug}/`는 만들지 않음 — 첫 레포 종속 문서가 생길 때 add·update가 만듦
 
 ## 5. 로컬 경로·커밋
