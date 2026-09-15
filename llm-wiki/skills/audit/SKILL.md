@@ -33,6 +33,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 | 변경 서사 불릿("A에서 B로", "추후", "폐기") | 현재 상태로 다시 쓸 수 있으면 `재작성`, 없으면 `삭제` |
 | 다른 위키 문서 링크·이름 참조(index.md 면제) | 접점 사실로 `재작성`, 남는 것이 "다른 곳에 있다"뿐이면 `삭제` |
 | index.md에 템플릿 밖 절 또는 사실 불릿(규약 9장) | `이동` — 후: 도메인 루트 일반 문서 경로와 절, 비고에 옮길 원문 |
+| index.md에 `## 의존 방향` 절 (규약 9장) | `이동` — 후: deps.json 간선 from·to·note, 비고에 원문 줄 |
 | description 60자 초과·"때" 미종결·범주어만 | `설명` — 후: 새 문장. 한 주제로 60자에 안 덮이면 `분할 후보` |
 | 40줄 미만이고 목록의 다른 문서 description이 이미 그 주제를 덮음(조각) | `흡수` — 후: 소유 문서 경로와 절, 비고에 옮길 불릿 원문 |
 | 절 제목과 다른 질문에 답하는 불릿 | `이동` — 후: 대상 절 |
@@ -50,7 +51,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 
 ## 4. 적용 fan-out — 문서 1장 = 에이전트 1회
 
-한 메시지에 병렬 Agent 호출, `model: sonnet`(전사와 검사만 남음). 흡수 행은 소유 문서의 에이전트가 맡고, 에이전트는 커밋하지 않습니다.
+한 메시지에 병렬 Agent 호출, `model: sonnet`(전사와 검사만 남음). 흡수 행은 소유 문서의 에이전트가 맡고, 에이전트는 커밋하지 않습니다. 의존 절 이동 행에서 에이전트는 index.md의 절만 지우고, `deps.json` 간선 추가는 메인이 승인 표대로 직접 편집합니다.
 
 ````
 위키 문서 한 장에 승인된 조치를 적용하는 작업입니다. 이 문서와 지시된 흡수 조각 밖의 파일을 고치지 말고 커밋하지 마세요.
@@ -67,7 +68,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 ## 5. 검증·커밋
 
 - **전수 검사**: 삭제·흡수 뒤 `catalog.py --check --root {WIKI_ROOT}/knowledge` 재실행 — description 충돌은 문서 단위 검사가 보지 못함
-- **커밋**: 본문이 바뀐 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} audit {조치 요약}`, `verified`만 바뀐 문서는 `docs: verified 갱신 N건 (audit)` 한 커밋, `git pull --rebase && git push`
+- **커밋**: 본문이 바뀐 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} audit {조치 요약}`, `verified`만 바뀐 문서는 `docs: verified 갱신 N건 (audit)` 한 커밋, `deps.json`이 바뀌면 `docs(deps): audit 의존 방향 이동 N건` 한 커밋, `git pull --rebase && git push`
 
 ## 6. 보고
 
