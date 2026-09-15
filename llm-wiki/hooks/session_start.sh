@@ -79,7 +79,7 @@ catalog_py = os.path.join(plugin, "scripts", "catalog.py")
 today = date.today()
 
 guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-guide = guide.replace("{WIKI_ROOT}", wiki)
+guide = guide.replace("{WIKI_ROOT}", wiki).replace("{CATALOG_PY}", catalog_py)
 
 registry = catalog.load_json(wiki_root / "registry.json", {})
 if not isinstance(registry, dict):

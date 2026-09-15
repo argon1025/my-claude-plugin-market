@@ -14,3 +14,5 @@
   - evidence: llm-wiki/references/doc-contract.md 9장 템플릿
 - `correction` llm-wiki 플러그인 버전은 .claude-plugin/marketplace.json metadata.version(2.8.0)만 올라가고 llm-wiki/.claude-plugin/plugin.json version은 2.2.0에 머물러 있었다 — 두 파일은 별도 관리라 드리프트가 생기며 이번 v2.9.0에서 둘을 같은 값으로 맞춘다.
   - evidence: .claude-plugin/marketplace.json, llm-wiki/.claude-plugin/plugin.json
+- `constraint` llm-wiki `rules/agent-guide.md`에 경로를 적으려면 훅이 치환하는 자리표시자만 쓸 수 있다 — `{WIKI_ROOT}`와 이번에 더한 `{CATALOG_PY}` 두 개뿐이며, 위키 루트 상대 경로로 catalog.py를 가리키면 플러그인 캐시 밖을 짚어 깨진다.
+  - evidence: llm-wiki/hooks/session_start.sh `guide.replace`
