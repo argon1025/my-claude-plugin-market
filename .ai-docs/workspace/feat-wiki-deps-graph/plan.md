@@ -171,3 +171,39 @@
 - **역인덱스 참조 검사 한계**: `## 역인덱스` 절의 표 행만 보므로 다른 절의 `{domain}/{slug}` 표기는 검사하지 않음
 - **후속**: 실제 위키 `argon1025-side/index.md`의 description 고정문은 `/llm-wiki:audit`의 `설명` 조치로 새 고정문에 맞춤, 커서가 HEAD보다 뒤인 상태는 머지 후 `/llm-wiki:update`로 반영
 - **핸드오프**: 승인 시 slug `feat-wiki-deps-graph`로 `.ai-docs/workspace/feat-wiki-deps-graph/plan.md`(신규)·`feedback.md`를 한 커밋으로 남기고 구현은 새 세션 `/plan-workflow:execute`로 시작
+
+## 추가 계획 2026-09-15 — 세션 주입 접기 제거
+
+- 폐기: `## 외부 계약`의 "HARD 예산 초과 시 접는 순서" 불릿과 `### session_start.sh`의 `접기` 불릿 — 목록·index 본문·간선 블록 어느 것도 접지 않음
+
+### 의도
+
+- **왜**: 에이전트는 목록의 `description`만으로 문서를 열지 말지 정하므로 목록이 한 줄로 접히면 그 세션은 문서의 존재를 모른 채 코드를 고치며, 접힘을 푸는 명령을 건너뛰어도 신호가 없음 — 하드 12,000토큰은 문서 약 200건에서 닿는 값이라 접기가 아니라 audit 분할이 답인 상태임
+- **누가**: 문서가 많은 도메인·레포에서 세션을 여는 에이전트, 특히 명령 재실행 단계를 건너뛰기 쉬운 무인 실행과 서브에이전트
+- **완료**: `session_start.sh`가 예산과 무관하게 도메인 목록·간선·index 본문·도메인 루트 목록·레포 목록을 항상 전체 주입하고, 소프트 8,000토큰 초과 시 `# 위키 목록이 약 N토큰 — /llm-wiki:audit 로 정리 권장` 한 줄만 앞에 붙음
+
+### 확정 결정 (사용자 확인 2026-09-15)
+
+- **접기 제거**: 사용자 원문 "위키 문서 목록을 접는 기능이 있는데 이건 제외해도 되지 않을지? 결국 해당 프로젝트 수정 시 해당 문서 목록 전체를 알고 있어야함으로.. 누락되면 그게 더 위험할듯함" — 목록 접기, index 본문 접기, 간선 블록 접기를 모두 제거
+- **소프트 경고 유지**: 8,000토큰 초과 시 audit 권고 한 줄은 그대로 둠 — 누락 없이 목록 비대를 알리는 유일한 신호
+
+### 작업
+
+| 파일 | 변경 | 사다리 |
+|---|---|---|
+| `llm-wiki/hooks/session_start.sh` | `HARD_BUDGET` 상수, `folded` while 루프, index 본문 접기 블록 삭제, `spaces`를 본문 문자열 목록으로 단순화(접기용 `root`·`shallow` 필드 불필요), 관련 주석 정리 | ⑥ |
+| `llm-wiki/README.md` | `주입 범위` 불릿에서 "하드 12,000토큰을 넘으면 가장 큰 목록이 전체 보기 명령 한 줄로 접힘" 삭제 | ⑥ |
+
+- **session_start.sh**: `SOFT_BUDGET = 8000`과 마지막 `if catalog.estimate_tokens(context) > SOFT_BUDGET:` 블록만 남기고, `assemble()`는 `guide` → `header` → 도메인 블록 → 간선 블록 → `index_block` → `spaces` 순 그대로 유지
+- **doc-contract.md**: 9장 "토큰 상한은 두지 않으며 크기는 절 고정으로 다룸"이 이미 같은 방향이라 변경 없음
+
+### 커밋 분해
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 2 (기존 커밋에 흡수) | `session_start.sh` 접기 제거 | 픽스처 `wiki/knowledge/acme-dev/dev-api/`에 `for i in $(seq 1 300)`으로 frontmatter 3키를 갖춘 문서 300건 생성 후 커밋 2와 같은 훅 명령 실행 → 출력에 `doc-001` … `doc-300` 300행 전부 포함(`grep -c '^doc-' → 300`), 첫 줄이 `# 위키 목록이 약` 으로 시작, `전체 보기`·`Read ` 접기 문자열 없음, exit 0. `grep -c 'HARD_BUDGET\|folded' llm-wiki/hooks/session_start.sh` → 0 |
+| 5 (기존 커밋에 흡수) | README 주입 범위 문구 | `grep -c '접힘' llm-wiki/README.md` → 0 |
+
+### 특이 사항
+
+- **주입 크기 상한 없음**: 목록이 커질수록 세션 시작·compact마다 그만큼 주입되며 제어 수단은 audit 권고와 사용자의 문서 정리뿐 — 상한이 다시 필요해지면 접기가 아니라 "레포 목록은 전체, 도메인 루트 목록만 축약" 같은 누락 없는 대안을 검토

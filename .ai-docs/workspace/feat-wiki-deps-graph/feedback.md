@@ -16,3 +16,7 @@
   - evidence: .claude-plugin/marketplace.json, llm-wiki/.claude-plugin/plugin.json
 - `constraint` llm-wiki `rules/agent-guide.md`에 경로를 적으려면 훅이 치환하는 자리표시자만 쓸 수 있다 — `{WIKI_ROOT}`와 이번에 더한 `{CATALOG_PY}` 두 개뿐이며, 위키 루트 상대 경로로 catalog.py를 가리키면 플러그인 캐시 밖을 짚어 깨진다.
   - evidence: llm-wiki/hooks/session_start.sh `guide.replace`
+- `context` 사용자 원문 "위키 문서 목록을 접는 기능이 있는데 이건 제외해도 되지 않을지? 결국 해당 프로젝트 수정 시 해당 문서 목록 전체를 알고 있어야함으로.. 누락되면 그게 더 위험할듯함" — llm-wiki 세션 주입은 목록·index 본문·간선을 예산과 무관하게 항상 전체 주입하고 소프트 8,000토큰 초과 시 audit 권고 한 줄만 붙인다.
+  - source: 사용자 확인 2026-09-15
+- `why` llm-wiki 훅의 하드 예산 접기를 제거하는 이유는 에이전트가 목록의 description만으로 문서를 열지 말지 정하는 구조에서 접힌 목록은 조용한 사실 누락이 되고, 하드 12,000토큰은 문서 약 200건에서 닿는 값이라 접기가 아니라 audit 분할이 답인 상태이기 때문이다 — 토큰 절감보다 잘못된 수정의 비용이 크다.
+  - source: 사용자 확인 2026-09-15
