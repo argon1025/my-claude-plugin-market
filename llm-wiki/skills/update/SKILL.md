@@ -1,18 +1,19 @@
 ---
 name: update
-description: Use when merged code in registered repos must be reflected into the wiki without questions ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --repo/--range) — walks every registered repo from its cursor, fans out one subagent per merge batch (5 merges or 500KB of diff) to extract facts, assigns facts to the domain root, the repo folder and index.md against the catalogs, fans out one subagent per doc to apply, runs --check, commits per doc, advances the cursor, pushes. 관찰-tier only: confirms and adds, never overwrites; conflicts go to inbox.md. NOT for material the user hands over (that is /llm-wiki:add's job) and NOT for sweeping existing docs (that is /llm-wiki:audit's job).
+description: Use when merged code in registered repos must be reflected into the wiki ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --domain/--repo/--range) — asks once which domains to document then walks that domain's registered repos from their cursors (skipping the question for --domain/--repo/--range/--all runs), fans out one subagent per merge batch (5 merges or 500KB of diff) to extract facts, assigns facts to the domain root, the repo folder and index.md against the catalogs, fans out one subagent per doc to apply, runs --check, commits per doc, advances the cursor, pushes. 관찰-tier only: confirms and adds, never overwrites; conflicts go to inbox.md. NOT for material the user hands over (that is /llm-wiki:add's job) and NOT for sweeping existing docs (that is /llm-wiki:audit's job).
 disable-model-invocation: true
 ---
 
-등록된 레포의 머지된 코드를 사용자 응답 없이 도메인 루트와 레포 폴더에 반영합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`가 정본이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. 이 스킬은 `관찰` 출처만 만들므로 기존 값을 지우거나 바꾸지 않습니다.
+등록된 레포의 머지된 코드를 도메인 루트와 레포 폴더에 반영합니다. 대상 도메인 확인 1회 외에는 사용자 응답 없이 진행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`가 정본이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. 이 스킬은 `관찰` 출처만 만들므로 기존 값을 지우거나 바꾸지 않습니다.
 
-인자: `--repo {slug}`(대상 한정), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(레포별 예산, 기본 20), `--batch-merges N`·`--batch-bytes N`(추출 묶음 상한, 기본 5건·500,000바이트), `--baseline-days N`(커서 없는 레포 소급), `--dry-run`(3장까지).
+인자: `--domain {name}`(대상 도메인 한정, 반복 가능), `--all`(전체 도메인, 질문 생략), `--repo {slug}`(대상 한정), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(레포별 예산, 기본 20), `--batch-merges N`·`--batch-bytes N`(추출 묶음 상한, 기본 5건·500,000바이트), `--baseline-days N`(커서 없는 레포 소급), `--dry-run`(3장까지).
 
 ## 1. 범위 확정
 
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only` — 실패하면 보고 후 중단(팀원 커밋과 갈라진 상태에서 무인 편집 금지)
+- **대상 도메인**: `--domain`·`--repo`·`--range`·`--all` 중 하나라도 있으면 생략, 없으면 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" domains --wiki {WIKI_ROOT}` 출력을 그대로 보이고 AskUserQuestion으로 도메인을 고르게 함(복수 선택 가능) — 고른 이름을 `--domain`으로 다음 불릿에 넘기며, 등록 도메인이 하나뿐이어도 묻고, 사용자가 답하지 않으면 실행하지 않음
 - **실행**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" pending --wiki {WIKI_ROOT} --out {스크래치} {인자}` — 레포별 커서 이후 first-parent 커밋 목록·머지별 diff 파일·추출 묶음(`batches[{id, shas, bytes}]`)을 만들고 `work.json` 경로를 마지막 줄에 냄. 묶음 경계는 이 스크립트가 정하며 스킬이 다시 묶지 않음
-- **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류(stderr 전달 후 중단)
+- **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류·미등록 도메인(stderr 전달 후 중단)
 - **건너뜀**: `work.json`의 `skipped`(로컬 경로 없음·force-push 의심·대상 ref 없음)와 `notes`는 그대로 보고에 옮김
 - **부트스트랩**: 커서 없던 레포는 커밋 0건이라도 5장에서 HEAD를 커서로 기록함
 - **입력 집합**: 추출된 diff와 그 범위의 커밋 메시지·함께 커밋된 노트만 — 범위 밖 작업 트리·사전 지식·현재 코드 재조회로 채우지 않음
@@ -90,6 +91,7 @@ disable-model-invocation: true
 
 ## 6. 보고
 
+- **범위**: 이번 실행의 대상 도메인과 그 선택이 질문·인자 중 무엇으로 정해졌는지 한 줄
 - **레포별**: 처리 머지 수·사실 수·커서 전후·건너뜀 사유
 - **문서**: 생성·수정 목록과 동일·보강 건수
 - **확인 필요**: `inbox.md`에 남긴 행 전부 — 이 실행이 사람에게 남기는 판정 요청이며 `/llm-wiki:add`로 집음

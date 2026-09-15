@@ -12,6 +12,9 @@ force-push 검사·diff 절단·제외 pathspec을 에이전트가 bash 여러 �
 추출 묶음(batches)도 여기서 자른다 — 머지 5건 또는 diff 파일 합계 500KB 중 먼저 닿는 쪽.
 diff의 실제 바이트는 파일을 쓴 뒤에만 알 수 있고, 스킬이 묶으면 실행마다 경계가 달라진다.
 
+`domains`는 도메인별 레포와 미반영 커밋 수를 낸다 — 스킬이 대상 도메인을 묻기 전에 쓰며,
+fetch 없이 로컬 ref만 보므로 질문 앞단에서 지연을 만들지 않는다.
+
 `advance`는 state/{slug}.json의 커서를 전진시킨다. 커서 파일을 레포별로 나눈 것은 여러
 사람과 여러 머신이 서로 다른 레포를 갱신할 때 같은 파일에서 충돌하지 않게 하려는 것이다.
 레포별 상태 표는 여기 없다 — registry.json·state/*.json·.local/paths.json 3파일을 읽으면
@@ -164,6 +167,53 @@ def baseline_before(path: str, ref: str, days: int) -> str | None:
     return out.strip() if code == 0 and out.strip() else None
 
 
+def repo_status(wiki: Path, paths: dict, slug: str, info: dict) -> tuple[str, int]:
+    """도메인 선택 질문에 낼 레포 한 줄. fetch 없이 로컬 ref만 보므로 질문 앞단을 지연시키지 않는다."""
+    path = paths.get(slug)
+    if not path or not Path(path).is_dir():
+        return "경로 없음", 0
+    ref = target_ref(path, info.get("branch") or "main")
+    if git(path, "rev-parse", "--verify", "--quiet", ref)[0] != 0:
+        return "대상 ref 없음", 0
+    state = load_json(wiki / "state" / f"{slug}.json", {})
+    cursor = state.get("cursor") if isinstance(state, dict) else None
+    if not cursor:
+        return "부트스트랩", 0
+    code, out = git(path, "rev-list", "--count", f"{cursor}..{ref}")
+    if code != 0:
+        return "커서 확인 실패", 0
+    count = int(out.strip() or 0)
+    return (f"미반영 {count}" if count else "미반영 없음"), count
+
+
+def cmd_domains(args) -> int:
+    wiki = Path(args.wiki).expanduser()
+    registry = load_json(wiki / "registry.json", {})
+    registry = registry if isinstance(registry, dict) else {}
+    repos = registry.get("repos", {})
+    if not repos:
+        print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:register", file=sys.stderr)
+        return 1
+
+    paths = load_json(wiki / ".local" / "paths.json", {})
+    grouped: dict[str, list[str]] = {name: [] for name in registry.get("domains", {})}
+    for slug, info in sorted(repos.items()):
+        grouped.setdefault(info.get("domain") or "(도메인 없음)", []).append(slug)
+
+    width = max((len(slug) for slug in repos), default=0)
+    for domain, slugs in sorted(grouped.items()):
+        lines, total = [], 0
+        for slug in slugs:
+            label, count = repo_status(wiki, paths, slug, repos[slug])
+            total += count
+            lines.append(f"  {slug.ljust(width)}  {label}")
+        print(f"{domain}: 레포 {len(slugs)}개 · 미반영 {total}건")
+        for line in lines:
+            print(line)
+    print("(fetch 전 로컬 ref 기준 — 실제 처리량은 pending에서 늘 수 있음)")
+    return 0
+
+
 def cmd_pending(args) -> int:
     wiki = Path(args.wiki).expanduser()
     registry = load_json(wiki / "registry.json", {})
@@ -177,10 +227,17 @@ def cmd_pending(args) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     selected = set(args.repo or [])
+    domains = set(args.domain or [])
+    unknown = sorted(domains - {info.get("domain") for info in repos.values()})
+    if unknown:
+        print(f"# 등록되지 않은 도메인: {', '.join(unknown)} — update.py domains로 확인", file=sys.stderr)
+        return 1
     work = {"wiki": str(wiki), "repos": {}, "skipped": {}, "range_only": bool(args.range)}
 
     for slug, info in sorted(repos.items()):
         if selected and slug not in selected:
+            continue
+        if domains and info.get("domain") not in domains:
             continue
         path = paths.get(slug)
         if not path or not Path(path).is_dir():
@@ -292,6 +349,7 @@ def main() -> int:
 
     pending = sub.add_parser("pending", parents=[common], help="커서 이후 머지 목록과 diff 파일을 만든다")
     pending.add_argument("--out", metavar="DIR", required=True, help="diff와 work.json을 쓸 디렉터리")
+    pending.add_argument("--domain", metavar="NAME", action="append", help="대상 도메인 한정 (반복 가능)")
     pending.add_argument("--repo", metavar="SLUG", action="append", help="대상 레포 한정 (반복 가능)")
     pending.add_argument("--range", metavar="REV", help="지목 범위. 이 실행은 커서를 전진시키지 않는다")
     pending.add_argument("--max-merges", metavar="N", type=int, default=DEFAULT_MAX_MERGES,
@@ -303,6 +361,9 @@ def main() -> int:
     pending.add_argument("--batch-bytes", metavar="N", type=int, default=DEFAULT_BATCH_BYTES,
                          help=f"추출 묶음 하나의 diff 파일 합계 상한 (기본값: {DEFAULT_BATCH_BYTES})")
     pending.set_defaults(func=cmd_pending)
+
+    domains_cmd = sub.add_parser("domains", parents=[common], help="도메인별 레포와 미반영 커밋 수를 낸다")
+    domains_cmd.set_defaults(func=cmd_domains)
 
     advance = sub.add_parser("advance", parents=[common], help="레포 커서를 전진시킨다")
     advance.add_argument("slug")
