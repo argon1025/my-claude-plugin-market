@@ -96,7 +96,7 @@ areas의 area는 아래 기존 키 중 하나만 쓰고 걸리는 것이 없으�
 
 - **전수 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` — 이번에 손대지 않은 문서의 에러는 고치지 않고 보고에 남김
 - **되돌림**: `blocked`·`check: fail` 문서는 `git -C {WIKI_ROOT} checkout -- {경로}`로 원복하고 그 사실은 보고의 `기각`, 되돌린 머지가 있으면 커서는 그 머지 직전까지만
-- **inbox/{domain}.md**: `excluded`(충돌)·배치 내 상충 행과 3장의 `새 영역 후보` 행을 `- [{날짜}] [{domain}] {주제} — 기존 {값} ({파일:절}, {출처}) / 새 {값} ({slug} @{sha7} {code})` 형식으로 그 레포 도메인 파일에 append — 파일이 없으면 만들고, 여러 도메인을 한 실행에서 처리하면 도메인별 파일에 각각 씀
+- **inbox/{domain}.md**: `excluded`(충돌)·배치 내 상충 행은 `- [{날짜}] [{domain}] {주제} — 기존 {값} ({파일:절}, {출처}) / 새 {값} ({slug} @{sha7} {code})` 형식으로, 3장의 `새 영역 후보` 행은 3장 형식 그대로 그 레포 도메인 파일에 append — 파일이 없으면 만들고, 여러 도메인을 한 실행에서 처리하면 도메인별 파일에 각각 씀
 - **커밋**: 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} {요약}`, 그 뒤 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" advance {slug} {sha} --wiki {WIKI_ROOT}`로 `state/{slug}.json` 갱신 + 그 도메인의 `inbox/{domain}.md`를 `chore(update): {slug} 커서 {sha7} · 머지 N건 · 문서 M건` 한 커밋(N·M은 스킬이 셈) — 사실 0건 머지도 전진, 예산으로 잘린 머지 앞에서 멈춤, 되돌린 묶음이 있으면 그 묶음 첫 머지 직전까지만, `--range` 실행은 커서 불변
 - **그래프 커밋**: 노드·간선이 바뀌면 `docs(graph): {slug} @{sha7} 간선 N건 · 영역 M건 · 호스트 K건` 한 커밋에 `registry.json`·`deps.json`을 함께 담음 — 문서 커밋과 섞지 않음
 - **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 재시도 2회, 실패는 로컬 커밋 상태와 함께 보고

@@ -104,7 +104,6 @@ if sync_note:
     header.append(sync_note)
 
 if domain:
-    # 형제 레포 건수는 싣지 않는다 — 간선 상대 레포의 문서 건수는 인접 좌표가 낸다.
     header.append(f"# 위키 — 도메인 {domain} · 레포 {slug}")
 elif slug:
     header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 도메인 목록이 함께 주입됨")

@@ -392,7 +392,7 @@ def main() -> int:
     parser.add_argument("--label", metavar="TEXT", default=DEFAULT_LABEL,
                         help=f"목록 머리에 붙는 이름 (기본값: {DEFAULT_LABEL})")
     parser.add_argument("--shallow", action="store_true",
-                        help="도메인 루트 목록: --root 바로 아래 *.md와 adr/*.md만, index.md와 레포 폴더 제외")
+                        help="도메인 루트 목록: --root 바로 아래 *.md와 adr/*.md만, 레포 폴더 제외")
     parser.add_argument("--stale-days", metavar="N", type=int, default=STALE_DAYS,
                         help=f"마지막 확인이 며칠 넘으면 낡은 것으로 볼지 (기본값: {STALE_DAYS})")
     parser.add_argument("--check", action="store_true",

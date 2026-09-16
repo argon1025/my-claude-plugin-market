@@ -56,7 +56,7 @@ disable-model-invocation: true
 
 ## 4. registry.json·deps.json
 
-- **노드**: `repos.{slug}`에 규약 9장 9키(+`excluded`면 `reason`)를 기록 — `areas` 키는 `{domain}/{영역}` 꼴이고 타 도메인 영역 참여는 그 도메인 접두, `source`는 `확인 — register 조사, {오늘}`
+- **노드**: `repos.{slug}`에 규약 9장 9키(+`excluded`면 `reason`)를 기록 — `areas` 키는 `{domain}/{영역}` 꼴이고 타 도메인 영역 참여는 그 도메인 접두, `source`는 `확인 — register 조사, {오늘}`(`--excluded`는 조사가 없으므로 `확인 — 사용자 확인, {오늘}`)
 - **도메인**: 신규 도메인이면 `domains.{d}`에 `description`·`access` 기록
 - **간선**: `outgoing`의 `target`을 다른 노드의 `hosts`·slug·`remotes`와 대조해 걸린 것만 `deps.json`에 `관찰 — register 조사, {오늘}` 간선으로 추가(`kind`는 `outgoing.kind`, `note`는 `identifiers`를 ` · `로 나열) — 걸리지 않은 대상은 보고의 `미등록 상대`로만 남기고 간선을 만들지 않음
 - **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, `deps.json`의 `{old}/{slug}` 끝점을 `{new}/{slug}`로 치환 — 영역 키의 도메인 접두는 참여 도메인을 뜻하므로 바꾸지 않으며, 새 도메인 영역 참여가 필요하면 `--resurvey`로 재조사하라고 보고에 안내
