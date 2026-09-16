@@ -1,0 +1,31 @@
+# feat-llm-wiki-inbox-per-domain 작업 기록
+
+- `context` 해당 위키는 차후에 도메인(개발자센터, 상품전시) 별로 하위에 프로젝트별 (Front, Batch, Backend 등등..)로 문서들을 생성해서 개발할 때 마다 컨텍스트 자동 주입 되게 할거고 개발, 코드 리뷰, 질문 시 다음과같은게 가능했으면함 — Front 개발 시 Backend API 대응여부를 직접 Backend 코드 clone 하거나 하여 확인 하고 backend 선대응 필요 확인 / 코드 리뷰 시 backend API 변경으로 인해 외부 도메인 (예: 상품전시)이 영향을 받음으로 주의 필요한 사항이라 판단 / 특정 요구사항을 들고 왔을 때 어떤 도메인에 어떤 프로젝트를 수정해야하는지 파악이 가능해야함
+  - source: 사용자 확인 2026-09-16
+- `context` 다양한 프로젝트에 대해 전방위적으로 검토가능한 구조였으면함
+  - source: 사용자 확인 2026-09-16
+- `constraint` llm-wiki update 스킬의 추출 서브에이전트 프롬프트(skills/update/SKILL.md 2장)는 사실 목록만 출력하고 호출 관계를 사실이 아니라고 배제하므로, 3장의 deps.json 배정이 기대하는 레포 간 의존 관찰은 메인 세션에 도달하지 않음
+  - evidence: llm-wiki/skills/update/SKILL.md, llm-wiki/references/doc-contract.md 1장
+- `constraint` session_start.sh는 현재 도메인의 index.md 본문과 도메인 루트·현재 레포 목록만 주입하고, 타 도메인은 이름·한 줄 설명, 형제 레포는 이름·문서 건수만 주입하며 간선 끝점 레포의 로컬 경로(.local/paths.json)와 remote(registry.json)는 주입하지 않음
+  - evidence: llm-wiki/hooks/session_start.sh, llm-wiki/rules/agent-guide.md
+- `context` 예전에는 onestore-devcenter-claude-plugin-marketplace/knowledge/system-repository-map.md 이런식으로 되어 있어서 Front 작업 전 Backend 작업이 필요하면 진행이 가능했음 — 현 llm-wiki를 토큰·구조적으로 간결한 방향으로 개선 검토 요청
+  - source: 사용자 확인 2026-09-16
+- `constraint` 사내 레거시 system-repository-map.md는 약 9,200토큰 단일 문서로 세션에는 목록 한 줄만 주입되고 필요 시 열렸으며, 접근 좌표(MCP 호출 템플릿·clone URL 패턴)·역인덱스·레포 표·의존 방향·반영 순서 계약 사실을 한 파일에 담았고 요건 판정은 별도 scope-review 스킬이 이 문서만 근거로 수행함
+  - evidence: onestore-devcenter-claude-plugin-marketplace/knowledge/system-repository-map.md, plugins/devcenter-wiki/skills/scope-review/SKILL.md
+- `context` 주입 축소 : 동의 그리고 어짜피 노드 방식으로 의존성을 관리 함으로 접점은없어도 되지 않을지 지금 index 와 deps 간 책임이 중복 발생하는듯한데 아니면 deps 를 유지하고 파이썬에서 해당 deps 바탕으로 자동으로 역인덱스 제공해주는것도 괜찮을거같음 아니면 deps 에서 레포별 노드 정보에 스택이나 소관까지 관리하던지 그럼 나중에 유연하게 스크립트로 주입할 수 있을듯, 각 레포별 노드는 register 에서 관리하던지 SSOT 준수하면 좋을듯함
+  - source: 사용자 확인 2026-09-16
+- `context` 소관 채우기 : register 에서 책임등을 등록시점에 상세하게 조사하는게 좋을듯한데, 먼저 조사하고 이후에 확인차 물어보는형태로 그리고 이후 update 시에 변경되면 추가로 대응하면 되고
+  - source: 사용자 확인 2026-09-16
+- `context` 도메인 별로 의존관계는 있을 수 있으나 해당 도메인간에는 용어등 다 다를 수 있고 각자 유지되어야함 / 의존성 deps 도 코드상 의존 (예: external 라이브러리는 외부연동만 정의 해당 서비스를 백엔드 프론트든 다 import 하여 사용) 이 있고 도메인간에 의존이 있음 (예: 개발자센터에서 MQ로 상품이 배포 이것은 전시에서 받음) 이런 부분도 표현되어야하지 않을까
+  - source: 사용자 확인 2026-09-16
+- `why` llm-wiki 그래프 파생·검사는 외부 라이브러리(networkx·jsonschema·Backstage 카탈로그) 대신 표준 라이브러리 graph.py로 직접 유지함 — SessionStart 훅은 pip 없는 맨 python3에서 종료 코드 0으로 끝나야 해 import 실패가 곧 주입 소멸이고, 필요한 연산이 1홉 이웃·그룹화·딕셔너리 반전뿐이라 알고리즘 라이브러리가 기여할 자리가 없으며, 전이 파급·순환 탐지가 필요해지면 스킬 경로 별도 스크립트에만 networkx를 두기로 함
+  - source: 사용자 확인 2026-09-16
+- `why` 레포 노드 지식은 새 graph.json 대신 registry.json repos.{slug}에 통합함 — register가 노드 생명주기를 단독 소유해 정체(remote·branch)와 지식(stack·summary·areas·hosts)이 한 레코드에서 SSOT를 이루고, 편집 빈도가 높은 간선은 deps.json에 남겨 병합 충돌 표면을 분리함
+  - source: 사용자 확인 2026-09-16
+- `constraint` llm-wiki 간선 방향은 kind(library·http·message·data)와 무관하게 from이 to의 계약에 의존하는 것으로 하나이며, 메시지 간선은 발행자가 to·소비자가 from임 — 발행자 → 소비자로 그리는 관행과 반대이므로 register 조사·update 추출 프롬프트가 이 방향을 명시해야 함
+  - evidence: .ai-docs/workspace/feat-llm-wiki-inbox-per-domain/plan.md 외부 계약 deps.json
+- `constraint` llm-wiki의 graph.py는 모듈 수준에서 catalog를 import하고 catalog.check()는 graph를 함수 안에서 import하므로, 편의상 graph import를 catalog 모듈 수준으로 올리면 graph.py를 직접 실행할 때 graph 모듈이 __main__과 graph 두 벌로 적재됨
+  - evidence: llm-wiki/scripts/graph.py, llm-wiki/scripts/catalog.py check()
+- `context` 기존 위키 ~/.ai-docs/wiki는 v3 노드 스키마를 채우지 않아 훅이 도메인 설명·영역 0·간선 0으로 관용 주입하고 knowledge/argon1025-side/index.md가 일반 문서로 목록에 남음 — 채우기는 각 레포에서 /llm-wiki:register --resurvey, index.md 제거는 사용자의 git rm으로 하는 후속 작업
+  - source: 사용자 확인 2026-09-16
+- `context` 계획의 커밋 4·5 실행 검증(trendlog-backend에서 /llm-wiki:register --resurvey, my-claude-plugin-market에서 /llm-wiki:update --dry-run)은 AskUserQuestion 정지점이 있는 대화형 세션과 실제 위키 저장소 쓰기·push를 요구해 이번 세션에서 수행하지 않았고 명령 기반 검증만 마침

@@ -57,6 +57,12 @@ EXCLUDE_PATHSPECS = [
 
 SKIP_NO_PATH = "로컬 경로 없음 — 그 레포에서 세션을 한 번 열면 등록됨"
 SKIP_NOT_ANCESTOR = "커서가 HEAD 조상이 아님(force-push 의심) — advance로 재설정"
+SKIP_EXCLUDED = "제외 레포 — registry.json의 status가 excluded"
+
+
+def excluded(info: dict) -> bool:
+    """휴면·레거시로 등록만 해 둔 레포. 훅 주입과 무인 갱신 양쪽에서 빠진다."""
+    return (info.get("status") or "active") == "excluded"
 
 
 def git(cwd: str | Path, *args: str, timeout: int = 60) -> tuple[int, str]:
@@ -198,6 +204,8 @@ def cmd_domains(args) -> int:
     paths = load_json(wiki / ".local" / "paths.json", {})
     grouped: dict[str, list[str]] = {name: [] for name in registry.get("domains", {})}
     for slug, info in sorted(repos.items()):
+        if excluded(info):
+            continue
         grouped.setdefault(info.get("domain") or "(도메인 없음)", []).append(slug)
 
     width = max((len(slug) for slug in repos), default=0)
@@ -238,6 +246,9 @@ def cmd_pending(args) -> int:
         if selected and slug not in selected:
             continue
         if domains and info.get("domain") not in domains:
+            continue
+        if excluded(info):
+            work["skipped"][slug] = SKIP_EXCLUDED
             continue
         path = paths.get(slug)
         if not path or not Path(path).is_dir():
