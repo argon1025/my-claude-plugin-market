@@ -1,6 +1,7 @@
 #!/bin/bash
-# 위키 규약(rules/agent-guide.md)과 3층(도메인 목록·의존 간선 → 도메인 index.md 본문 →
-# 목록(도메인 루트 + 현재 레포))을 세션 컨텍스트로 주입한다.
+# 위키 규약(rules/agent-guide.md)과 그래프 파생 블록(도메인 목록·접근 좌표·역인덱스·
+# 현재 레포 기준 두 묶음 간선·인접 레포 좌표), 목록(도메인 루트 + 현재 레포)을
+# 세션 컨텍스트로 주입한다. 파생은 scripts/graph.py가 registry.json·deps.json에서 만든다.
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 돈다.
 # 주입은 전 이벤트에서 하고, 원격 pull은 stdin의 source가 startup·resume일 때만 한다 —
 # clear·compact는 같은 세션의 재주입이고 fork는 부모가 이미 당겼다.
@@ -69,49 +70,42 @@ from pathlib import Path
 plugin, wiki, remote, common_dir, toplevel, sync_note = sys.argv[1:7]
 sys.path.insert(0, os.path.join(plugin, "scripts"))
 import catalog
+import graph
 
 SOFT_BUDGET = 8000
 
 wiki_root = Path(wiki)
 knowledge = wiki_root / "knowledge"
 catalog_py = os.path.join(plugin, "scripts", "catalog.py")
+graph_py = os.path.join(plugin, "scripts", "graph.py")
 today = date.today()
 
 guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-guide = guide.replace("{WIKI_ROOT}", wiki).replace("{CATALOG_PY}", catalog_py)
+guide = (guide.replace("{WIKI_ROOT}", wiki)
+              .replace("{CATALOG_PY}", catalog_py)
+              .replace("{GRAPH_PY}", graph_py))
 
-registry = catalog.load_json(wiki_root / "registry.json", {})
-if not isinstance(registry, dict):
-    registry = {}
-slug, domain = catalog.resolve_repo(registry, remote, common_dir)
-repos = registry.get("repos", {}) or {}
+registry = graph.load_registry(wiki_root)
+edges = graph.load_edges(wiki_root)
+slug, domain = graph.resolve_repo(registry, remote, common_dir)
 
 # 무인 갱신은 이 파일에 경로가 있는 레포만 처리한다 — 그 레포에서 세션을 한 번 여는 것이 등록이다.
-if domain and toplevel:
+paths = catalog.load_json(wiki_root / ".local" / "paths.json", {})
+if not isinstance(paths, dict):
+    paths = {}
+if domain and toplevel and paths.get(slug) != toplevel:
+    paths[slug] = toplevel
     local = wiki_root / ".local" / "paths.json"
-    paths = catalog.load_json(local, {})
-    if not isinstance(paths, dict):
-        paths = {}
-    if paths.get(slug) != toplevel:
-        paths[slug] = toplevel
-        local.parent.mkdir(parents=True, exist_ok=True)
-        local.write_text(json.dumps(paths, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_text(json.dumps(paths, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 header = []
 if sync_note:
     header.append(sync_note)
 
 if domain:
-    # 형제 레포는 이름과 문서 건수만 — 목록은 주입하지 않으므로 건수가 "볼 게 있는가"의 유일한 신호다.
-    siblings = [
-        f"{name} {len(catalog.docs(knowledge / domain / name)) if (knowledge / domain / name).is_dir() else 0}건"
-        for name, info in sorted(repos.items())
-        if info.get("domain") == domain and name != slug
-    ]
-    line = f"# 위키 — 도메인 {domain} · 레포 {slug}"
-    if siblings:
-        line += " · 형제: " + " · ".join(siblings)
-    header.append(line)
+    # 형제 레포 건수는 싣지 않는다 — 간선 상대 레포의 문서 건수는 인접 좌표가 낸다.
+    header.append(f"# 위키 — 도메인 {domain} · 레포 {slug}")
 elif slug:
     header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 도메인 목록이 함께 주입됨")
 
@@ -147,56 +141,10 @@ if domain:
         elif behind == 0:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
-# 1층: 도메인 목록과 현재 도메인에 닿는 간선. 전역 index 문서를 저작하지 않고 registry.json과
-# 각 도메인 index.md 첫 줄·deps.json에서 파생한다 — 도메인 간 의존은 레포 간 의존의 요약이라
-# 세 번째 문서를 두면 같은 사실을 복제하고 갱신 규칙이 하나 더 는다.
-domains = sorted(registry.get("domains", {}) or {})
-domain_block = ""
-if domains:
-    head = f"# 도메인 {len(domains)}개"
-    if domain:
-        head += f" · 현재 {domain}"
-    rows = []
-    for name in domains:
-        index_file = knowledge / name / catalog.INDEX_NAME
-        lead = catalog.lead_line(index_file) if index_file.is_file() else "(index.md 없음 — /llm-wiki:register)"
-        rows.append(f"- {name} — {lead}" if lead else f"- {name}")
-    domain_block = "\n".join([head, *rows])
-
-# 간선은 양방향으로 준다 — 현재 레포를 to로 가진 from이 이번 변경의 파급 대상이고,
-# 그 from이 다른 도메인이면 목록이 주입되지 않으므로 여기가 유일한 신호다.
-touching: list[tuple[str, str, str]] = []
-if domain:
-    for edge in catalog.load_edges(wiki_root):
-        origin, target = edge.get("from"), edge.get("to")
-        if not isinstance(origin, str) or not isinstance(target, str):
-            continue
-        if not catalog.EDGE_RE.match(origin) or not catalog.EDGE_RE.match(target):
-            continue
-        if domain not in (origin.split("/", 1)[0], target.split("/", 1)[0]):
-            continue
-        note = edge.get("note")
-        suffix = f" — {note.strip()}" if isinstance(note, str) and note.strip() else ""
-        touching.append((origin, target, f"- {origin} → {target}{suffix}"))
-    touching.sort(key=lambda item: item[:2])
-
-edge_block = ""
-if touching:
-    edge_block = "\n".join([
-        f"# 의존 간선 {len(touching)}건 · {domain}에 닿는 것 (from → to = from이 to를 호출·참조)",
-        *(row for _, _, row in touching),
-    ])
-
-# 도메인 지도(index.md)는 목록이 아니라 본문 전체를 주입한다 — 레포 구성·역인덱스가
-# 있어야 코드 변경의 파급 레포를 답할 수 있다. 없으면 헤더에 register 안내만 남긴다.
-index_block = ""
-index_path = knowledge / domain / catalog.INDEX_NAME if domain else None
-if domain:
-    if index_path.is_file():
-        index_body = "\n".join(catalog.body_lines(index_path)).strip()
-        index_block = f"# 도메인 {domain} index.md · 약 {catalog.estimate_tokens(index_body):,}토큰\n\n{index_body}"
-    else:
-        header.append(f"# {domain}/index.md 없음 — /llm-wiki:register")
+# 그래프 블록. 도메인 목록·접근 좌표·역인덱스·두 묶음 간선·인접 좌표를 저장된 문서가
+# 아니라 registry.json 노드와 deps.json 간선에서 파생한다 — 같은 사실을 사람이 쓰는
+# 지도 문서에도 두면 갱신 규칙이 하나 더 늘고 두 값이 갈린다.
+graph_block = graph.render_session(registry, edges, domain or "", slug, paths, knowledge, today)
 
 # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
 # 에이전트는 description만으로 문서를 열지 말지 정하므로 목록에서 빠진 문서는 없는 문서가 된다.
@@ -211,12 +159,8 @@ def assemble():
     blocks = [guide]
     if header:
         blocks.append("\n".join(header))
-    if domain_block:
-        blocks.append(domain_block)
-    if edge_block:
-        blocks.append(edge_block)
-    if index_block:
-        blocks.append(index_block)
+    if graph_block:
+        blocks.append(graph_block)
     blocks.extend(spaces)
     return "\n\n".join(blocks)
 
