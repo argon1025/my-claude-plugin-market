@@ -115,14 +115,16 @@ if domain:
 elif slug:
     header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 도메인 목록이 함께 주입됨")
 
-inbox = wiki_root / "inbox.md"
-if inbox.is_file():
+# 인박스는 도메인마다 파일 하나다 — 담당자가 다른 두 도메인이 한 파일 끝에 append하면
+# 매일 pull --rebase가 충돌한다. 다른 도메인의 건수는 그 도메인 목록처럼 주입하지 않는다.
+inbox = wiki_root / "inbox" / f"{domain}.md" if domain else None
+if inbox is not None and inbox.is_file():
     try:
         rows = sum(1 for line in inbox.read_text(encoding="utf-8").splitlines() if line.startswith("- ["))
     except OSError:
         rows = 0
     if rows:
-        header.append(f"# 확인 필요 {rows}건 — inbox.md, /llm-wiki:add 로 처리")
+        header.append(f"# 확인 필요 {rows}건 — inbox/{domain}.md, /llm-wiki:add 로 처리")
 
 # 낡음 신호의 절반은 문서 날짜가 아니라 커서와 HEAD의 거리다. 커서가 뒤처져 있으면
 # 목록이 최신으로 보여도 반영되지 않은 머지가 있다는 뜻이다.

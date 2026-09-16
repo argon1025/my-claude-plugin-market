@@ -10,7 +10,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
 - **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`의 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장 — `!` 낡음·60자 초과·description 중복이 여기서 나옴
 - **index.md**: 스코프 도메인의 `index.md`는 대상에 포함하며 템플릿 이탈만 봄 — 참조·한 주제 신호는 면제
-- **인박스**: `inbox.md`의 해당 스코프 행 수를 세고 "처리는 `/llm-wiki:add`" 안내
+- **인박스**: 스코프 도메인의 `inbox/{domain}.md` 행 수를 세고 "처리는 `/llm-wiki:add`" 안내
 - **묶음**: 대상 문서를 폴더별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 붙임 — 메인은 문서 본문을 열지 않음
 
 ## 2. 진단 fan-out — 묶음 1개 = 에이전트 1회
@@ -46,7 +46,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 
 - **승인 대상**: `삭제`·`통합`·`흡수`·`이동`·`분할 후보` 행 — 번호·조치·문서:절·전·후를 채팅에 그대로 싣고, 사용자가 제외한 번호 외는 전부 승인
 - **승인 불필요**: `재작성`·`설명`·`검증`은 `{스크래치}/approval-{날짜}.md`에만 두고 적용
-- **충돌·확인 필요**: 적용하지 않고 `inbox.md`에 append
+- **충돌·확인 필요**: 적용하지 않고 스코프 도메인의 `inbox/{domain}.md`에 append
 - **0행**: 승인 대상이 없으면 표를 제시하지 않고 4장으로
 
 ## 4. 적용 fan-out — 문서 1장 = 에이전트 1회
@@ -74,5 +74,5 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 
 - **처리**: 문서 수·조치별 건수·삭제 파일
 - **승인**: 승인 행 수·제외 번호
-- **충돌·확인 필요·분할 후보**: 문서와 내용 — `inbox.md`에 남긴 다음 작업
+- **충돌·확인 필요·분할 후보**: 문서와 내용 — `inbox/{domain}.md`에 남긴 다음 작업
 - **검사**: 남은 에러와 그 문서

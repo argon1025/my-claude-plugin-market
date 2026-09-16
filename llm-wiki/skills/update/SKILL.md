@@ -1,6 +1,6 @@
 ---
 name: update
-description: Use when merged code in registered repos must be reflected into the wiki ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --domain/--repo/--range) — asks once which domains to document then walks that domain's registered repos from their cursors (skipping the question for --domain/--repo/--range/--all runs), fans out one subagent per merge batch (5 merges or 500KB of diff) to extract facts, assigns facts to the domain root, the repo folder and index.md against the catalogs, fans out one subagent per doc to apply, runs --check, commits per doc, advances the cursor, pushes. 관찰-tier only: confirms and adds, never overwrites; conflicts go to inbox.md. NOT for material the user hands over (that is /llm-wiki:add's job) and NOT for sweeping existing docs (that is /llm-wiki:audit's job).
+description: Use when merged code in registered repos must be reflected into the wiki ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --domain/--repo/--range) — asks once which domains to document then walks that domain's registered repos from their cursors (skipping the question for --domain/--repo/--range/--all runs), fans out one subagent per merge batch (5 merges or 500KB of diff) to extract facts, assigns facts to the domain root, the repo folder and index.md against the catalogs, fans out one subagent per doc to apply, runs --check, commits per doc, advances the cursor, pushes. 관찰-tier only: confirms and adds, never overwrites; conflicts go to inbox/{domain}.md. NOT for material the user hands over (that is /llm-wiki:add's job) and NOT for sweeping existing docs (that is /llm-wiki:audit's job).
 disable-model-invocation: true
 ---
 
@@ -50,7 +50,7 @@ disable-model-invocation: true
 - **위치**: 규약 3장 위치 판정 "이 레포를 지워도 참인가"를 사실마다 한 번 물어 도메인 루트와 레포 폴더를 가르고 둘 다 직접 편집
 - **대조**: 도메인 루트 목록(`catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`)과 레포 목록(`--root {WIKI_ROOT}/knowledge/{domain}/{slug}`)의 `description` 전수와 grep으로 대상 문서를 찾음 — 후보가 둘이면 범위가 좁은 문서
 - **신규 문서**: 대상이 없는 사실은 주제로 묶어 40자 한 문장으로 덮이면 신규 1장, 덮이지 않으면 나누고 그래도 서지 않으면 `기각 — 한 주제 아님`
-- **배치 내 상충**: 같은 주제에 값이 다른 사실 둘은 둘 다 `inbox.md`
+- **배치 내 상충**: 같은 주제에 값이 다른 사실 둘은 둘 다 그 레포 도메인의 `inbox/{domain}.md`
 - **index.md 배정**: 신규 문서가 생기면 그 업무 영역·레포를 `## 역인덱스` 행으로, diff에서 레포 역할·접근 좌표(호스트·환경 이름)가 확정되면 `## 레포 구성`·`## 접근 좌표` 보강으로 도메인 `index.md`에 배정 — index.md도 문서 1장으로 4장 에이전트 1회
 - **deps.json 배정**: diff에서 레포 간 의존(빌드 파일의 모듈 의존·HTTP·Feign 클라이언트·AMQP 발신·DB 공유)이 확정되고 양 끝이 등록 레포면 규약 10장 형식의 `관찰` 간선으로 배정하고, 한쪽이 미등록이면 `기각 — 미등록 레포`
 - **배정표**: `{스크래치}/assign.json`에 문서별 사실 목록·신규 여부를 씀 — `--dry-run`이면 배정표를 보고하고 종료
@@ -86,8 +86,8 @@ disable-model-invocation: true
 
 - **전수 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` — 이번에 손대지 않은 문서의 에러는 고치지 않고 보고에 남김
 - **되돌림**: `blocked`·`check: fail` 문서는 `git -C {WIKI_ROOT} checkout -- {경로}`로 원복하고 그 사실은 보고의 `기각`, 되돌린 머지가 있으면 커서는 그 머지 직전까지만
-- **inbox.md**: `excluded`(충돌)·배치 내 상충 행만 `- [{날짜}] [{domain}] {주제} — 기존 {값} ({파일:절}, {출처}) / 새 {값} ({slug} @{sha7} {code})` 형식으로 append
-- **커밋**: 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} {요약}`, 그 뒤 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" advance {slug} {sha} --wiki {WIKI_ROOT}`로 `state/{slug}.json` 갱신 + `inbox.md`를 `chore(update): {slug} 커서 {sha7} · 머지 N건 · 문서 M건` 한 커밋(N·M은 스킬이 셈) — 사실 0건 머지도 전진, 예산으로 잘린 머지 앞에서 멈춤, 되돌린 묶음이 있으면 그 묶음 첫 머지 직전까지만, `--range` 실행은 커서 불변
+- **inbox/{domain}.md**: `excluded`(충돌)·배치 내 상충 행만 `- [{날짜}] [{domain}] {주제} — 기존 {값} ({파일:절}, {출처}) / 새 {값} ({slug} @{sha7} {code})` 형식으로 그 레포 도메인 파일에 append — 파일이 없으면 만들고, 여러 도메인을 한 실행에서 처리하면 도메인별 파일에 각각 씀
+- **커밋**: 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} {요약}`, 그 뒤 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" advance {slug} {sha} --wiki {WIKI_ROOT}`로 `state/{slug}.json` 갱신 + 그 도메인의 `inbox/{domain}.md`를 `chore(update): {slug} 커서 {sha7} · 머지 N건 · 문서 M건` 한 커밋(N·M은 스킬이 셈) — 사실 0건 머지도 전진, 예산으로 잘린 머지 앞에서 멈춤, 되돌린 묶음이 있으면 그 묶음 첫 머지 직전까지만, `--range` 실행은 커서 불변
 - **deps.json 커밋**: 간선이 바뀌면 `docs(deps): 간선 N건 · {slug} @{sha7}` 한 커밋 — 문서 커밋과 섞지 않음
 - **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 재시도 2회, 실패는 로컬 커밋 상태와 함께 보고
 
@@ -96,6 +96,6 @@ disable-model-invocation: true
 - **범위**: 이번 실행의 대상 도메인과 그 선택이 질문·인자 중 무엇으로 정해졌는지 한 줄
 - **레포별**: 처리 머지 수·사실 수·커서 전후·건너뜀 사유
 - **문서**: 생성·수정 목록과 동일·보강 건수, `deps.json` 간선 추가 건수
-- **확인 필요**: `inbox.md`에 남긴 행 전부 — 이 실행이 사람에게 남기는 판정 요청이며 `/llm-wiki:add`로 집음
+- **확인 필요**: `inbox/{domain}.md`에 남긴 행 전부 — 이 실행이 사람에게 남기는 판정 요청이며 `/llm-wiki:add`로 집음
 - **기각**: 사유별 건수(담지 않는 것·한 주제 아님·내부 동작 서술·검사 실패)
 - **후속**: 신규 문서 목록과 `/llm-wiki:audit` 권고

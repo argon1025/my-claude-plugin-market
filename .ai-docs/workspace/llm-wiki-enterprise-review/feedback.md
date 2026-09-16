@@ -1,0 +1,32 @@
+# llm-wiki-enterprise-review 작업 기록
+
+- `context` 개인용 llm-wiki를 사내 위키(개발자센터 knowledge, 상품전시 onestore-display)로 쓸 수 있는지 라이프사이클 관점에서 리뷰함
+  - source: 사용자 확인 2026-09-16
+- `constraint` catalog.py의 LOCATION_RE는 도메인 루트 바로 아래 1층 폴더를 레포 폴더로 해석하므로 `policy/`·`domain/`·`process/`처럼 성격별로 나눈 폴더는 레지스트리에 없는 레포로 잡혀 --check 에러 없이 세션 주입에서 통째로 빠짐
+  - evidence: llm-wiki/scripts/catalog.py:47
+- `constraint` session_start.sh의 소프트 8,000토큰 경고는 목록뿐 아니라 index.md 본문까지 합산하지만 doc-contract 9장이 index.md에 토큰 상한을 두지 않아, index.md가 큰 도메인은 audit으로 없앨 수 없는 정리 권고 줄이 매 세션 고정으로 붙음
+  - evidence: llm-wiki/hooks/session_start.sh:226, llm-wiki/references/doc-contract.md
+- `constraint` update.py의 무인 갱신 대상은 `.local/paths.json`에 경로가 기록된 레포뿐이고 그 기록은 해당 레포에서 세션을 한 번 여는 것이 유일한 경로라, 클론하지 않은 등록 레포는 커서가 영원히 전진하지 않음
+  - evidence: llm-wiki/hooks/session_start.sh, llm-wiki/skills/update/SKILL.md
+- `constraint` 상품전시 위키 저장소(DSP/onestore-display-claude-plugin-marketplace)는 이미 llm-wiki 규격의 registry.json·state/·knowledge/onestore-display/ 구조이나 deps.json과 inbox.md가 없는 2.9.0 이전 판본임
+- `constraint` 개발자센터 위키는 devcenter-wiki 플러그인의 2단 파이프(auto-collect가 facts/ 원자재 대장에 적재, auto-publish가 PR로 knowledge/ 반영)로 유지되며 Bitbucket Data Center에 Pipelines가 없어 기계 게이트는 .githooks/pre-commit 하나뿐임
+  - evidence: onestore-devcenter-claude-plugin-marketplace/.githooks/pre-commit
+- `correction` 성격별 폴더(`policy/`·`domain/`)를 도메인 루트 아래 둔 채 registry.json에 그 도메인이 있으면 catalog.py --check가 문서마다 "레포 폴더 {name}가 registry.json에 없거나 도메인이 다름" 에러를 내므로 에러 없이 통과하는 것은 아니며, 주입에서 빠지는 것(shallow 목록이 하위 폴더 제외)만 참임
+  - evidence: llm-wiki/scripts/catalog.py check_location, docs(shallow=True)
+- `constraint` 개발자센터 knowledge 176건은 frontmatter 3키·60자 상한·출처 줄을 이미 전부 지키고 폴더를 평면화해도 파일명 충돌이 없어, llm-wiki 도메인 루트로 옮기는 기계적 비용은 175건 git mv와 index.md 신설(system-repository-map.md 승계)이 전부임
+- `constraint` 상품전시 위키 저장소는 2026-09-15 담당자 1인이 main에 49커밋을 직접 push한 상태라 직접 push가 허용되나, 개발자센터 마켓플레이스는 `[WIKI]` PR로만 main에 반영되어 llm-wiki 스킬의 `pull --rebase && git push` 종료 절차와 충돌함
+- `constraint` llm-wiki는 LLM_WIKI_ROOT 하나만 읽고 다중 위키는 README에서 보류 항목이라, 두 팀이 위키 저장소를 따로 두면 한 사람이 두 위키를 동시에 쓸 수 없고 개인 위키(~/.ai-docs/wiki, argon1025-side)도 사내 위키와 공존하지 못함
+  - evidence: llm-wiki/hooks/session_start.sh WIKI 변수, llm-wiki/README.md 미이전 기능
+- `constraint` catalog.py의 description 중복 검사(inspect_across)는 knowledge/ 전체 코퍼스를 대상으로 하므로 한 저장소에 두 도메인을 두면 다른 팀 문서와 같은 description이 내 커밋을 막음
+  - evidence: llm-wiki/scripts/catalog.py inspect_across
+- `context` 지금 문서를 그대로 적용하는게아니고 문서 자체는 마이그레이션 할것임. 지금 해당 프로젝트들의 pr 양상과 문서화 되는 부하, 매 세션 개발등 사용하는 부분에서 구조적으로 괜찮을지가 궁금함
+  - source: 사용자 확인 2026-09-16
+- `constraint` 개발자센터·CMS 코드 레포는 develop에 머지 커밋 방식으로 PR이 닿고(PR당 커밋 중앙값 1~4) 최근 90일 first-parent 머지가 cmsapp-api 171건·devcenter-front 140건으로 최대 주 13건이라, llm-wiki update의 레포별 예산 20건은 주 1회 실행에서만 잔여 없이 소화됨
+- `constraint` 프런트 레포(devcenter-front·cmsapp-front)는 90일 안에 400KB 절단에 걸리는 머지가 각 4건·2건(최대 3.3MB) 있어 diff 절단으로 사실이 유실되는 자리가 프런트에 집중됨
+- `constraint` 상품전시 18레포는 90일 develop 머지 합계 약 200건(주 16건, 최대 replication-agent 45건)이고 feature→develop과 release→develop 역머지로 같은 변경이 develop first-parent에 두 번 닿아 update가 동일 판정 비용을 두 번 냄
+- `constraint` 개발자센터 auto-publish 대장 기준 머지 1건당 사실 4.7건이 나오고 그중 반영 36%·기각 34%·레포 스페이스 25%라, llm-wiki update로 옮기면 주 48머지에서 사실 약 225건이 메인 세션 배정 단계를 지나감
+- `constraint` oneshop-console은 master에 PR 없이 직접 커밋(90일 450건)하는 레포라 first-parent 단위가 커밋 하나가 되어 update 예산 20건이 무의미하며 등록 대상에서 계속 제외해야 함
+- `context` update는 매일 수시로 할 예정이라문제 없을듯 inbox만 도메인별 문할 검토 진행
+  - source: 사용자 확인 2026-09-16
+- `constraint` inbox.md를 읽거나 쓰는 자리는 hooks/session_start.sh(건수 헤더)·skills/update(3·5·6장)·skills/add(1·4·5·6장)·skills/audit(1·3·6장)·references/doc-contract.md 7장·README 3곳이며 scripts/update.py·catalog.py는 inbox를 다루지 않음
+- `constraint` 개인 위키(~/.ai-docs/wiki)와 상품전시 위키 모두 inbox.md가 아직 없어 도메인별 분할 시 기존 행 이관은 발생하지 않음
