@@ -24,3 +24,8 @@
   - source: 사용자 확인 2026-09-16
 - `constraint` llm-wiki 간선 방향은 kind(library·http·message·data)와 무관하게 from이 to의 계약에 의존하는 것으로 하나이며, 메시지 간선은 발행자가 to·소비자가 from임 — 발행자 → 소비자로 그리는 관행과 반대이므로 register 조사·update 추출 프롬프트가 이 방향을 명시해야 함
   - evidence: .ai-docs/workspace/feat-llm-wiki-inbox-per-domain/plan.md 외부 계약 deps.json
+- `constraint` llm-wiki의 graph.py는 모듈 수준에서 catalog를 import하고 catalog.check()는 graph를 함수 안에서 import하므로, 편의상 graph import를 catalog 모듈 수준으로 올리면 graph.py를 직접 실행할 때 graph 모듈이 __main__과 graph 두 벌로 적재됨
+  - evidence: llm-wiki/scripts/graph.py, llm-wiki/scripts/catalog.py check()
+- `context` 기존 위키 ~/.ai-docs/wiki는 v3 노드 스키마를 채우지 않아 훅이 도메인 설명·영역 0·간선 0으로 관용 주입하고 knowledge/argon1025-side/index.md가 일반 문서로 목록에 남음 — 채우기는 각 레포에서 /llm-wiki:register --resurvey, index.md 제거는 사용자의 git rm으로 하는 후속 작업
+  - source: 사용자 확인 2026-09-16
+- `context` 계획의 커밋 4·5 실행 검증(trendlog-backend에서 /llm-wiki:register --resurvey, my-claude-plugin-market에서 /llm-wiki:update --dry-run)은 AskUserQuestion 정지점이 있는 대화형 세션과 실제 위키 저장소 쓰기·push를 요구해 이번 세션에서 수행하지 않았고 명령 기반 검증만 마침
