@@ -1,6 +1,6 @@
 ---
 name: init
-description: Use when the wiki repo is not present on this machine or exists without registry.json ("위키 초기화", "위키 세팅", "위키 클론") — clones the shared wiki into the wiki root, or git-inits a new one and asks for the remote, and writes the skeleton (registry.json, state/, .gitignore) with a first commit. Registers nothing. NOT for registering the current repo (that is /llm-wiki:register's job) and NOT for writing facts (that is /llm-wiki:add and /llm-wiki:update's job).
+description: Use when the wiki repo is not present on this machine or exists without registry.json ("위키 초기화", "위키 세팅", "위키 클론", session header says 위키가 없음) — clones the shared wiki into the wiki root, or git-inits a new one and asks for the remote, and writes the skeleton (registry.json, deps.json, state/, knowledge/, .gitignore) with a first commit. Registers nothing and writes no facts. NOT for registering the current repo (/llm-wiki:register).
 disable-model-invocation: true
 ---
 
@@ -21,11 +21,14 @@ disable-model-invocation: true
 
 ## 3. 골격
 
-- **파일**: `registry.json`에 `{"domains": {}, "repos": {}}`, `state/.gitkeep`, `.gitignore`에 `.local/` — `knowledge/`는 만들지 않음(첫 `/llm-wiki:register`가 첫 도메인과 함께 생성)
+- **registry.json**: `{"domains": {}}`
+- **deps.json**: `{"deps": {}}`
+- **state/.gitkeep**·**knowledge/.gitkeep**: 빈 파일
+- **.gitignore**: `.local/` 한 줄 — 스킬의 clean-tree 판정이 통과하는 조건
 - **커밋**: `chore(init): 위키 골격` 한 커밋
-- **원격**: URL을 받았으면 `git remote add origin {URL}`과 `git push -u origin main` — 실패는 로컬 커밋 상태와 함께 보고
+- **원격**: URL을 받았으면 `git remote add origin {URL}`과 `git push -u origin main`, clone한 저장소면 `git push` — 실패는 로컬 커밋 상태와 함께 보고
 
 ## 4. 보고
 
 - **결과**: 위키 경로, clone·신설 여부, 원격 URL 또는 "원격 없음"
-- **다음**: 등록할 각 레포에서 `/llm-wiki:register`를 실행하면 도메인과 레포 노드가 생기고 다음 세션부터 규약·도메인 목록·역인덱스·간선이 자동 주입됨
+- **다음**: 등록할 각 레포에서 `/llm-wiki:register`를 실행하면 도메인과 레포 노드가 생기고 다음 세션부터 규약·레포 지도·의존이 자동 주입됨

@@ -5,15 +5,14 @@
 force-push 검사·diff 절단·제외 pathspec을 에이전트가 bash 여러 번으로 하면 실행마다
 결과가 달라진다. 판정과 문서 편집은 스킬이 하고, 여기서는 "무엇을 볼지"만 정한다.
 
-`pending`은 레포별로 커서 이후 first-parent 커밋을 세고 그 diff를 {out}/{slug}/{sha7}.diff로
-꺼낸 뒤 work.json 경로를 마지막 줄에 낸다. 종료 코드는 0(작업 있음 또는 부트스트랩),
+`pending`은 전 등록 레포의 커서 이후 first-parent 머지를 모아 머지 시각 순으로 세우고, 전역
+예산만큼 골라 그 diff를 {out}/{slug}/{sha7}.diff로 꺼낸 뒤 work.json 경로를 마지막 줄에 낸다.
+work.json `order`가 선택된 머지의 전역 순서다. 종료 코드는 0(작업 있음 또는 부트스트랩),
 10(미처리 없음), 1(오류)이다.
 
 추출 묶음(batches)도 여기서 자른다 — 머지 5건 또는 diff 파일 합계 500KB 중 먼저 닿는 쪽.
 diff의 실제 바이트는 파일을 쓴 뒤에만 알 수 있고, 스킬이 묶으면 실행마다 경계가 달라진다.
-
-`domains`는 도메인별 레포와 미반영 커밋 수를 낸다 — 스킬이 대상 도메인을 묻기 전에 쓰며,
-fetch 없이 로컬 ref만 보므로 질문 앞단에서 지연을 만들지 않는다.
+묶음은 레포 안에서만 만든다.
 
 `advance`는 state/{slug}.json의 커서를 전진시킨다. 커서 파일을 레포별로 나눈 것은 여러
 사람과 여러 머신이 서로 다른 레포를 갱신할 때 같은 파일에서 충돌하지 않게 하려는 것이다.
@@ -28,11 +27,15 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
+# 노드 로드와 휴면 판정은 graph가 정본이다 — registry.json이 도메인 아래 중첩이라 평탄화가
+# 필요하고, 같은 변환을 여기 한 벌 더 두면 스키마를 고칠 때 한쪽만 남는다.
+import graph
+
 DEFAULT_WIKI = os.environ.get("LLM_WIKI_ROOT", "~/.ai-docs/wiki")
-DEFAULT_MAX_MERGES = 20
+DEFAULT_MAX_MERGES = 40
 DIFF_MAX_BYTES = 400_000
 # 추출 에이전트 1회가 읽는 묶음의 상한. 건수는 사실 병합의 품질, 바이트는 컨텍스트 예산이다.
 DEFAULT_BATCH_MERGES = 5
@@ -57,12 +60,7 @@ EXCLUDE_PATHSPECS = [
 
 SKIP_NO_PATH = "로컬 경로 없음 — 그 레포에서 세션을 한 번 열면 등록됨"
 SKIP_NOT_ANCESTOR = "커서가 HEAD 조상이 아님(force-push 의심) — advance로 재설정"
-SKIP_EXCLUDED = "제외 레포 — registry.json의 status가 excluded"
-
-
-def excluded(info: dict) -> bool:
-    """휴면·레거시로 등록만 해 둔 레포. 훅 주입과 무인 갱신 양쪽에서 빠진다."""
-    return (info.get("status") or "active") == "excluded"
+SKIP_DORMANT = "휴면 레포 — registry.json의 status가 dormant"
 
 
 def git(cwd: str | Path, *args: str, timeout: int = 60) -> tuple[int, str]:
@@ -92,7 +90,7 @@ def target_ref(path: str, branch: str) -> str:
 
 def first_parent(path: str, rev_range: str) -> list[dict]:
     code, out = git(path, "log", "--first-parent", "--reverse",
-                    "--format=%H%x09%P%x09%ad%x09%s", "--date=short", rev_range)
+                    "--format=%H%x09%P%x09%cI%x09%s", rev_range)
     if code != 0:
         return []
     rows = []
@@ -173,59 +171,10 @@ def baseline_before(path: str, ref: str, days: int) -> str | None:
     return out.strip() if code == 0 and out.strip() else None
 
 
-def repo_status(wiki: Path, paths: dict, slug: str, info: dict) -> tuple[str, int]:
-    """도메인 선택 질문에 낼 레포 한 줄. fetch 없이 로컬 ref만 보므로 질문 앞단을 지연시키지 않는다."""
-    path = paths.get(slug)
-    if not path or not Path(path).is_dir():
-        return "경로 없음", 0
-    ref = target_ref(path, info.get("branch") or "main")
-    if git(path, "rev-parse", "--verify", "--quiet", ref)[0] != 0:
-        return "대상 ref 없음", 0
-    state = load_json(wiki / "state" / f"{slug}.json", {})
-    cursor = state.get("cursor") if isinstance(state, dict) else None
-    if not cursor:
-        return "부트스트랩", 0
-    code, out = git(path, "rev-list", "--count", f"{cursor}..{ref}")
-    if code != 0:
-        return "커서 확인 실패", 0
-    count = int(out.strip() or 0)
-    return (f"미반영 {count}" if count else "미반영 없음"), count
-
-
-def cmd_domains(args) -> int:
-    wiki = Path(args.wiki).expanduser()
-    registry = load_json(wiki / "registry.json", {})
-    registry = registry if isinstance(registry, dict) else {}
-    repos = registry.get("repos", {})
-    if not repos:
-        print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:register", file=sys.stderr)
-        return 1
-
-    paths = load_json(wiki / ".local" / "paths.json", {})
-    grouped: dict[str, list[str]] = {name: [] for name in registry.get("domains", {})}
-    for slug, info in sorted(repos.items()):
-        if excluded(info):
-            continue
-        grouped.setdefault(info.get("domain") or "(도메인 없음)", []).append(slug)
-
-    width = max((len(slug) for slug in repos), default=0)
-    for domain, slugs in sorted(grouped.items()):
-        lines, total = [], 0
-        for slug in slugs:
-            label, count = repo_status(wiki, paths, slug, repos[slug])
-            total += count
-            lines.append(f"  {slug.ljust(width)}  {label}")
-        print(f"{domain}: 레포 {len(slugs)}개 · 미반영 {total}건")
-        for line in lines:
-            print(line)
-    print("(fetch 전 로컬 ref 기준 — 실제 처리량은 pending에서 늘 수 있음)")
-    return 0
-
-
 def cmd_pending(args) -> int:
     wiki = Path(args.wiki).expanduser()
-    registry = load_json(wiki / "registry.json", {})
-    repos = registry.get("repos", {}) if isinstance(registry, dict) else {}
+    registry = graph.load_registry(wiki)
+    repos = registry["repos"]
     if not repos:
         print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:register", file=sys.stderr)
         return 1
@@ -235,20 +184,16 @@ def cmd_pending(args) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     selected = set(args.repo or [])
-    domains = set(args.domain or [])
-    unknown = sorted(domains - {info.get("domain") for info in repos.values()})
-    if unknown:
-        print(f"# 등록되지 않은 도메인: {', '.join(unknown)} — update.py domains로 확인", file=sys.stderr)
-        return 1
-    work = {"wiki": str(wiki), "repos": {}, "skipped": {}, "range_only": bool(args.range)}
+    work = {"wiki": str(wiki), "order": [], "repos": {}, "skipped": {}, "range_only": bool(args.range)}
 
+    # 1단: 레포별 미처리 머지를 모아 한 리스트에 세운다. diff는 선택된 것만 꺼내므로 여기서는 부르지 않는다.
+    pool: list[dict] = []
+    spans: dict[str, list[dict]] = {}
     for slug, info in sorted(repos.items()):
         if selected and slug not in selected:
             continue
-        if domains and info.get("domain") not in domains:
-            continue
-        if excluded(info):
-            work["skipped"][slug] = SKIP_EXCLUDED
+        if graph.is_dormant(info):
+            work["skipped"][slug] = SKIP_DORMANT
             continue
         path = paths.get(slug)
         if not path or not Path(path).is_dir():
@@ -259,7 +204,7 @@ def cmd_pending(args) -> int:
         if git(path, "fetch", "--quiet", "origin")[0] != 0:
             notes.append("fetch 실패 — 로컬 ref 기준")
 
-        branch = info.get("branch") or "main"
+        branch = info.get("defaultBranch") or "main"
         ref = target_ref(path, branch)
         code, head = git(path, "rev-parse", ref)
         if code != 0:
@@ -283,11 +228,16 @@ def cmd_pending(args) -> int:
             span = f"{cursor}..{head}"
 
         rows = first_parent(path, span)
-        remaining = max(0, len(rows) - args.max_merges)
-        rows = rows[: args.max_merges]
-        for row in rows:
-            extract_diff(path, slug, row, out_dir / slug)
-
+        # 정렬 키는 레포 안 누적 최대 시각이다. fast-forward·rebase 커밋은 committer date가
+        # first-parent 순서와 어긋날 수 있는데, 날짜만으로 자르면 한 레포의 선택이 앞부분이
+        # 아니게 되고 커서가 선택되지 않은 머지를 넘어 전진해 그 머지가 영구 누락된다.
+        # 시각은 타임존 오프셋이 레포마다 달라 문자열이 아니라 epoch로 비교한다.
+        latest = 0.0
+        for position, row in enumerate(rows):
+            latest = max(latest, datetime.fromisoformat(row["date"]).timestamp())
+            row["slug"], row["key"], row["position"] = slug, latest, position
+        pool.extend(rows)
+        spans[slug] = rows
         work["repos"][slug] = {
             "domain": info.get("domain"),
             "path": path,
@@ -296,11 +246,28 @@ def cmd_pending(args) -> int:
             "head": head,
             "cursor": cursor,
             "bootstrapped": bootstrapped,
-            "commits": rows,
-            "batches": batches(rows, args.batch_merges, args.batch_bytes),
-            "remaining": remaining,
+            "commits": [],
+            "batches": [],
+            "remaining": 0,
             "notes": notes,
         }
+
+    # 2단: 전 레포를 머지 시각 순으로 세워 전역 예산만큼 자르고, 선택된 머지만 diff를 꺼낸다.
+    pool.sort(key=lambda row: (row["key"], row["slug"], row["position"]))
+    chosen = pool[: args.max_merges]
+    for row in chosen:
+        entry = work["repos"][row["slug"]]
+        extract_diff(entry["path"], row["slug"], row, out_dir / row["slug"])
+        work["order"].append({"slug": row["slug"], "sha7": row["sha"][:7], "date": row["date"]})
+    picked = {id(row) for row in chosen}
+    for slug, rows in spans.items():
+        entry = work["repos"][slug]
+        entry["commits"] = [
+            {key: value for key, value in row.items() if key not in ("slug", "key", "position")}
+            for row in rows if id(row) in picked
+        ]
+        entry["remaining"] = len(rows) - len(entry["commits"])
+        entry["batches"] = batches(entry["commits"], args.batch_merges, args.batch_bytes)
 
     work_path = out_dir / "work.json"
     work_path.write_text(json.dumps(work, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -322,15 +289,14 @@ def cmd_pending(args) -> int:
 
 def cmd_advance(args) -> int:
     wiki = Path(args.wiki).expanduser()
-    registry = load_json(wiki / "registry.json", {})
-    info = (registry.get("repos", {}) if isinstance(registry, dict) else {}).get(args.slug)
+    info = graph.load_registry(wiki)["repos"].get(args.slug)
     if info is None:
         print(f"# 등록되지 않은 레포: {args.slug}", file=sys.stderr)
         return 1
 
     paths = load_json(wiki / ".local" / "paths.json", {})
     path = paths.get(args.slug)
-    branch = info.get("branch") or "main"
+    branch = info.get("defaultBranch") or "main"
     if path and Path(path).is_dir():
         ref = target_ref(path, branch)
         if git(path, "merge-base", "--is-ancestor", args.sha, ref)[0] != 0:
@@ -360,11 +326,10 @@ def main() -> int:
 
     pending = sub.add_parser("pending", parents=[common], help="커서 이후 머지 목록과 diff 파일을 만든다")
     pending.add_argument("--out", metavar="DIR", required=True, help="diff와 work.json을 쓸 디렉터리")
-    pending.add_argument("--domain", metavar="NAME", action="append", help="대상 도메인 한정 (반복 가능)")
     pending.add_argument("--repo", metavar="SLUG", action="append", help="대상 레포 한정 (반복 가능)")
     pending.add_argument("--range", metavar="REV", help="지목 범위. 이 실행은 커서를 전진시키지 않는다")
     pending.add_argument("--max-merges", metavar="N", type=int, default=DEFAULT_MAX_MERGES,
-                         help=f"레포별 머지 예산 (기본값: {DEFAULT_MAX_MERGES})")
+                         help=f"전역 머지 예산 (기본값: {DEFAULT_MAX_MERGES})")
     pending.add_argument("--baseline-days", metavar="N", type=int,
                          help="커서 없는 레포를 며칠 전부터 소급할지")
     pending.add_argument("--batch-merges", metavar="N", type=int, default=DEFAULT_BATCH_MERGES,
@@ -372,9 +337,6 @@ def main() -> int:
     pending.add_argument("--batch-bytes", metavar="N", type=int, default=DEFAULT_BATCH_BYTES,
                          help=f"추출 묶음 하나의 diff 파일 합계 상한 (기본값: {DEFAULT_BATCH_BYTES})")
     pending.set_defaults(func=cmd_pending)
-
-    domains_cmd = sub.add_parser("domains", parents=[common], help="도메인별 레포와 미반영 커밋 수를 낸다")
-    domains_cmd.set_defaults(func=cmd_domains)
 
     advance = sub.add_parser("advance", parents=[common], help="레포 커서를 전진시킨다")
     advance.add_argument("slug")
