@@ -1,16 +1,20 @@
 #!/bin/bash
-# 위키 규약(rules/agent-guide.md)과 그래프 파생 블록(도메인 목록·접근 좌표·역인덱스·
-# 현재 레포 기준 두 묶음 간선·인접 레포 좌표), 목록(도메인 루트 + 현재 레포)을
-# 세션 컨텍스트로 주입한다. 파생은 scripts/graph.py가 registry.json·deps.json에서 만든다.
+# 위키 규약(rules/agent-guide.md), 상태 헤더, 그래프 파생 블록(레포 지도 → 현재 레포 기준
+# 의존 3묶음), 목록(도메인 루트 + 현재 레포)을 세션 컨텍스트로 주입한다.
+# 파생은 scripts/graph.py가 registry.json·deps.json에서 만든다.
+#
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 돈다.
 # 주입은 전 이벤트에서 하고, 원격 pull은 stdin의 source가 startup·resume일 때만 한다 —
 # clear·compact는 같은 세션의 재주입이고 fork는 부모가 이미 당겼다.
 # 어떤 실패에서도 종료 코드 0으로 끝난다 — 0이 아닌 값을 내면 주입이 조용히 사라진다.
+# set -e를 걸지 않는다 — 실패 명령 하나로 주입 전체가 사라진다.
 set -uo pipefail
 
 WIKI="${LLM_WIKI_ROOT:-$HOME/.ai-docs/wiki}"
 PLUGIN="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"
+
+ALERT='첫 응답에서 사용자에게 알릴 것'
 
 command -v python3 >/dev/null 2>&1 || exit 0
 
@@ -24,10 +28,13 @@ SYNC_MINUTES="${LLM_WIKI_SYNC_MINUTES:-10}"
 case "$SYNC_MINUTES" in ''|*[!0-9]*) SYNC_MINUTES=10 ;; esac
 SYNC_SECONDS=$(( SYNC_MINUTES * 60 ))
 
-if [ ! -f "$WIKI/registry.json" ]; then
-  python3 -B -c 'import json,sys;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":sys.argv[1]}},ensure_ascii=False))' \
-    "LLM-WIKI: 위키가 $WIKI 에 없음 — /llm-wiki:init 으로 clone 하거나 새로 만들 것" 2>/dev/null
+emit() {
+  python3 -B -c 'import json,sys;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":sys.argv[1]}},ensure_ascii=False))' "$1" 2>/dev/null
   exit 0
+}
+
+if [ ! -f "$WIKI/registry.json" ]; then
+  emit "LLM-WIKI: 위키가 $WIKI 에 없음 — /llm-wiki:init 으로 clone 하거나 새로 만들 것"
 fi
 
 # 원격 동기화. startup·resume에서 FETCH_HEAD가 주기보다 오래됐을 때만 당기고, 3초 안에 안 끝나면
@@ -48,14 +55,16 @@ if { [ "$SOURCE" = startup ] || [ "$SOURCE" = resume ]; } && [ -n "$GIT_DIR" ] &
       sleep 0.5
     done
     if kill -0 "$PULL_PID" 2>/dev/null; then
-      SYNC_NOTE="# 위키 동기화 지연 — 아래 목록은 이전 사본. 첫 응답에서 사용자에게 알릴 것"
+      SYNC_NOTE="# 위키 동기화 지연 — 아래 목록은 이전 사본. $ALERT"
     elif ! wait "$PULL_PID"; then
-      SYNC_NOTE="# 위키 동기화 실패 — 아래 목록은 이전 사본. 첫 응답에서 사용자에게 알릴 것"
+      SYNC_NOTE="# 위키 동기화 실패 — 아래 목록은 이전 사본. $ALERT"
     fi
   fi
 fi
 
-REMOTE="$(git -C "$PROJECT_DIR" remote get-url origin 2>/dev/null || git -C "$PROJECT_DIR" remote get-url upstream 2>/dev/null || true)"
+# fork 워크플로에서 origin은 개인 포크이고 upstream이 정본이다. 노드에는 정본만 적으므로
+# upstream을 먼저 본다 — 둘 다 없거나 어긋나도 resolve_repo의 slug 폴백이 받는다.
+REMOTE="$(git -C "$PROJECT_DIR" remote get-url upstream 2>/dev/null || git -C "$PROJECT_DIR" remote get-url origin 2>/dev/null || true)"
 COMMON_DIR="$(git -C "$PROJECT_DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
 TOPLEVEL="$(git -C "$PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 
@@ -64,7 +73,6 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 
 plugin, wiki, remote, common_dir, toplevel, sync_note = sys.argv[1:7]
@@ -76,20 +84,17 @@ SOFT_BUDGET = 8000
 
 wiki_root = Path(wiki)
 knowledge = wiki_root / "knowledge"
-catalog_py = os.path.join(plugin, "scripts", "catalog.py")
 graph_py = os.path.join(plugin, "scripts", "graph.py")
-today = date.today()
 
 guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-guide = (guide.replace("{WIKI_ROOT}", wiki)
-              .replace("{CATALOG_PY}", catalog_py)
-              .replace("{GRAPH_PY}", graph_py))
+guide = guide.replace("{WIKI_ROOT}", wiki).replace("{GRAPH_PY}", graph_py)
 
 registry = graph.load_registry(wiki_root)
 edges = graph.load_edges(wiki_root)
 slug, domain = graph.resolve_repo(registry, remote, common_dir)
 
 # 무인 갱신은 이 파일에 경로가 있는 레포만 처리한다 — 그 레포에서 세션을 한 번 여는 것이 등록이다.
+# .local/은 .gitignore 대상이라 clean-tree 판정에 걸리지 않는다.
 paths = catalog.load_json(wiki_root / ".local" / "paths.json", {})
 if not isinstance(paths, dict):
     paths = {}
@@ -103,24 +108,11 @@ header = []
 if sync_note:
     header.append(sync_note)
 
-if domain:
-    header.append(f"# 위키 — 도메인 {domain} · 레포 {slug}")
-elif slug:
-    header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 도메인 목록이 함께 주입됨")
+# 등록 레포의 도메인·slug는 레포 지도 머리글이 말하므로 여기서는 미등록만 알린다.
+if slug and not domain:
+    header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 레포 지도·의존이 주입됨")
 
-# 인박스는 도메인마다 파일 하나다 — 담당자가 다른 두 도메인이 한 파일 끝에 append하면
-# 매일 pull --rebase가 충돌한다. 다른 도메인의 건수는 그 도메인 목록처럼 주입하지 않는다.
-inbox = wiki_root / "inbox" / f"{domain}.md" if domain else None
-if inbox is not None and inbox.is_file():
-    try:
-        rows = sum(1 for line in inbox.read_text(encoding="utf-8").splitlines() if line.startswith("- ["))
-    except OSError:
-        rows = 0
-    if rows:
-        header.append(f"# 확인 필요 {rows}건 — inbox/{domain}.md, /llm-wiki:add 로 처리")
-
-# 낡음 신호의 절반은 문서 날짜가 아니라 커서와 HEAD의 거리다. 커서가 뒤처져 있으면
-# 목록이 최신으로 보여도 반영되지 않은 머지가 있다는 뜻이다.
+# 위키가 이 레포를 얼마나 따라왔는지는 커서와 HEAD의 거리로 보인다.
 if domain:
     state = catalog.load_json(wiki_root / "state" / f"{slug}.json", {})
     cursor = state.get("cursor") if isinstance(state, dict) else None
@@ -140,34 +132,27 @@ if domain:
         elif behind == 0:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
-# 그래프 블록. 도메인 목록·접근 좌표·역인덱스·두 묶음 간선·인접 좌표를 저장된 문서가
-# 아니라 registry.json 노드와 deps.json 간선에서 파생한다 — 같은 사실을 사람이 쓰는
-# 지도 문서에도 두면 갱신 규칙이 하나 더 늘고 두 값이 갈린다.
-graph_block = graph.render_session(registry, edges, domain or "", slug, paths, knowledge, today)
+# 그래프 블록은 저장된 문서가 아니라 registry.json 노드와 deps.json 간선에서 파생한다.
+graph_block = graph.render_session(registry, edges, domain or "", slug, paths)
 
 # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
 # 에이전트는 description만으로 문서를 열지 말지 정하므로 목록에서 빠진 문서는 없는 문서가 된다.
 spaces = []
 if domain and (knowledge / domain).is_dir():
     root = knowledge / domain
-    spaces.append(catalog.build(root, today, f"도메인 {domain}", shallow=True))
+    spaces.append(catalog.build(root, f"도메인 {domain}", shallow=True))
     if (root / slug).is_dir():
-        spaces.append(catalog.build(root / slug, today, f"레포 {slug}"))
+        spaces.append(catalog.build(root / slug, f"레포 {slug}"))
 
-def assemble():
-    blocks = [guide]
-    if header:
-        blocks.append("\n".join(header))
-    if graph_block:
-        blocks.append(graph_block)
-    blocks.extend(spaces)
-    return "\n\n".join(blocks)
+blocks = [guide]
+if header:
+    blocks.append("\n".join(header))
+if graph_block:
+    blocks.append(graph_block)
+blocks.extend(spaces)
+context = "\n\n".join(blocks)
 
-
-context = assemble()
-
-# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다. 상한을 넘겼다고
-# 목록을 줄이면 누락이 조용히 생기고, 접힘을 푸는 명령을 건너뛰어도 아무 신호가 없다.
+# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다.
 if catalog.estimate_tokens(context) > SOFT_BUDGET:
     context = f"# 위키 목록이 약 {catalog.estimate_tokens(context):,}토큰 — /llm-wiki:audit 로 정리 권장\n\n" + context
 

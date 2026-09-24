@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>레포 의존 그래프</title>
+<link rel="icon" href="data:,">
+<!-- scripts/view.py가 graph-data 스크립트 태그의 자리 표시자에 화면용 JSON을 넣어 {wiki}/.local/graph.html 로 낸다.
+     토큰 값은 quest-mate-backend/demo/assets/design.css :root 블록을 정본으로 가져왔다(DESIGN.md는 참조명만 정의). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js" onerror="window.__cdnFailed=true"></script>
+<script src="https://cdn.jsdelivr.net/npm/layout-base@2/layout-base.js" onerror="window.__cdnFailed=true"></script>
+<script src="https://cdn.jsdelivr.net/npm/cose-base@2/cose-base.js" onerror="window.__cdnFailed=true"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-fcose@2/cytoscape-fcose.js" onerror="window.__cdnFailed=true"></script>
+<style>
+:root{
+  /* --- 무채색 --- */
+  --ink-strong:#000000; --ink:#171717; --charcoal:#3d3d3d; --slate:#5c5c5c;
+  --steel:#7a7a7a; --stone:#969696; --muted:#b0b0b0;
+  /* --- 표면 --- */
+  --canvas:#ffffff; --surface:#f5f5f5; --surface-soft:#fafafa;
+  --hairline:#e5e5e5; --hairline-soft:#f0f0f0;
+  --primary:var(--ink); --on-primary:#ffffff;
+  /* --- 브랜드 4색: 간선 kind 인코딩 한 곳에만 쓴다 --- */
+  --brand-coral:#ff4d3d; --brand-magenta:#e8388c; --brand-blue:#1f5cff;
+  --brand-blue-deep:#1749d6; --brand-cyan:#35c7f0; --brand-purple:#7c3aed;
+  /* --- 시맨틱 --- */
+  --error:#d45656; --error-bg:#fdecec;
+  /* --- 도메인 색 점: 저채도 파생 팔레트 순환 --- */
+  --sub-c1-bg:#e4edff; --sub-c1-fg:#1e4fae;
+  --sub-c2-bg:#efe7fd; --sub-c2-fg:#6428c4;
+  --sub-c3-bg:#e2f4e8; --sub-c3-fg:#24704a;
+  --sub-c4-bg:#ffeedc; --sub-c4-fg:#8f5211;
+  --sub-c5-bg:#e8eef2; --sub-c5-fg:#425768;
+  --sub-c6-bg:#dff2f7; --sub-c6-fg:#1b6377;
+  /* --- 간선 kind --- */
+  --kind-library:var(--charcoal); --kind-http:var(--brand-blue);
+  --kind-message:var(--brand-coral); --kind-data:var(--brand-purple);
+  /* --- 타이포그래피 --- */
+  --font-sans:"Pretendard Variable",Pretendard,"DM Sans",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  /* --- 간격 · 반경 · 그림자 --- */
+  --sp-xxs:4px; --sp-xs:8px; --sp-sm:12px; --sp-md:16px; --sp-lg:20px; --sp-xl:24px; --sp-xxl:32px;
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px; --r-full:9999px;
+  --sh-1:rgba(0,0,0,.04) 0 1px 2px 0;
+  --sh-4:rgba(36,36,36,.12) 0 12px 16px -4px;
+  /* --- 레이아웃 --- */
+  --sidebar-w:236px; --panel-w:330px; --topbar-h:64px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{font-family:var(--font-sans);font-size:14px;line-height:1.5;color:var(--ink);background:var(--surface-soft);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+.hidden{display:none !important}
+.mono{font-family:var(--font-mono)}
+
+/* ---- 앱 셸: 사이드바 · 메인 · 패널 ---- */
+.app{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr) var(--panel-w);height:100vh;overflow:hidden}
+.sidebar{background:var(--canvas);border-right:1px solid var(--hairline);overflow-y:auto;display:flex;flex-direction:column;padding:var(--sp-lg) var(--sp-sm);gap:var(--sp-lg)}
+.main{display:flex;flex-direction:column;min-width:0;background:var(--surface-soft)}
+.panel{background:var(--canvas);border-left:1px solid var(--hairline);overflow-y:auto;display:flex;flex-direction:column}
+
+/* ---- 사이드바 ---- */
+.brand{display:flex;align-items:center;gap:10px;padding:var(--sp-xs) 10px 0}
+.brand-mark{width:32px;height:32px;border-radius:var(--r-md);flex:none;background:var(--ink);color:var(--on-primary);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.03em}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.brand-sub{font-size:11px;color:var(--stone);margin-top:1px}
+.sec{display:flex;flex-direction:column;gap:var(--sp-xs);padding:0 10px}
+.sec-title{font-size:11px;font-weight:600;color:var(--stone);letter-spacing:.04em;text-transform:uppercase}
+.pill-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.pill-tab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;font-weight:500;border-radius:var(--r-full);background:var(--canvas);color:var(--steel);border:1px solid var(--hairline);cursor:pointer;max-width:100%}
+.pill-tab:hover{border-color:var(--stone);color:var(--charcoal)}
+.pill-tab.is-active{background:var(--ink);color:var(--on-primary);border-color:var(--ink);font-weight:600}
+.pill-tab .count{opacity:.65;margin-left:2px}
+.pill-tab .dot{width:8px;height:8px;border-radius:var(--r-full);flex:none}
+.pill-tab .line{width:18px;height:0;border-top:2px solid currentColor;flex:none}
+.pill-tab .line.dotted{border-top-style:dotted}
+.pill-tab .line.dashed{border-top-style:dashed}
+.pill-tab .label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--charcoal);cursor:pointer;padding:2px 0}
+.toggle input{accent-color:var(--ink);margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-full);border:1px solid transparent;padding:6px 13px;font-size:12px;font-weight:600;line-height:1.4;cursor:pointer;white-space:nowrap;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.btn-primary{background:var(--ink);color:var(--on-primary);border-color:var(--ink)}
+.btn-primary:hover{background:var(--charcoal);border-color:var(--charcoal)}
+.btn-tertiary{background:var(--canvas);color:var(--ink);border-color:var(--hairline)}
+.btn-tertiary:hover{background:var(--surface-soft);border-color:var(--stone)}
+.btn:disabled{background:var(--hairline);color:var(--muted);border-color:var(--hairline);cursor:not-allowed}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px}
+.repo-list{display:flex;flex-direction:column;gap:2px}
+.repo-group{font-size:11px;font-weight:600;color:var(--stone);padding:8px 0 3px;display:flex;align-items:center;gap:6px}
+.repo-group .dot{width:8px;height:8px;border-radius:var(--r-full)}
+.repo-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:var(--r-sm);font-size:12px;color:var(--charcoal);cursor:pointer;font-family:var(--font-mono)}
+.repo-item:hover{background:var(--surface)}
+.repo-item.is-active{background:var(--ink);color:var(--on-primary)}
+.repo-item.is-dormant{color:var(--stone)}
+.repo-item.is-match{background:var(--sub-c4-bg)}
+.repo-item .local{font-size:9px;flex:none;width:8px}
+
+/* ---- 상단 바 ---- */
+.topbar{background:var(--canvas);border-bottom:1px solid var(--hairline);padding:var(--sp-sm) var(--sp-xl);display:flex;align-items:center;gap:var(--sp-md);min-height:var(--topbar-h);flex:none}
+.topbar h1{font-size:18px;letter-spacing:-.02em;white-space:nowrap}
+.stats{display:flex;gap:var(--sp-md);align-items:baseline}
+.stat{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.stat .v{font-size:16px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .k{font-size:11px;color:var(--stone)}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:var(--sp-xs);flex:none;min-width:0}
+.search-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-full);padding:6px 12px;min-width:220px}
+.search-pill input{border:0;background:transparent;outline:0;width:100%;font-size:13px}
+.search-pill .ico{color:var(--stone);font-size:12px}
+.generated{font-size:11px;color:var(--stone);white-space:nowrap}
+.btn-icon{width:34px;height:34px;padding:0;border-radius:var(--r-full);background:var(--canvas);border:1px solid var(--hairline);color:var(--ink);display:none;place-items:center;cursor:pointer;font-size:13px}
+
+/* ---- 캔버스 ---- */
+.canvas-wrap{position:relative;flex:1;min-height:0}
+#cy{position:absolute;inset:0}
+.canvas-notice{position:absolute;left:var(--sp-xl);right:var(--sp-xl);top:var(--sp-xl);z-index:5}
+.notice{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r-lg);font-size:12.5px;line-height:1.6;background:var(--surface);border:1px solid var(--hairline);color:var(--charcoal)}
+.notice-ico{flex:none;font-size:13px;line-height:1.4}
+.notice.is-error{background:var(--error-bg);border-color:#f2c9c9;color:#a63535}
+.legend{position:absolute;left:var(--sp-md);bottom:var(--sp-md);background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--r-lg);padding:10px 12px;font-size:11px;color:var(--slate);display:flex;flex-direction:column;gap:5px;box-shadow:var(--sh-1);z-index:4}
+.legend-row{display:flex;align-items:center;gap:8px}
+.legend .line{width:22px;height:0;border-top:2px solid var(--charcoal);flex:none}
+.legend .line.dotted{border-top-style:dotted}
+.legend .line.dashed{border-top-style:dashed}
+.legend .box{width:14px;height:10px;border:1px solid var(--hairline);border-radius:3px;background:var(--canvas);flex:none}
+.legend .box.dormant{border-style:dashed}
+.legend .mode{font-size:10px;color:var(--stone);border-top:1px solid var(--hairline-soft);padding-top:5px;margin-top:2px}
+
+/* ---- 상세 패널 ---- */
+.cp-head{padding:var(--sp-md) var(--sp-md) var(--sp-sm);border-bottom:1px solid var(--hairline);position:sticky;top:0;background:var(--canvas);z-index:2;display:flex;align-items:center;gap:var(--sp-xs)}
+.cp-kicker{font-size:11px;font-weight:600;color:var(--stone);letter-spacing:.04em}
+.cp-close{margin-left:auto;width:28px;height:28px;border-radius:var(--r-full);border:1px solid var(--hairline);background:var(--canvas);color:var(--slate);display:none;place-items:center;cursor:pointer;font-size:12px}
+.cp-body{padding:var(--sp-md);display:flex;flex-direction:column;gap:var(--sp-md)}
+.cp-title{font-size:16px;font-weight:700;letter-spacing:-.02em;word-break:break-all;font-family:var(--font-mono)}
+.cp-sub{font-size:12px;color:var(--stone);margin-top:3px}
+.cp-summary{font-size:13px;color:var(--charcoal);line-height:1.6}
+.cp-sec{display:flex;flex-direction:column;gap:6px}
+.cp-sec-title{font-size:11px;font-weight:600;color:var(--stone);letter-spacing:.04em;text-transform:uppercase}
+.cp-list{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--charcoal)}
+.cp-list li{padding-left:12px;position:relative;line-height:1.55}
+.cp-list li::before{content:"";position:absolute;left:0;top:9px;width:4px;height:4px;border-radius:var(--r-full);background:var(--stone)}
+.badges{display:flex;flex-wrap:wrap;gap:5px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;line-height:1.4;border-radius:var(--r-full);padding:3px 9px;background:var(--surface);color:var(--slate);white-space:nowrap}
+.badge.sq{border-radius:var(--r-sm);padding:2px 6px;font-size:10.5px;font-family:var(--font-mono)}
+.badge.kind{color:var(--on-primary)}
+.badge.kind-library{background:var(--kind-library)}
+.badge.kind-http{background:var(--kind-http)}
+.badge.kind-message{background:var(--kind-message)}
+.badge.kind-data{background:var(--kind-data)}
+.badge.dormant{border:1px dashed var(--stone);background:transparent;color:var(--stone)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;font-size:12px}
+.kv .k{color:var(--stone);white-space:nowrap}
+.kv .v{color:var(--charcoal);word-break:break-all;font-family:var(--font-mono);font-size:11.5px}
+.kv a{color:var(--brand-blue-deep)}
+.kv a:hover{text-decoration:underline}
+.dep{border:1px solid var(--hairline);border-radius:var(--r-md);padding:8px 10px;display:flex;flex-direction:column;gap:5px;cursor:pointer;background:var(--canvas)}
+.dep:hover{border-color:var(--stone)}
+.dep-head{display:flex;align-items:center;gap:6px;min-width:0}
+.dep-name{font-family:var(--font-mono);font-size:12px;color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dep-domain{font-size:10.5px;color:var(--stone);white-space:nowrap}
+.dep-contracts{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--slate);font-family:var(--font-mono);line-height:1.45;word-break:break-all}
+.empty{font-size:12px;color:var(--stone)}
+.cp-help{font-size:12.5px;color:var(--slate);line-height:1.7;display:flex;flex-direction:column;gap:6px}
+.cp-help b{color:var(--ink);font-weight:600}
+
+/* ---- 반응형 ---- */
+@media (max-width:1440px){ :root{--panel-w:300px} }
+@media (max-width:1279px){
+  .app{grid-template-columns:var(--sidebar-w) minmax(0,1fr)}
+  .panel{position:fixed;right:0;top:0;bottom:0;z-index:120;box-shadow:var(--sh-4);width:320px;transform:translateX(100%);transition:transform .2s ease}
+  .panel.is-open{transform:translateX(0)}
+  .cp-close,.btn-icon{display:inline-grid}
+}
+@media (max-width:1023px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .sidebar{display:none}
+  .topbar{padding:var(--sp-sm) var(--sp-md);flex-wrap:wrap}
+  .stats{display:none}
+}
+</style>
+</head>
+<body>
+<script type="application/json" id="graph-data">/*__GRAPH_DATA__*/</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">DG</div>
+      <div><div class="brand-name">레포 의존 그래프</div><div class="brand-sub" id="brand-sub">wiki</div></div>
+    </div>
+    <div class="sec"><div class="sec-title">도메인</div><div class="pill-tabs" id="domain-filters"></div></div>
+    <div class="sec"><div class="sec-title">간선 종류</div><div class="pill-tabs" id="kind-filters"></div></div>
+    <div class="sec">
+      <div class="sec-title">표시</div>
+      <label class="toggle"><input type="checkbox" id="toggle-dormant" checked> 휴면 레포 표시</label>
+    </div>
+    <div class="sec">
+      <div class="sec-title">레이아웃</div>
+      <div class="btn-row">
+        <button class="btn btn-tertiary" id="btn-layout">재배치</button>
+        <button class="btn btn-tertiary" id="btn-neighbors" disabled>이웃만 보기</button>
+        <button class="btn btn-tertiary" id="btn-reset" disabled>전체 복귀</button>
+      </div>
+    </div>
+    <div class="sec"><div class="sec-title">레포</div><div class="repo-list" id="repo-list"></div></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1>레포 의존 그래프</h1>
+      <div class="stats">
+        <div class="stat"><span class="v" id="stat-repos">0</span><span class="k">레포</span></div>
+        <div class="stat"><span class="v" id="stat-edges">0</span><span class="k">간선</span></div>
+        <div class="stat"><span class="v" id="stat-domains">0</span><span class="k">도메인</span></div>
+      </div>
+      <div class="topbar-actions">
+        <label class="search-pill"><span class="ico">⌕</span><input id="search" type="search" placeholder="slug · 요약 · 책임 검색" autocomplete="off"></label>
+        <span class="generated" id="generated"></span>
+        <button class="btn-icon" id="btn-panel" title="상세 패널">☰</button>
+      </div>
+    </header>
+    <div class="canvas-wrap">
+      <div id="cy"></div>
+      <div class="canvas-notice hidden" id="cdn-notice">
+        <div class="notice is-error"><span class="notice-ico">!</span><span>그래프 라이브러리(Cytoscape.js, jsdelivr CDN)를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침하십시오. 좌측 레포 목록과 우측 상세 패널은 데이터만으로 동작합니다.</span></div>
+      </div>
+      <div class="legend" id="legend">
+        <div class="legend-row"><span class="line" style="border-color:var(--kind-library)"></span>library (import)</div>
+        <div class="legend-row"><span class="line" style="border-color:var(--kind-http)"></span>http (호출)</div>
+        <div class="legend-row"><span class="line dotted" style="border-color:var(--kind-message)"></span>message (발행/소비)</div>
+        <div class="legend-row"><span class="line dashed" style="border-color:var(--kind-data)"></span>data (조회)</div>
+        <div class="legend-row"><span class="box"></span>레포 · <span class="box dormant"></span>휴면 · ● 로컬 사본</div>
+        <div class="mode">from → to : from이 to의 계약에 의존</div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel" id="panel">
+    <div class="cp-head"><span class="cp-kicker" id="cp-kicker">안내</span><button class="cp-close" id="cp-close">✕</button></div>
+    <div class="cp-body" id="cp-body"></div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var DATA = JSON.parse(document.getElementById('graph-data').textContent);
+  var KINDS = ['library', 'http', 'message', 'data'];
+  var KIND_LABEL = { library: 'library', http: 'http', message: 'message', data: 'data' };
+  var KIND_STYLE = { library: 'solid', http: 'solid', message: 'dotted', data: 'dashed' };
+  var css = getComputedStyle(document.documentElement);
+  var token = function (name) { return css.getPropertyValue(name).trim(); };
+  var KIND_COLOR = {};
+  KINDS.forEach(function (k) { KIND_COLOR[k] = token('--kind-' + k); });
+
+  var repoById = {};
+  DATA.repos.forEach(function (r) { repoById[r.id] = r; });
+  var domainColor = {};
+  DATA.domains.forEach(function (d, i) { domainColor[d.id] = token('--sub-c' + ((i % 6) + 1) + '-fg'); });
+  var outEdges = {}, inEdges = {};
+  DATA.edges.forEach(function (e) {
+    (outEdges[e.from] = outEdges[e.from] || []).push(e);
+    (inEdges[e.to] = inEdges[e.to] || []).push(e);
+  });
+
+  var state = {
+    domains: {}, kinds: {}, dormant: true,
+    selected: null, focus: null, query: ''
+  };
+  DATA.domains.forEach(function (d) { state.domains[d.id] = true; });
+  KINDS.forEach(function (k) { state.kinds[k] = true; });
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  var shortName = function (id) { return id.split('/')[1] || id; };
+  var domainOf = function (id) { return id.split('/')[0]; };
+
+  // ---- 상단 통계 ----
+  $('stat-repos').textContent = DATA.repos.length;
+  $('stat-edges').textContent = DATA.edges.length;
+  $('stat-domains').textContent = DATA.domains.length;
+  $('generated').textContent = '생성 ' + DATA.generatedAt;
+  if (DATA.wiki) $('brand-sub').textContent = DATA.wiki.split('/').pop() || DATA.wiki;
+
+  // ---- 사이드바 필터 ----
+  var domainBox = $('domain-filters');
+  DATA.domains.forEach(function (d) {
+    var b = el('button', 'pill-tab is-active');
+    b.title = d.description;
+    var dot = el('span', 'dot'); dot.style.background = domainColor[d.id];
+    b.appendChild(dot);
+    b.appendChild(el('span', 'label', d.id));
+    b.appendChild(el('span', 'count', String(d.repoCount)));
+    b.addEventListener('click', function () {
+      state.domains[d.id] = !state.domains[d.id];
+      b.classList.toggle('is-active', state.domains[d.id]);
+      applyFilters();
+    });
+    domainBox.appendChild(b);
+  });
+  var kindBox = $('kind-filters');
+  KINDS.forEach(function (k) {
+    var b = el('button', 'pill-tab is-active');
+    var line = el('span', 'line ' + KIND_STYLE[k]); line.style.borderColor = KIND_COLOR[k];
+    b.appendChild(line);
+    b.appendChild(el('span', 'label', KIND_LABEL[k]));
+    var n = DATA.edges.filter(function (e) { return e.kind === k; }).length;
+    b.appendChild(el('span', 'count', String(n)));
+    b.addEventListener('click', function () {
+      state.kinds[k] = !state.kinds[k];
+      b.classList.toggle('is-active', state.kinds[k]);
+      applyFilters();
+    });
+    kindBox.appendChild(b);
+  });
+  $('toggle-dormant').addEventListener('change', function (e) { state.dormant = e.target.checked; applyFilters(); });
+
+  // ---- 레포 목록 ----
+  var listBox = $('repo-list');
+  var listItems = {};
+  DATA.domains.forEach(function (d) {
+    var g = el('div', 'repo-group');
+    var dot = el('span', 'dot'); dot.style.background = domainColor[d.id];
+    g.appendChild(dot); g.appendChild(el('span', null, d.id));
+    listBox.appendChild(g);
+    DATA.repos.filter(function (r) { return r.domain === d.id; }).forEach(function (r) {
+      var item = el('div', 'repo-item' + (r.status === 'dormant' ? ' is-dormant' : ''));
+      item.appendChild(el('span', 'local', r.local ? '●' : ''));
+      item.appendChild(el('span', null, r.slug));
+      item.addEventListener('click', function () { selectRepo(r.id, true); });
+      listBox.appendChild(item);
+      listItems[r.id] = item;
+    });
+  });
+
+  // ---- 상세 패널 ----
+  var panel = $('panel'), body = $('cp-body'), kicker = $('cp-kicker');
+  $('btn-panel').addEventListener('click', function () { panel.classList.toggle('is-open'); });
+  $('cp-close').addEventListener('click', function () { panel.classList.remove('is-open'); });
+  var openPanel = function () { if (window.matchMedia('(max-width:1279px)').matches) panel.classList.add('is-open'); };
+
+  var section = function (title) {
+    var s = el('div', 'cp-sec');
+    s.appendChild(el('div', 'cp-sec-title', title));
+    return s;
+  };
+  var kindBadge = function (kind) { return el('span', 'badge kind kind-' + kind, KIND_LABEL[kind] || kind); };
+  var depCard = function (edge, otherId, currentDomain) {
+    var card = el('div', 'dep');
+    var head = el('div', 'dep-head');
+    head.appendChild(kindBadge(edge.kind));
+    var name = el('span', 'dep-name', shortName(otherId)); name.title = otherId;
+    head.appendChild(name);
+    if (domainOf(otherId) !== currentDomain) head.appendChild(el('span', 'dep-domain', domainOf(otherId)));
+    var other = repoById[otherId];
+    if (other && other.status === 'dormant') head.appendChild(el('span', 'badge dormant', '휴면'));
+    card.appendChild(head);
+    if (edge.contracts.length) {
+      var c = el('div', 'dep-contracts');
+      edge.contracts.forEach(function (t) { c.appendChild(el('div', null, t)); });
+      card.appendChild(c);
+    }
+    card.addEventListener('click', function (ev) { ev.stopPropagation(); selectEdge(edge.id, true); });
+    return card;
+  };
+
+  function renderHelp() {
+    kicker.textContent = '안내';
+    body.innerHTML = '';
+    var h = el('div', 'cp-help');
+    [['노드 클릭', '레포 상세와 이 레포가 의존 / 이 레포에 의존 목록'],
+     ['간선 클릭', 'from · to · kind · contracts · 출처'],
+     ['더블클릭', '선택 노드와 1홉 이웃만 남김 (전체 복귀로 해제)'],
+     ['검색', 'slug · 요약 · 책임 문장 부분 일치, Enter로 첫 결과 선택'],
+     ['도메인 상자', '점선 테두리가 도메인 경계, 점 색이 도메인']].forEach(function (row) {
+      var p = el('div'); var b = el('b', null, row[0] + ' '); p.appendChild(b); p.appendChild(document.createTextNode(row[1]));
+      h.appendChild(p);
+    });
+    body.appendChild(h);
+  }
+
+  function renderRepo(r) {
+    kicker.textContent = r.domain;
+    body.innerHTML = '';
+    var head = el('div');
+    head.appendChild(el('div', 'cp-title', (r.local ? '● ' : '') + r.slug));
+    var sub = el('div', 'cp-sub', r.status === 'dormant' ? '휴면' + (r.reason ? ' — ' + r.reason : '') : 'active · 의존 ' + r.outDegree + ' · 피의존 ' + r.inDegree);
+    head.appendChild(sub);
+    body.appendChild(head);
+    if (r.summary) body.appendChild(el('p', 'cp-summary', r.summary));
+
+    if (r.responsibilities.length) {
+      var s = section('책임 ' + r.responsibilities.length + '건');
+      var ul = el('ul', 'cp-list');
+      r.responsibilities.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+      s.appendChild(ul); body.appendChild(s);
+    }
+    if (r.stack.length) {
+      var st = section('스택'); var bd = el('div', 'badges');
+      r.stack.forEach(function (t) { bd.appendChild(el('span', 'badge', t)); });
+      st.appendChild(bd); body.appendChild(st);
+    }
+    var hostKeys = Object.keys(r.hosts);
+    if (hostKeys.length) {
+      var hs = section('호스트'); var kv = el('div', 'kv');
+      hostKeys.forEach(function (env) { kv.appendChild(el('span', 'k', env)); kv.appendChild(el('span', 'v', r.hosts[env])); });
+      hs.appendChild(kv); body.appendChild(hs);
+    }
+    var co = section('좌표'); var ckv = el('div', 'kv');
+    var addKv = function (k, v, href) {
+      if (!v) return;
+      ckv.appendChild(el('span', 'k', k));
+      var vv = el('span', 'v');
+      if (href) { var a = el('a', null, v); a.href = href; a.target = '_blank'; a.rel = 'noopener'; vv.appendChild(a); }
+      else vv.textContent = v;
+      ckv.appendChild(vv);
+    };
+    addKv('project', r.project, r.project);
+    addKv('remote', r.remote, r.remote ? 'https://' + r.remote : '');
+    addKv('branch', r.defaultBranch);
+    addKv('local', r.local);
+    co.appendChild(ckv); body.appendChild(co);
+
+    var outs = (outEdges[r.id] || []).slice().sort(function (a, b) { return a.to.localeCompare(b.to); });
+    var ins = (inEdges[r.id] || []).slice().sort(function (a, b) { return a.from.localeCompare(b.from); });
+    var so = section('이 레포가 의존 ' + outs.length + '건');
+    if (outs.length) outs.forEach(function (e) { so.appendChild(depCard(e, e.to, r.domain)); });
+    else so.appendChild(el('div', 'empty', '없음'));
+    body.appendChild(so);
+    var si = section('이 레포에 의존 ' + ins.length + '건');
+    if (ins.length) ins.forEach(function (e) { si.appendChild(depCard(e, e.from, r.domain)); });
+    else si.appendChild(el('div', 'empty', '없음'));
+    body.appendChild(si);
+  }
+
+  function renderEdge(e) {
+    kicker.textContent = '간선 ' + e.id;
+    body.innerHTML = '';
+    var head = el('div');
+    var t = el('div', 'cp-title'); t.textContent = shortName(e.from) + ' → ' + shortName(e.to);
+    head.appendChild(t);
+    var bd = el('div', 'badges'); bd.style.marginTop = '6px';
+    bd.appendChild(kindBadge(e.kind));
+    head.appendChild(bd);
+    body.appendChild(head);
+    var kv = el('div', 'kv');
+    var add = function (k, v, id) {
+      kv.appendChild(el('span', 'k', k));
+      var vv = el('span', 'v', v);
+      if (id) { vv.style.cursor = 'pointer'; vv.style.color = 'var(--brand-blue-deep)'; vv.addEventListener('click', function () { selectRepo(id, true); }); }
+      kv.appendChild(vv);
+    };
+    add('from', e.from, e.from); add('to', e.to, e.to);
+    body.appendChild(kv);
+    var s = section('contracts ' + e.contracts.length + '건');
+    if (e.contracts.length) { var c = el('div', 'dep-contracts'); e.contracts.forEach(function (x) { c.appendChild(el('div', null, x)); }); s.appendChild(c); }
+    else s.appendChild(el('div', 'empty', '없음'));
+    body.appendChild(s);
+  }
+
+  // ---- 선택 ----
+  function setActiveItem(id) {
+    Object.keys(listItems).forEach(function (k) { listItems[k].classList.toggle('is-active', k === id); });
+    if (id && listItems[id]) listItems[id].scrollIntoView({ block: 'nearest' });
+  }
+  function selectRepo(id, center) {
+    var r = repoById[id];
+    if (!r) return;
+    state.selected = { type: 'node', id: id };
+    renderRepo(r);
+    setActiveItem(id);
+    $('btn-neighbors').disabled = false;
+    openPanel();
+    if (cy) {
+      var n = cy.getElementById(id);
+      cy.elements().unselect();
+      n.select();
+      highlight(n);
+      if (center) cy.animate({ center: { eles: n } }, { duration: 200 });
+    }
+  }
+  function selectEdge(id, center) {
+    var e = DATA.edges.filter(function (x) { return x.id === id; })[0];
+    if (!e) return;
+    state.selected = { type: 'edge', id: id };
+    renderEdge(e);
+    setActiveItem(null);
+    $('btn-neighbors').disabled = true;
+    openPanel();
+    if (cy) {
+      var ed = cy.getElementById(id);
+      cy.elements().unselect();
+      ed.select();
+      highlight(ed);
+      if (center) cy.animate({ center: { eles: ed } }, { duration: 200 });
+    }
+  }
+  function clearSelection() {
+    state.selected = null;
+    renderHelp();
+    setActiveItem(null);
+    $('btn-neighbors').disabled = true;
+    if (cy) { cy.elements().unselect(); cy.elements().removeClass('dim hl'); }
+  }
+
+  // ---- Cytoscape ----
+  var cy = null;
+  function highlight(ele) {
+    var keep = ele.isNode() ? ele.closedNeighborhood().union(ele.parents()).union(ele.neighborhood('node').parents())
+                            : ele.union(ele.connectedNodes()).union(ele.connectedNodes().parents());
+    cy.elements().removeClass('hl').addClass('dim');
+    keep.removeClass('dim');
+    (ele.isNode() ? ele.connectedEdges() : ele).addClass('hl');
+  }
+
+  function buildElements() {
+    var els = [];
+    DATA.domains.forEach(function (d) {
+      els.push({ data: { id: d.id, label: d.id, isDomain: true, color: domainColor[d.id] }, selectable: false });
+    });
+    DATA.repos.forEach(function (r) {
+      els.push({ data: { id: r.id, parent: r.domain, label: (r.local ? '● ' : '') + r.slug, slug: r.slug, dormant: r.status === 'dormant' }, classes: r.status === 'dormant' ? 'dormant' : '' });
+    });
+    DATA.edges.forEach(function (e) {
+      els.push({ data: { id: e.id, source: e.from, target: e.to, kind: e.kind }, classes: 'kind-' + e.kind });
+    });
+    return els;
+  }
+
+  function stylesheet() {
+    var s = [
+      { selector: 'node', style: {
+        'shape': 'round-rectangle', 'background-color': token('--canvas'),
+        'border-width': 1, 'border-color': token('--hairline'),
+        'label': 'data(label)', 'font-family': css.getPropertyValue('--font-mono') || 'monospace',
+        'font-size': 10, 'color': token('--ink'), 'text-valign': 'center', 'text-halign': 'center',
+        'width': function (n) { return Math.round(String(n.data('label')).length * 6.3) + 14; }, 'height': 24, 'padding': '4px'
+      } },
+      { selector: 'node.dormant', style: { 'border-style': 'dashed', 'color': token('--stone'), 'border-color': token('--muted') } },
+      { selector: 'node:parent', style: {
+        'shape': 'round-rectangle', 'background-color': token('--surface-soft'), 'background-opacity': 1,
+        'border-width': 1, 'border-style': 'dashed', 'border-color': token('--hairline'),
+        'label': 'data(label)', 'font-family': css.getPropertyValue('--font-sans') || 'sans-serif',
+        'font-size': 11, 'font-weight': 700, 'color': 'data(color)',
+        'text-valign': 'top', 'text-halign': 'left', 'text-margin-x': 14, 'text-margin-y': -4,
+        'padding': '22px'
+      } },
+      { selector: 'node:selected', style: { 'border-width': 2, 'border-color': token('--ink'), 'background-color': token('--surface') } },
+      { selector: 'edge', style: {
+        'width': 1.5, 'curve-style': 'bezier', 'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
+        'line-color': token('--charcoal'), 'target-arrow-color': token('--charcoal')
+      } }
+    ];
+    KINDS.forEach(function (k) {
+      s.push({ selector: 'edge.kind-' + k, style: { 'line-color': KIND_COLOR[k], 'target-arrow-color': KIND_COLOR[k], 'line-style': KIND_STYLE[k] } });
+    });
+    s.push({ selector: 'edge:selected', style: { 'width': 3 } });
+    s.push({ selector: '.hl', style: { 'width': 2.5 } });
+    s.push({ selector: '.dim', style: { 'opacity': 0.18 } });
+    s.push({ selector: 'node.match', style: { 'background-color': token('--sub-c4-bg'), 'border-color': token('--sub-c4-fg'), 'border-width': 2 } });
+    s.push({ selector: '.filtered', style: { 'display': 'none' } });
+    s.push({ selector: '.unfocused', style: { 'display': 'none' } });
+    return s;
+  }
+
+  var LAYOUT = {
+    name: 'fcose', quality: 'proof', animate: false, randomize: true, fit: true, padding: 40,
+    nodeRepulsion: 4500, idealEdgeLength: 70, edgeElasticity: 0.35, nestingFactor: 0.1,
+    gravity: 0.5, gravityRange: 3.8, gravityRangeCompound: 2.5, gravityCompound: 2.0, nodeSeparation: 50,
+    packComponents: true, tile: true, tilingPaddingVertical: 10, tilingPaddingHorizontal: 10
+  };
+  // 도메인 상자 안에서 의존 수(in+out)가 큰 레포가 위쪽 행에 오도록 fcose 상대 배치 제약을 만든다.
+  // 행 크기는 ceil(sqrt(n))이라 상자가 대략 정사각형을 유지한다.
+  function placementConstraints(eles) {
+    var rows = [];
+    DATA.domains.forEach(function (d) {
+      var members = eles.nodes('[!isDomain]').filter(function (n) { return repoById[n.id()].domain === d.id; })
+        .map(function (n) { return n.id(); })
+        .sort(function (a, b) {
+          var da = repoById[a].inDegree + repoById[a].outDegree, db = repoById[b].inDegree + repoById[b].outDegree;
+          return db - da || a.localeCompare(b);
+        });
+      if (members.length < 2) return;
+      var cols = Math.max(2, Math.ceil(Math.sqrt(members.length)));
+      var prev = null;
+      for (var i = 0; i < members.length; i += cols) {
+        var row = members.slice(i, i + cols);
+        if (prev) prev.forEach(function (top) { row.forEach(function (bottom) { rows.push({ top: top, bottom: bottom, gap: 30 }); }); });
+        prev = row;
+      }
+    });
+    return rows;
+  }
+  function runLayout() {
+    if (!cy) return;
+    var eles = cy.elements().not('.filtered, .unfocused');
+    var opts = Object.assign({}, LAYOUT, { relativePlacementConstraint: placementConstraints(eles) });
+    eles.layout(opts).run();
+    cy.fit(eles, 40);
+  }
+
+  function initCy() {
+    if (window.__cdnFailed || typeof cytoscape !== 'function' || typeof cytoscapeFcose !== 'function') {
+      $('cdn-notice').classList.remove('hidden');
+      $('legend').classList.add('hidden');
+      $('btn-layout').disabled = true;
+      return;
+    }
+    cytoscape.use(cytoscapeFcose);
+    cy = cytoscape({
+      container: $('cy'), elements: buildElements(), style: stylesheet(),
+      minZoom: 0.15, maxZoom: 3, boxSelectionEnabled: false
+    });
+    cy.on('tap', 'node[!isDomain]', function (ev) { selectRepo(ev.target.id(), false); });
+    cy.on('tap', 'edge', function (ev) { selectEdge(ev.target.id(), false); });
+    cy.on('tap', function (ev) { if (ev.target === cy) clearSelection(); });
+    cy.on('dbltap', 'node[!isDomain]', function (ev) { focusOn(ev.target.id()); });
+    runLayout();
+  }
+
+  // ---- 필터 · 이웃 보기 ----
+  function applyFilters() {
+    DATA.repos.forEach(function (r) {
+      var hidden = !state.domains[r.domain] || (!state.dormant && r.status === 'dormant');
+      if (listItems[r.id]) listItems[r.id].classList.toggle('hidden', hidden);
+    });
+    if (!cy) return;
+    cy.batch(function () {
+      cy.nodes().forEach(function (n) {
+        if (n.data('isDomain')) { n.toggleClass('filtered', !state.domains[n.id()]); return; }
+        var r = repoById[n.id()];
+        var hidden = !state.domains[r.domain] || (!state.dormant && r.status === 'dormant');
+        n.toggleClass('filtered', hidden);
+      });
+      cy.edges().forEach(function (e) {
+        var hidden = !state.kinds[e.data('kind')] || e.source().hasClass('filtered') || e.target().hasClass('filtered');
+        e.toggleClass('filtered', hidden);
+      });
+    });
+  }
+  function focusOn(id) {
+    if (!cy) return;
+    var n = cy.getElementById(id);
+    if (n.empty()) return;
+    state.focus = id;
+    var keep = n.closedNeighborhood().union(n.parents()).union(n.neighborhood('node').parents());
+    cy.batch(function () { cy.elements().addClass('unfocused'); keep.removeClass('unfocused'); });
+    selectRepo(id, false);
+    runLayout();
+    $('btn-reset').disabled = false;
+  }
+  function resetFocus() {
+    if (!cy) return;
+    state.focus = null;
+    cy.elements().removeClass('unfocused');
+    runLayout();
+    $('btn-reset').disabled = true;
+    if (state.selected && state.selected.type === 'node') selectRepo(state.selected.id, false);
+  }
+  $('btn-layout').addEventListener('click', runLayout);
+  $('btn-neighbors').addEventListener('click', function () { if (state.selected && state.selected.type === 'node') focusOn(state.selected.id); });
+  $('btn-reset').addEventListener('click', resetFocus);
+
+  // ---- 검색 ----
+  function matches(r, q) {
+    if (r.slug.toLowerCase().indexOf(q) >= 0) return true;
+    if (r.summary.toLowerCase().indexOf(q) >= 0) return true;
+    return r.responsibilities.some(function (t) { return t.toLowerCase().indexOf(q) >= 0; });
+  }
+  var searchInput = $('search');
+  function runSearch() {
+    var q = searchInput.value.trim().toLowerCase();
+    state.query = q;
+    var hits = [];
+    DATA.repos.forEach(function (r) {
+      var hit = q.length > 0 && matches(r, q);
+      if (hit) hits.push(r.id);
+      if (listItems[r.id]) listItems[r.id].classList.toggle('is-match', hit);
+    });
+    if (cy) cy.batch(function () {
+      cy.nodes('[!isDomain]').forEach(function (n) { n.toggleClass('match', hits.indexOf(n.id()) >= 0); });
+    });
+    return hits;
+  }
+  searchInput.addEventListener('input', runSearch);
+  searchInput.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter') return;
+    var hits = runSearch();
+    if (hits.length) selectRepo(hits[0], true);
+  });
+
+  renderHelp();
+  initCy();
+  applyFilters();
+})();
+</script>
+</body>
+</html>

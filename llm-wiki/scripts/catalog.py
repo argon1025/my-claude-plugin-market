@@ -29,20 +29,13 @@ import argparse
 import json
 import re
 import sys
-from datetime import date, datetime
 from pathlib import Path
 
 DEFAULT_ROOT = "knowledge"
 DEFAULT_LABEL = "위키"
-# 마지막 확인이 이 일수를 넘으면 목록에 `!`가 붙는다. 낡음 기준의 유일한 출처다.
-STALE_DAYS = 180
 
-# frontmatter는 이 3키만 쓴다. 하나라도 없으면 에러다 — description이 없으면 목록에
-# 올릴 수 없고, updated·verified가 없으면 낡았는지 볼 수 없다.
-REQUIRED_FIELDS = ("description", "updated", "verified")
-DATE_FIELDS = ("updated", "verified")
-# 낡음 판정에 쓸 날짜를 이 순서로 찾는다. verified는 "지금도 맞는지 확인한 날"이다.
-STALENESS_FIELDS = ("verified", "updated")
+# frontmatter는 이 키만 쓴다. description이 없으면 목록에 올릴 수 없다.
+REQUIRED_FIELDS = ("description",)
 
 DESCRIPTION_LIMIT = 60
 
@@ -101,22 +94,6 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, str], str, bool]:
     return fields, "", False
 
 
-def parse_date(value: str) -> date | None:
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except ValueError:
-        return None
-
-
-def staleness_date(fields: dict[str, str]) -> date | None:
-    """낡음 판정에 쓸 날짜. verified가 없으면 updated."""
-    for name in STALENESS_FIELDS:
-        parsed = parse_date(fields.get(name, ""))
-        if parsed:
-            return parsed
-    return None
-
-
 def body_lines(path: Path) -> list[str]:
     """frontmatter 뒤의 본문 줄을 돌려준다. frontmatter가 없으면 전체를 본문으로 본다."""
     try:
@@ -157,8 +134,7 @@ def estimate_tokens(text: str) -> int:
     return round(len(text) / CHARS_PER_TOKEN / 100) * 100
 
 
-def build(root: Path, today: date, label: str = DEFAULT_LABEL, stale_days: int = STALE_DAYS,
-          shallow: bool = False) -> str:
+def build(root: Path, label: str = DEFAULT_LABEL, shallow: bool = False) -> str:
     """폴더 하나의 목록 텍스트. 경로는 그 폴더 기준 상대 경로다."""
     files = docs(root, shallow)
 
@@ -175,9 +151,7 @@ def build(root: Path, today: date, label: str = DEFAULT_LABEL, stale_days: int =
             rows.append(f"{name} — !! description 없음. 직접 읽을 것")
             continue
 
-        checked = staleness_date(fields)
-        mark = "!" if checked and (today - checked).days > stale_days else ""
-        rows.append(f"{name}{mark} — {description}")
+        rows.append(f"{name} — {description}")
 
     body = "\n".join(rows)
 
@@ -232,12 +206,12 @@ def check_body(path: Path) -> list[str]:
     return ["본문이 비어 있음"]
 
 
-def check_fields(fields: dict[str, str], today: date) -> list[str]:
+def check_fields(fields: dict[str, str]) -> list[str]:
     """frontmatter 필드 값만 본다."""
     errors: list[str] = []
 
-    # 미승인 키 검사는 값이 규약에 어긋나도 그대로 돌린다. `verifed:` 같은 오타는
-    # "verified 없음"과 함께 나와야 왜 없는지가 보인다.
+    # 미승인 키 검사는 값이 규약에 어긋나도 그대로 돌린다. `descripton:` 같은 오타는
+    # "description 없음"과 함께 나와야 왜 없는지가 보인다.
     unknown = sorted(set(fields) - set(REQUIRED_FIELDS))
     if unknown:
         errors.append(f"허용되지 않은 frontmatter 키: {', '.join(unknown)}")
@@ -246,16 +220,6 @@ def check_fields(fields: dict[str, str], today: date) -> list[str]:
         if not fields.get(name):
             errors.append(f"{name} 없음")
 
-    for name in DATE_FIELDS:
-        raw = fields.get(name)
-        if not raw:
-            continue
-        value = parse_date(raw)
-        if value is None:
-            errors.append(f"{name} 값이 YYYY-MM-DD 형식이 아님 ({raw})")
-        elif value > today:
-            errors.append(f"{name}가 미래 날짜 ({raw})")
-
     description = fields.get("description", "").strip()
     if description and len(description) > DESCRIPTION_LIMIT:
         errors.append(f"description이 {len(description)}자 — 상한 {DESCRIPTION_LIMIT}자")
@@ -263,7 +227,7 @@ def check_fields(fields: dict[str, str], today: date) -> list[str]:
     return errors
 
 
-def inspect(path: Path, root: Path, today: date, registry: dict | None = None) -> list[str]:
+def inspect(path: Path, root: Path, registry: dict | None = None) -> list[str]:
     errors = check_location(path, root, registry)
     fields, reason, broken = parse_frontmatter(path)
 
@@ -272,7 +236,7 @@ def inspect(path: Path, root: Path, today: date, registry: dict | None = None) -
         errors.append(reason)
         return errors
 
-    errors.extend(check_fields(fields, today))
+    errors.extend(check_fields(fields))
     errors.extend(check_body(path))
     return errors
 
@@ -332,17 +296,19 @@ def selected_names(root: Path, paths: list[str]) -> set[str] | None:
     return names
 
 
-def check(root: Path, today: date, only: set[str] | None = None) -> int:
+def check(root: Path, only: set[str] | None = None) -> int:
     files = docs(root)
-    # registry.json은 knowledge/의 형제다. 읽지 못하면 폴더-등록 대조는 건너뛴다.
-    registry = load_json(root.parent / "registry.json", None)
-    if not isinstance(registry, dict):
-        registry = None
 
     # 노드·간선은 문서가 아니라 knowledge/의 형제 파일이라, 문서가 한 장도 없어도 검사한다.
     # graph는 여기서만 쓰므로 함수 안에서 import한다 — graph도 catalog를 쓰기 때문에
     # 모듈 수준에서 서로 import하면 graph.py를 직접 실행할 때 모듈이 두 번 적재된다.
     import graph
+
+    # registry.json은 knowledge/의 형제이고 노드가 도메인 아래 중첩이라, 폴더-등록 대조가
+    # 쓰는 평탄화 인덱스는 graph.load_registry가 만든다. 파일이 없으면 빈 인덱스가 온다.
+    registry = graph.load_registry(root.parent)
+    if not registry["domains"] and not registry["repos"]:
+        registry = None
 
     graph_errors = [
         (name, message) for name, message in graph.check_errors(root.parent)
@@ -358,7 +324,7 @@ def check(root: Path, today: date, only: set[str] | None = None) -> int:
         name = path.relative_to(root).as_posix()
         if only is not None and name not in only:
             continue
-        errors.extend((name, message) for message in inspect(path, root, today, registry))
+        errors.extend((name, message) for message in inspect(path, root, registry))
 
     for name, involved, message in inspect_across(files, root):
         if only is None or only & set(involved):
@@ -393,8 +359,6 @@ def main() -> int:
                         help=f"목록 머리에 붙는 이름 (기본값: {DEFAULT_LABEL})")
     parser.add_argument("--shallow", action="store_true",
                         help="도메인 루트 목록: --root 바로 아래 *.md와 adr/*.md만, 레포 폴더 제외")
-    parser.add_argument("--stale-days", metavar="N", type=int, default=STALE_DAYS,
-                        help=f"마지막 확인이 며칠 넘으면 낡은 것으로 볼지 (기본값: {STALE_DAYS})")
     parser.add_argument("--check", action="store_true",
                         help="목록 대신 규약 위반을 검사한다. --root는 knowledge/여야 한다. 에러가 있으면 종료 코드 1.")
     parser.add_argument("paths", nargs="*", metavar="PATH",
@@ -405,14 +369,11 @@ def main() -> int:
     if not root.is_dir():
         print(f"# 문서 디렉토리를 찾지 못함: {root}")
         return 1
-    if args.stale_days < 1:
-        print("# --stale-days는 1 이상이어야 한다")
-        return 1
 
     if args.check:
-        return check(root, date.today(), selected_names(root, args.paths))
+        return check(root, selected_names(root, args.paths))
 
-    print(build(root, date.today(), args.label, args.stale_days, args.shallow))
+    print(build(root, args.label, args.shallow))
     return 0
 
 
