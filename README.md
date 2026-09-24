@@ -19,7 +19,7 @@ argon1025의 개인 Claude Code 플러그인 마켓플레이스입니다.
 | [better-communication](./better-communication/README.md) | 산출물 작성 규약(보고 골격·항목 구조·문장 문체)을 세션 시작 시 자동 주입 | `python3` |
 | [pr-workflow](./pr-workflow/README.md) | PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), 스킬 호출 시에만 동작 | `gh`·`glab`·PR 호스트 MCP 중 1종 |
 | [plan-workflow](./plan-workflow/README.md) | 의도 확인·계획 스냅샷·작업 기록 규약과 현재 브랜치 기록을 세션 시작 시 자동 주입 + planning·execute 스킬 2종, 기록은 `.ai-docs/workspace/{slug}/` | `python3`, `git` |
-| [llm-wiki](./llm-wiki/README.md) | 별도 git 저장소의 도메인 `index.md` 본문과 도메인 루트·현재 레포 문서 목록을 세션 시작 시 자동 주입 + init·register·update·add·audit 스킬 5종, 무인 갱신은 등록 레포 커서 기준 묶음 추출 | `python3`, `git`, 위키 원격 저장소 |
+| [llm-wiki](./llm-wiki/README.md) | 별도 git 저장소의 레포 그래프에서 파생한 레포 지도·의존과 도메인 루트·현재 레포 문서 목록을 세션 시작 시 자동 주입 + init·register·update·add·audit 스킬 5종과 그래프 화면, 무인 갱신은 전 도메인 미처리 머지를 시각 순으로 반영 | `python3`, `git`, 위키 원격 저장소 |
 
 ## 라이선스
 

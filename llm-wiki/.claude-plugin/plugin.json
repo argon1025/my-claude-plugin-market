@@ -1,7 +1,7 @@
 {
   "name": "llm-wiki",
-  "description": "LLM 위키 — 별도 git 저장소의 사실과 레포 그래프(registry.json 노드·deps.json 간선)를 세션 시작 시 그래프 파생 주입(도메인 목록·접근 좌표·역인덱스·선행 조건과 파급 대상 간선·인접 레포 좌표) + 문서 목록 + 스킬 5종(init·register·update·add·audit)",
-  "version": "3.0.0",
+  "description": "LLM 위키 — 별도 git 저장소의 사실과 레포 그래프(registry.json 노드·deps.json 간선)를 세션 시작 시 그래프 파생 주입(레포 지도·현재 레포 기준 의존 3묶음) + 문서 목록 + 스킬 5종(init·register·update·add·audit) + 그래프 화면(view.py), 무인 갱신은 전 도메인 미처리 머지를 시각 순으로 반영",
+  "version": "4.0.0",
   "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
-  "keywords": ["wiki", "knowledge", "위키", "지식"]
+  "keywords": ["wiki", "knowledge", "위키", "지식", "도메인", "레포 그래프"]
 }
