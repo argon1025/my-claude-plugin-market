@@ -9,7 +9,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
 - **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장
-- **그래프**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/graph.py" check --wiki {WIKI_ROOT}`의 에러·contracts 형식 경고, `responsibilities`가 빈 `active` 노드, `contracts`가 상한 3건에 닿은 간선을 같은 `catalog.md`에 이어 저장 — 노드·간선은 메인이 봄
+- **그래프**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/graph.py" check --wiki {WIKI_ROOT}`의 에러·contracts 형식 경고와 `contracts`가 상한 3건에 닿은 간선을 같은 `catalog.md`에 이어 저장 — 노드·간선은 메인이 봄
 - **묶음**: 대상 문서를 폴더별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 — 메인은 문서 본문을 열지 않음
 
 ## 2. 진단 — 묶음 1개 = 에이전트 1회
@@ -32,7 +32,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 | 변경 서사 불릿("A에서 B로", "추후", "폐기") | 현재 상태로 쓸 수 있으면 `재작성`, 없으면 `삭제` |
 | 다른 위키 문서 링크·이름 참조 | 접점 사실로 `재작성`, 남는 것이 "다른 곳에 있다"뿐이면 `삭제` |
 | 레포 소관·책임·의존을 본문으로 적은 절 | `삭제` — 비고에 원문 줄(노드·간선 후보) |
-| description 60자 초과·"때" 미종결·범주어만 | `설명` — 후: 새 문장, 60자에 안 덮이면 `분할 후보` |
+| `--check` 힌트의 description 길이 에러·"때" 미종결·범주어만 | `설명` — 후: 새 문장, 상한에 안 덮이면 `분할 후보` |
 | 40줄 미만이고 다른 문서 description이 이미 그 주제를 덮음 | `흡수` — 후: 소유 문서 경로와 절, 비고에 옮길 불릿 |
 | 절 제목과 다른 질문에 답하는 불릿 | `이동` — 후: 대상 절 |
 
@@ -44,7 +44,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 - **책임 중복 행**: 같은 도메인에서 뜻이 겹치는 책임 문장 쌍을 메인이 `| 통합 | registry.json:responsibilities | {두 문장} | {남길 문장} | {고칠 노드} |` 행으로 더함
 - **승인 대상**: `삭제`·`통합`·`흡수`·`이동`·`분할 후보` — 번호·조치·문서:절·전·후를 채팅에 싣고 사용자가 제외한 번호 외는 전부 승인
 - **승인 불필요**: `재작성`·`설명`은 `{스크래치}/approval.md`에만 두고 적용
-- **적용 제외**: `충돌`·빈 노드·contracts 상한 간선은 적용하지 않고 6장 건너뜀 표에만
+- **적용 제외**: `충돌`은 적용하지 않고 6장 건너뜀 표에만
 - **0행**: 승인 대상이 없으면 표 없이 4장으로
 
 ## 4. 적용 — 문서 1장 = 에이전트 1회
@@ -74,4 +74,5 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 - **승인**: 승인 행 수·제외 번호
 - **건너뜀**: 3장 적용 제외 행을 규약 8장 건너뜀 표로
 - **분할 후보**: 문서와 내용
+- **그래프 경고**: `graph.py check` 에러·contracts 형식 경고와 상한에 닿은 간선
 - **검사**: 남은 에러와 그 문서

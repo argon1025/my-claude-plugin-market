@@ -22,7 +22,7 @@ description: Use when material the user hands over or a decision settled in conv
 ## 3. 위치와 대조
 
 - **위치**: 규약 3장 위치 판정과 레포 편차 — 기본은 현재 레포 폴더
-- **대조**: 주입된 목록의 `description` 전수와 grep으로 대상 문서를 찾고 규약 7장으로 동일·추가·교체 후보를 가름
+- **대조**: 규약 7장으로 동일·추가·교체 후보를 가름
 - **기존 문서 우선**: 덮는 문서가 있으면 신규 대신 그 문서 수정
 
 ## 4. 질문 — 정지점 하나

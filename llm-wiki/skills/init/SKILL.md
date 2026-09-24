@@ -21,10 +21,10 @@ disable-model-invocation: true
 
 ## 3. 골격
 
-- **registry.json**: `{"domains": {}}` — 노드는 `domains.{도메인}.repos.{slug}`로 도메인 아래에 들어감
-- **deps.json**: `{"deps": {}}` — 스킬이 `catalog.py --check`에 이 경로를 인자로 넘기므로 빈 파일이라도 있어야 함
-- **state/.gitkeep**·**knowledge/.gitkeep**: 빈 파일 — `knowledge/`가 없으면 첫 register의 `catalog.py --check --root {WIKI_ROOT}/knowledge`가 디렉터리 부재로 실패함
-- **.gitignore**: `.local/` 한 줄 — 훅이 쓰는 머신별 경로 파일이며, 이 줄이 있어야 스킬의 clean-tree 판정이 통과함
+- **registry.json**: `{"domains": {}}`
+- **deps.json**: `{"deps": {}}`
+- **state/.gitkeep**·**knowledge/.gitkeep**: 빈 파일
+- **.gitignore**: `.local/` 한 줄 — 스킬의 clean-tree 판정이 통과하는 조건
 - **커밋**: `chore(init): 위키 골격` 한 커밋
 - **원격**: URL을 받았으면 `git remote add origin {URL}`과 `git push -u origin main`, clone한 저장소면 `git push` — 실패는 로컬 커밋 상태와 함께 보고
 
