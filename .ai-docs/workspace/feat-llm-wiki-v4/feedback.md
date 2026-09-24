@@ -13,3 +13,10 @@
   - evidence: llm-wiki/scripts/graph.py (remote_pattern, owner_label)
 - `context` llm-wiki 4.0.0은 inbox가 없어 update·audit가 건너뛴 사실이 위키 파일에 남지 않고 실행 최종 보고의 건너뜀 표에만 실리며, 무인 실행의 건너뜀은 그 보고를 받아 `/llm-wiki:add`로 넘겨야 하는 의도적 단순화의 한계임
   - evidence: llm-wiki/references/doc-contract.md (8장 건너뜀 보고), llm-wiki/README.md (한계)
+- `context` llm-wiki 4.0.0 프롬프트 정리의 의도는 "에이전트들은 코드, 프롬프트 변경 시 기존 줄을 유지 하고 현 상태만 변경하는 방향으로 수정하는 경향이 존재 — 불필요하다면 제거, 재구성할것 — 해당 프롬프트가 꼭 필요한지 각각 검토 후 정리"이며, 범위는 rules/agent-guide.md·references/doc-contract.md·skills 5종이고 hooks·README·스크립트는 제외함
+  - source: 사용자 확인 2026-09-25
+- `why` llm-wiki 프롬프트는 판정 기준을 doc-contract 한 곳, 서브에이전트 값 규칙을 `graph.py schema` 출력 한 곳, 명령·정지점·실패 처리를 각 스킬이 소유하며, 다른 위치는 장 번호 참조만 둠 — 같은 규칙이 2~3곳에 있으면 한쪽만 개정되어 어긋남
+- `constraint` llm-wiki 스킬의 서브에이전트 프롬프트는 doc-contract를 `sed -n '/^## N\./,/^## M\./p'` 장 번호 범위로 잘라 읽으므로 doc-contract 장 번호·순서를 바꾸면 audit·update의 sed 범위를 함께 고쳐야 함
+  - evidence: llm-wiki/skills/audit/SKILL.md, llm-wiki/skills/update/SKILL.md
+- `constraint` llm-wiki 4.0.0의 `graph.py check`는 `active` 노드의 빈 `responsibilities`를 이미 에러로 내고 `catalog.py`는 description 60자 상한을 소유하므로, audit 프롬프트가 같은 항목을 별도 신호로 다시 세지 않음
+  - evidence: llm-wiki/scripts/graph.py, llm-wiki/scripts/catalog.py (DESCRIPTION_LIMIT)
