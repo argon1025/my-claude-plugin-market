@@ -23,7 +23,7 @@ description: Use when material the user hands over or a decision settled in conv
 
 ## 3. 위치와 대조
 
-- **위치**: 규약 3장 위치 판정과 레포 편차 — 기본은 현재 레포 폴더
+- **위치**: 규약 3장 위치 판정과 레포 편차
 - **대조**: 규약 7장으로 동일·추가·교체 후보를 가름
 - **기존 문서 우선**: 같은 `type`에서 덮는 문서가 있으면 신규 대신 그 문서 수정 — 유형이 다른 문서에는 주제가 같아도 넣지 않음
 
