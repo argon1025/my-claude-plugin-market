@@ -11,3 +11,5 @@
 - `constraint` llm-wiki update 검토 에이전트는 이번 변경 줄과 description만 고치고 기존 줄은 무인 삭제하지 않음 — 기존 줄 정리는 사용자 승인을 거치는 audit 몫
 - `constraint` update 검토 에이전트의 1장 판정은 `git grep {패턴} {sha}`·`git show {sha}:{경로}`처럼 머지 sha를 명시해야 함 — rev 없는 `git grep`은 로컬 작업 트리를 읽어 머지 시점이 아닌 현재 코드로 판정하게 되고, 한 문서에 여러 레포 사실이 섞이면 근거도 레포별 `path@sha` 목록으로 넘김
   - source: plan 실행 중 확인 2026-09-25
+- `constraint` llm-wiki 규약 1장은 update·add·audit가 함께 읽으므로 "머지 시점"처럼 한 스킬에만 맞는 표현을 두지 않고, 판정 시점·수단은 각 스킬 프롬프트가 정함 — update 1장의 입력 집합 제한도 추출·반영 프롬프트의 금지 줄이 소유하며 검토 단계는 레포를 읽음
+  - source: 프롬프트 리뷰 2026-09-25
