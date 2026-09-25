@@ -9,3 +9,5 @@
 - `correction` 리뷰 문서는 토스 명세 세부(응답 envelope·nullable)를 레포 문서로 옮기라고 했으나, 외부 서비스 사실이고 도메인 루트 `toss-openapi-constraints.md`와 한 주제이므로 도메인 루트 배치가 맞음
   - source: 사용자 확인 2026-09-25
 - `constraint` llm-wiki update 검토 에이전트는 이번 변경 줄과 description만 고치고 기존 줄은 무인 삭제하지 않음 — 기존 줄 정리는 사용자 승인을 거치는 audit 몫
+- `constraint` update 검토 에이전트의 1장 판정은 `git grep {패턴} {sha}`·`git show {sha}:{경로}`처럼 머지 sha를 명시해야 함 — rev 없는 `git grep`은 로컬 작업 트리를 읽어 머지 시점이 아닌 현재 코드로 판정하게 되고, 한 문서에 여러 레포 사실이 섞이면 근거도 레포별 `path@sha` 목록으로 넘김
+  - source: plan 실행 중 확인 2026-09-25
