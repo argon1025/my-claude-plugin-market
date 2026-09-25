@@ -11,6 +11,7 @@ disable-model-invocation: true
 ## 1. 범위
 
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only` — 실패하면 보고 후 중단(팀원 커밋과 갈라진 상태에서 무인 편집 금지)
+- **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type 없음` 에러가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — type 없는 문서에 반영하면 6장 되돌림에 걸려 사실이 보고 없이 사라짐
 - **실행**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" pending --wiki {WIKI_ROOT} --out {스크래치} {인자}` — 전 도메인 미처리 머지를 시각 순으로 골라 diff 파일·레포별 `commits`·`batches[{id, shas, bytes}]`·`remaining`과 전역 순서 `order[{slug, sha7, date}]`를 `work.json`에 씀, 묶음은 다시 나누지 않음
 - **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류(stderr 전달 후 중단)
 - **이월**: `skipped`(로컬 경로 없음·force-push 의심·대상 ref 없음·휴면)와 `notes`는 그대로 보고로
@@ -32,6 +33,7 @@ disable-model-invocation: true
 
 출력: {facts_dir}/{slug}/{batch_id}.json에 Write — 위 키에 facts를 더한 객체 1개.
 {"facts": [{"fact": "현재 상태 한 문장(업무 낱말 우선, 식별자 괄호 병기, 줄바꿈 금지)",
+            "type": "policy|domain|convention|external|procedure — 기준의 유형 표에서 하나",
             "topic": "2~4낱말 주제",
             "code": "저장소 상대 경로 또는 파일#심볼",
             "quote": "기존 동작을 바꾸는 사실이면 그 의도를 밝힌 plan·feedback·커밋 메시지 원문 — 그 레포만의 사정인지 합의 변경인지 드러나는 문장 우선, 없으면 빈 문자열",
@@ -41,14 +43,14 @@ disable-model-invocation: true
 
 ## 3. 배정 — 메인 전담
 
-- **입력**: `{facts_dir}/**/*.json` 전부 — 묶음 사이 같은 주장은 하나로 합치고 `shas`는 합집합
+- **입력**: `{facts_dir}/**/*.json` 전부 — 묶음 사이 같은 주장은 하나로 합치고 `shas`는 합집합, `type`이 다르면 다른 사실
 - **시각 순**: 사실마다 `order`에서 가장 늦은 근거 머지의 `date`를 붙이고 문서별로 오름차순 정렬
-- **위치·대조**: 규약 3장 위치 판정과 7장 대조·레포 편차 — 목록은 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`와 `--root {WIKI_ROOT}/knowledge/{domain}/{slug}`, 후보가 둘이면 범위가 좁은 문서
-- **신규 문서**: 대상이 없는 사실은 주제로 묶어 규약 2장 한 주제가 서면 신규 1장, 서지 않으면 `기각 — 한 주제 아님`
+- **위치·대조**: 규약 3장 위치 판정과 7장 대조·레포 편차 — 목록은 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`와 `--root {WIKI_ROOT}/knowledge/{domain}/{slug}`, 후보는 행의 `[type]`이 사실의 `type`과 같은 문서만, 후보가 둘이면 범위가 좁은 문서
+- **신규 문서**: 대상이 없는 사실은 같은 `type`끼리 주제로 묶어 규약 2장 한 주제가 서면 신규 1장(행에 `type` 기록), 서지 않으면 `기각 — 한 주제 아님`
 - **간선 상대**: 규약 10장 대상 판정 — 못 정하면 `기각 — 상대 미정`과 식별자 원문, 규약 10장 선언 위치를 어기면 `기각 — 선언 위치`
 - **간선 배정**: `from_me`로 끝점을 잡아 간선을 더하거나 같은 `(to, kind)`의 `contracts`에 식별자를 보탬 — 상한 3건을 넘으면 접거나 `기각 — contracts 상한`, 기존 식별자 교체는 규약 7장 조건
 - **책임·호스트**: 현재 노드에 없으면 추가, 뜻이 다른 기존 값은 규약 7장 판정
-- **배정표**: `{스크래치}/assign.json`에 문서별 사실 목록(시각 순)·신규 여부와 `graph` 배정 — `--dry-run`이면 보고하고 종료
+- **배정표**: `{스크래치}/assign.json`에 문서별 `type`·사실 목록(시각 순)·신규 여부와 `graph` 배정 — `--dry-run`이면 보고하고 종료
 
 ## 4. 반영 — 문서 1장 = 에이전트 1회
 
@@ -57,10 +59,10 @@ disable-model-invocation: true
 ````
 위키 문서 한 장에 사실 여러 건을 반영합니다.
 
-입력: {assign_path}의 "{doc}" 항목 — 문서 경로·신규 여부·사실 행(id·fact·topic·code·quote·slug·shas·date).
+입력: {assign_path}의 "{doc}" 항목 — 문서 경로·type·신규 여부·사실 행(id·fact·type·topic·code·quote·slug·shas·date).
 기준: `sed -n '/^## 3\./,/^## 8\./p' {doc_contract_path}` — 3~7장.
 판정: 사실을 주어진 순서대로 7장 판정 적용 — 동일·추가·교체는 본문에 반영, 건너뜀은 본문을 고치지 않고 skipped에.
-신규 문서: 규약 2장.
+신규 문서: 규약 2장, frontmatter `type`은 항목의 type.
 금지: 이 문서 밖 파일 편집, 코드 저장소 조회, 사전 지식.
 
 출력: {applied_dir}/{doc_slug}.json에 Write —
@@ -79,6 +81,8 @@ disable-model-invocation: true
 기준: `sed -n '/^## 1\./,/^## 8\./p' {doc_contract_path}` — 1~7장, 1장 판정은 `git -C {repo_path} grep {패턴} {sha}`·`git -C {repo_path} show {sha}:{경로}`로 머지 시점 레포를 읽어 수행.
 범위: 이번 변경 줄과 description만 — 기존 줄은 audit 몫.
 금지: 새 사실 추가, 이 문서 밖 편집.
+
+유형: 새 불릿이 문서 frontmatter `type`과 다른 유형의 질문(규약 1장 유형 표)에 답하면 삭제하고 reason `유형 불일치`.
 
 출력: {review_dir}/{doc_slug}.json에 Write — {"doc","removed":[{"bullet","reason"}]}. 응답은 건수만.
 ````
