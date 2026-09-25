@@ -11,19 +11,21 @@ description: Use when material the user hands over or a decision settled in conv
 - **부재 시 질문**: 건넨 것이 없으면 무엇을 기록할지 묻고 추측하지 않음
 - **큰 자료**: 한 세션에 못 담으면 장 단위로 나눠 실행하고 요약으로 줄이지 않음
 - **저장소 상태**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init`, 현재 레포가 미등록이면 `/llm-wiki:register` 안내 후 중단, 있으면 `git -C {WIKI_ROOT} pull --ff-only` — 충돌·분기는 멈추고 보고
+- **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — 목록의 `[?]` 문서는 같은 `type` 대조에서 빠져 중복 신규 문서가 생기고 편집 시 5장 검사가 실패함
 
 ## 2. 사실 추출
 
 - **번호 목록**: 사실마다 번호와 원문 위치(장·절·페이지)
+- **유형**: 사실마다 규약 1장 유형 표의 `type` 하나 — 둘에 걸치면 두 사실로 나눔
 - **제외 적용**: 규약 1장을 사실마다 적용하고 화면 시안, UI 문구 원문, 일정·담당자, "검토 중" 항목도 제외
-- **구조 분리**: 원문 절 구조를 옮기지 않고 규약 2장 한 주제 기준으로 문서 수를 정함
+- **구조 분리**: 원문 절 구조를 옮기지 않고 규약 2장 유형 1개 × 주제 1개 기준으로 문서 수를 정함
 - **원문 내부 충돌**: 같은 주제에 두 값이 있으면 원문의 개정 일자·판본으로 가리고, 가려지지 않으면 4장 질문 — 뒤쪽이 최신이라 가정하지 않음
 
 ## 3. 위치와 대조
 
 - **위치**: 규약 3장 위치 판정과 레포 편차 — 기본은 현재 레포 폴더
 - **대조**: 규약 7장으로 동일·추가·교체 후보를 가름
-- **기존 문서 우선**: 덮는 문서가 있으면 신규 대신 그 문서 수정
+- **기존 문서 우선**: 같은 `type`에서 덮는 문서가 있으면 신규 대신 그 문서 수정 — 유형이 다른 문서에는 주제가 같아도 넣지 않음
 
 ## 4. 질문 — 정지점 하나
 
@@ -33,7 +35,7 @@ description: Use when material the user hands over or a decision settled in conv
 
 ## 5. 반영 — 승인 하나
 
-- **초안**: 문서별 경로·`description`·바뀌는 절과 불릿, 노드 변경 행과 간선 행(`{kind} {from} → {to} — {contracts}`)을 보이고 승인 — 삭제·분할·이동은 따로 표시
+- **초안**: 문서별 경로·`type`·`description`·바뀌는 절과 불릿, 노드 변경 행과 간선 행(`{kind} {from} → {to} — {contracts}`)을 보이고 승인 — 삭제·분할·이동은 따로 표시
 - **병합**: 규약 7장 병합 방식, 신규 문서는 규약 2~4장
 - **노드·간선**: 레포 소관·책임·호스트·프로젝트와 레포 간 의존이 확정되면 규약 9·10장 형식으로 `registry.json`·`deps.json` 편집 — 기존 값 교체·삭제는 4장 선택을 거침, 커밋은 `docs(graph): {요약}`
 - **검사·커밋**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge {바꾼 파일}`(노드·간선을 고쳤으면 `{WIKI_ROOT}/registry.json`·`{WIKI_ROOT}/deps.json`도) 에러 0 뒤 문서마다 커밋, 본문은 규약 8장

@@ -55,7 +55,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
             └── adr/                # 선택
 ```
 
-위치 판정은 "이걸 모르고 개발하면 다른 레포에서 문제가 되는가" 한 단계이며, 도메인 루트와 다른 한 레포의 사정은 그 레포 폴더에 이유와 함께 둡니다. 문서 frontmatter는 `description`만 두고 발견 레포와 교체 전후 값은 위키 커밋 메시지에 남기며, 전체 공통 폴더는 두지 않고 레포는 한 도메인에만 속합니다. 레포 소관·레포 책임·owner·의존은 문서가 아니라 노드와 간선에 둡니다. 노드에는 다른 레포가 자기 코드에 적는 이름을 두지 않으므로, 간선의 상대는 조인 표가 아니라 식별자에서 읽히는 slug와 상대 레포 코드 확인으로 정하고, `from`은 선언이 실제로 있는 레포이며, registry 밖 시스템에는 간선 대신 책임 문장이 소재를 밝힙니다. 문서 규격과 사실 판정 기준은 `references/doc-contract.md`, 노드·간선의 판단 기준은 같은 문서 9·10장에 있고 스킬 실행 시에만 읽힙니다. 필드 스키마·상한·간선 종류 정의는 문서가 아니라 `python3 scripts/graph.py schema --for survey|facts [--lane {레인}]` 출력이 정본이며, 조사·추출 스킬이 서브에이전트 프롬프트에 그대로 싣습니다. register의 누락 대조 분모는 `scripts/survey.py inventory`가 냅니다.
+위치 판정은 "이걸 모르고 개발하면 다른 레포에서 문제가 되는가" 한 단계이며, 도메인 루트와 다른 한 레포의 사정은 그 레포 폴더에 이유와 함께 둡니다. 문서 frontmatter는 `description`과 `type`(policy·domain·convention·external·procedure, `adr/`는 adr) 둘만 두어 문서 한 장이 유형 1개 × 주제 1개를 지키게 하고, 발견 레포와 교체 전후 값은 위키 커밋 메시지에 남기며, 전체 공통 폴더는 두지 않고 레포는 한 도메인에만 속합니다. 레포 소관·레포 책임·owner·의존은 문서가 아니라 노드와 간선에 둡니다. 노드에는 다른 레포가 자기 코드에 적는 이름을 두지 않으므로, 간선의 상대는 조인 표가 아니라 식별자에서 읽히는 slug와 상대 레포 코드 확인으로 정하고, `from`은 선언이 실제로 있는 레포이며, registry 밖 시스템에는 간선 대신 책임 문장이 소재를 밝힙니다. 문서 규격과 사실 판정 기준은 `references/doc-contract.md`, 노드·간선의 판단 기준은 같은 문서 9·10장에 있고 스킬 실행 시에만 읽힙니다. 필드 스키마·상한·간선 종류 정의는 문서가 아니라 `python3 scripts/graph.py schema --for survey|facts [--lane {레인}]` 출력이 정본이며, 조사·추출 스킬이 서브에이전트 프롬프트에 그대로 싣습니다. register의 누락 대조 분모는 `scripts/survey.py inventory`가 냅니다.
 
 ## 무인 갱신 범위
 
@@ -70,11 +70,3 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 - **diff 절단**: 400KB를 넘는 머지 diff는 잘려 뒷부분의 사실이 빠질 수 있음(프런트 레포에 집중)
 - **직접 커밋 레포**: PR 없이 기본 브랜치에 직접 커밋하는 레포는 first-parent 단위가 커밋 하나가 되어 예산이 무의미함 — `status: dormant`로 둠
 - **건너뜀 보존**: 건너뛴 행은 위키에 파일로 남지 않고 실행의 최종 보고에만 실리므로, 무인 실행의 건너뜀은 그 보고를 받아 `/llm-wiki:add`로 넘겨야 함
-
-## 3.x에서 이관
-
-4.0.0은 노드 스키마(`domains.{d}.repos.{slug}` 중첩, `remote`·`defaultBranch`·`responsibilities`·`hosts`·`project`, `dormant`)와 합의 모델(등급·출처·`verified`·낡음·`inbox/` 폐지)이 바뀌어 3.x 위키는 `graph.py check`에서 에러가 납니다. 설치 후 아래 순서로 옮깁니다.
-
-- **노드·간선**: 등록 레포마다 그 레포에서 `/llm-wiki:register --resurvey`
-- **inbox**: `inbox/{domain}.md`의 남은 행을 `/llm-wiki:add`로 처리한 뒤 `inbox/` 삭제
-- **frontmatter**: 문서의 `updated`·`verified`·출처 줄은 `/llm-wiki:audit`로 정리

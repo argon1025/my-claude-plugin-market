@@ -35,7 +35,12 @@ DEFAULT_ROOT = "knowledge"
 DEFAULT_LABEL = "위키"
 
 # frontmatter는 이 키만 쓴다. description이 없으면 목록에 올릴 수 없다.
-REQUIRED_FIELDS = ("description",)
+REQUIRED_FIELDS = ("description", "type")
+
+# 문서 유형. 쓰는 쪽(update·add)이 같은 유형 문서에만 사실을 배정하도록 값을 고정한다.
+# `adr`은 `adr/` 폴더 문서만 쓰고, 그 밖의 문서는 앞의 5종 중 하나다.
+TYPES = ("policy", "domain", "convention", "external", "procedure", "adr")
+ADR_TYPE = "adr"
 
 DESCRIPTION_LIMIT = 60
 
@@ -151,7 +156,9 @@ def build(root: Path, label: str = DEFAULT_LABEL, shallow: bool = False) -> str:
             rows.append(f"{name} — !! description 없음. 직접 읽을 것")
             continue
 
-        rows.append(f"{name} — {description}")
+        # type이 없어도 행은 남긴다 — 목록에서 빠진 문서는 없는 문서가 된다.
+        doc_type = fields.get("type", "").strip() or "?"
+        rows.append(f"{name} — [{doc_type}] {description}")
 
     body = "\n".join(rows)
 
@@ -165,6 +172,12 @@ def build(root: Path, label: str = DEFAULT_LABEL, shallow: bool = False) -> str:
     if not files:
         return "\n".join([header, "", "(아직 문서가 없음)"])
     return "\n".join([header, "", body])
+
+
+def in_adr(path: Path, root: Path) -> bool:
+    """`adr/` 폴더 문서인지. 위치 자체가 규약 밖이면 False라 type 검사는 위치 에러에 맡긴다."""
+    match = LOCATION_RE.match(path.relative_to(root).as_posix())
+    return bool(match) and path.parent.name == "adr"
 
 
 def check_location(path: Path, root: Path, registry: dict | None = None) -> list[str]:
@@ -206,8 +219,8 @@ def check_body(path: Path) -> list[str]:
     return ["본문이 비어 있음"]
 
 
-def check_fields(fields: dict[str, str]) -> list[str]:
-    """frontmatter 필드 값만 본다."""
+def check_fields(fields: dict[str, str], adr: bool = False) -> list[str]:
+    """frontmatter 필드 값만 본다. adr은 문서가 `adr/` 폴더에 있는지다."""
     errors: list[str] = []
 
     # 미승인 키 검사는 값이 규약에 어긋나도 그대로 돌린다. `descripton:` 같은 오타는
@@ -224,6 +237,15 @@ def check_fields(fields: dict[str, str]) -> list[str]:
     if description and len(description) > DESCRIPTION_LIMIT:
         errors.append(f"description이 {len(description)}자 — 상한 {DESCRIPTION_LIMIT}자")
 
+    doc_type = fields.get("type", "").strip()
+    if doc_type and doc_type not in TYPES:
+        errors.append(f"type {doc_type}가 규약에 없음 — {', '.join(TYPES)} 중 하나")
+    elif doc_type and adr and doc_type != ADR_TYPE:
+        errors.append(f"adr/ 문서의 type이 {doc_type} — adr 고정")
+    elif doc_type == ADR_TYPE and not adr:
+        others = ", ".join(t for t in TYPES if t != ADR_TYPE)
+        errors.append(f"type adr은 adr/ 폴더 문서만 — 그 밖은 {others} 중 하나")
+
     return errors
 
 
@@ -236,7 +258,7 @@ def inspect(path: Path, root: Path, registry: dict | None = None) -> list[str]:
         errors.append(reason)
         return errors
 
-    errors.extend(check_fields(fields))
+    errors.extend(check_fields(fields, in_adr(path, root)))
     errors.extend(check_body(path))
     return errors
 
