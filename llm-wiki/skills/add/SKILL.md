@@ -11,6 +11,7 @@ description: Use when material the user hands over or a decision settled in conv
 - **부재 시 질문**: 건넨 것이 없으면 무엇을 기록할지 묻고 추측하지 않음
 - **큰 자료**: 한 세션에 못 담으면 장 단위로 나눠 실행하고 요약으로 줄이지 않음
 - **저장소 상태**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init`, 현재 레포가 미등록이면 `/llm-wiki:register` 안내 후 중단, 있으면 `git -C {WIKI_ROOT} pull --ff-only` — 충돌·분기는 멈추고 보고
+- **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — 목록의 `[?]` 문서는 같은 `type` 대조에서 빠져 중복 신규 문서가 생기고 편집 시 5장 검사가 실패함
 
 ## 2. 사실 추출
 

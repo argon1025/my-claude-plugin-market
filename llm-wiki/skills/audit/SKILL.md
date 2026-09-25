@@ -60,7 +60,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 입력: 문서 {절대 경로}, 행 {이 문서의 행} — `전` 줄을 `후`로 치환하고 그 밖의 문장은 바꾸지 않음, `후`가 빈 행은 삭제, `유형` 행은 frontmatter `type` 줄을 `후` 값으로 넣거나 고침.
 흡수: 조각 {조각 경로}의 불릿만 이 문서의 지정 절 끝에 옮기고 조각 파일 삭제.
 문체: `sed -n '/^## 5\./,/^## 6\./p' {doc_contract_path}`.
-검사: 행마다 `grep -cF '{후 첫 줄}' {문서}`, `python3 {catalog_py} --check --root {knowledge_root} {문서}` — 못 고치면 `git -C {WIKI_ROOT} checkout -- {문서}`로 되돌리고 blocked에 사유.
+검사: 행마다 `grep -cF '{후 첫 줄}' {문서}`(`유형` 행은 `grep -c '^type: {후}$' {문서}`), `python3 {catalog_py} --check --root {knowledge_root} {문서}` — 못 고치면 `git -C {WIKI_ROOT} checkout -- {문서}`로 되돌리고 blocked에 사유.
 
 응답: 적용 행 번호, 건너뛴 행과 사유, 삭제·생성 파일, check 결과, blocked 사유.
 ````
