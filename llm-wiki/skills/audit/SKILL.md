@@ -10,6 +10,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
 - **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장
 - **그래프**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/graph.py" check --wiki {WIKI_ROOT}`의 에러·contracts 형식 경고와 `contracts`가 상한 3건에 닿은 간선을 같은 `catalog.md`에 이어 저장 — 노드·간선은 메인이 봄
+- **레포**: 대상 도메인 레포마다 `{WIKI_ROOT}/.local/paths.json`의 로컬 경로와 `registry.json`의 `defaultBranch`를 `{slug} {경로}@{브랜치}` 줄로 같은 `catalog.md`에 이어 저장, 경로 없으면 `{slug} 없음`
 - **묶음**: 대상 문서를 폴더별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 — 메인은 문서 본문을 열지 않음
 
 ## 2. 진단 — 묶음 1개 = 에이전트 1회
@@ -20,8 +21,8 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 위키 문서를 진단합니다. 문서를 고치거나 커밋하지 마세요.
 
 입력: 대상 {절대 경로 5~6건}, 목록 {catalog.md}, 힌트 {문서별 --check 에러 또는 "없음"}.
-기준: `sed -n '/^## 1\./,/^## 8\./p' {doc_contract_path}` — 1~7장.
-금지: 코드 저장소 조회, 사전 지식.
+기준: `sed -n '/^## 1\./,/^## 8\./p' {doc_contract_path}` — 1~7장, 1장 판정은 목록의 레포 줄로 `git -C {경로} grep {패턴} {브랜치}`·`git -C {경로} show {브랜치}:{파일}`을 실행해 수행, `없음` 레포의 불릿은 판정 생략.
+금지: 레포 편집·1장 판정 밖 레포 조회, 사전 지식.
 
 문서마다 아래 신호를 판정하고 조치 행을 씀. 값이 어긋나는 불릿 쌍은 통합하지 않고 `충돌`.
 
