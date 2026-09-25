@@ -156,7 +156,7 @@ def build(root: Path, label: str = DEFAULT_LABEL, shallow: bool = False) -> str:
             rows.append(f"{name} — !! description 없음. 직접 읽을 것")
             continue
 
-        # type이 없어도 행은 남긴다 — 이관 전 위키에서 목록이 비면 안 된다.
+        # type이 없어도 행은 남긴다 — 목록에서 빠진 문서는 없는 문서가 된다.
         doc_type = fields.get("type", "").strip() or "?"
         rows.append(f"{name} — [{doc_type}] {description}")
 
