@@ -10,7 +10,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 - **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
 - **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장
 - **그래프**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/graph.py" check --wiki {WIKI_ROOT}`의 에러·contracts 형식 경고와 `contracts`가 상한 3건에 닿은 간선을 같은 `catalog.md`에 이어 저장 — 노드·간선은 메인이 봄
-- **레포**: 대상 도메인 레포마다 `{WIKI_ROOT}/.local/paths.json`의 로컬 경로와 `registry.json`의 `defaultBranch`를 `{slug} {경로}@{브랜치}` 줄로 같은 `catalog.md`에 이어 저장, 경로 없으면 `{slug} 없음`
+- **레포**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" mirror --repo {slug}... --wiki {WIKI_ROOT}`를 대상 도메인 레포 전부로 실행해 출력(`{slug} {미러}@{브랜치}` 또는 `{slug} 없음 — {사유}`)을 그대로 같은 `catalog.md`에 이어 저장
 - **묶음**: 대상 문서를 폴더별 5~6건으로 나누고 문서마다 검사 줄을 힌트로 — 메인은 문서 본문을 열지 않음
 
 ## 2. 진단 — 묶음 1개 = 에이전트 1회

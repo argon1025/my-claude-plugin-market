@@ -32,9 +32,9 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 
 - **SessionStart**: 규약(`rules/agent-guide.md`) → 상태 헤더 → 그래프 파생 블록(레포 지도 → 현재 레포 기준 의존 3묶음) → 도메인 루트와 현재 레포 문서 목록 순으로 주입하며, matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 실행됨. 프로젝트 조건 없이 항상 주입하며 끄려면 `/plugin`에서 비활성화함
 - **동기화**: 위키에 `origin`이 있으면 startup·resume에서 마지막 fetch가 10분(`LLM_WIKI_SYNC_MINUTES`)을 넘었을 때 `pull --ff-only`를 걸고 3초까지 기다림 — 늦거나 실패하면 이전 사본으로 주입하고 헤더에 알림. 쓰기 스킬은 시작에 `pull --ff-only`, 끝에 `pull --rebase && git push`
-- **그래프 파생**: 레포 지도(도메인별 레포와 책임·소관, owner)와 좌표 패턴(로컬 경로·clone URL의 공통 규칙과 예외), 라이브러리를 거쳐 닿는 파급 대상(`(경유 {lib})` 1홉)은 저장하지 않고 `scripts/graph.py`가 `registry.json` 노드와 `deps.json` 간선에서 매번 계산함 — 노드 필드의 상한·열거도 같은 스크립트의 상수 하나에서 나와 `schema` 출력과 `check` 에러가 갈리지 않음
+- **그래프 파생**: 레포 지도(도메인별 레포와 책임·소관, owner)와 좌표 패턴(미러 경로·clone URL의 공통 규칙과 예외), 라이브러리를 거쳐 닿는 파급 대상(`(경유 {lib})` 1홉)은 저장하지 않고 `scripts/graph.py`가 `registry.json` 노드와 `deps.json` 간선에서 매번 계산함 — 노드 필드의 상한·열거도 같은 스크립트의 상수 하나에서 나와 `schema` 출력과 `check` 에러가 갈리지 않음
 - **그래프 화면(디버깅용)**: `python3 scripts/view.py --wiki ~/.ai-docs/wiki`가 노드·간선을 `templates/graph.html`에 인라인 삽입한 자기완결 HTML을 `{wiki}/.local/graph.html`에 쓰고 macOS에서 브라우저로 염(`--out PATH`·`--no-open`). 도메인 상자·간선 종류별 색·상세 패널·검색·휴면 토글을 제공하며 Cytoscape.js와 fcose는 jsdelivr CDN에서 받음. 사람이 위키 데이터를 점검하는 용도라 세션 주입·규약에는 실리지 않음
-- **주입 범위**: 레포 지도는 전 도메인 레포 전수(현재 도메인 행은 책임 문장, 타 도메인 행은 소관 한 줄, 휴면 노드는 이름만, `●`는 로컬 사본)와 좌표 패턴 한 줄, 의존은 현재 레포의 선행 조건·파급 대상 간선(계약 포함, 파급 대상에는 공용 라이브러리를 거쳐 닿는 `(경유 {lib})` 파생 행이 붙음)과 도메인의 다른 의존(from → to kind만), 문서는 현재 도메인 루트 전수(레포 폴더 제외) + 현재 레포 폴더 전수 — 스택·호스트·remote·간선 계약·문서 목록을 레포 하나 기준으로 보려면 `python3 scripts/graph.py repo {slug}`, 다른 도메인의 책임 문장·간선 전수는 `graph.py map --domain {d}`, 훅이 주입하는 블록 전체는 `graph.py render --domain {d} --slug {s}`로 그대로 다시 봄
+- **주입 범위**: 레포 지도는 전 도메인 레포 전수(현재 도메인 행은 책임 문장, 타 도메인 행은 소관 한 줄, 휴면 노드는 이름만)와 좌표 패턴 한 줄, 의존은 현재 레포의 선행 조건·파급 대상 간선(계약 포함, 파급 대상에는 공용 라이브러리를 거쳐 닿는 `(경유 {lib})` 파생 행이 붙음)과 도메인의 다른 의존(from → to kind만), 문서는 현재 도메인 루트 전수(레포 폴더 제외) + 현재 레포 폴더 전수 — 스택·호스트·remote·간선 계약·문서 목록을 레포 하나 기준으로 보려면 `python3 scripts/graph.py repo {slug}`, 다른 도메인의 책임 문장·간선 전수는 `graph.py map --domain {d}`, 훅이 주입하는 블록 전체는 `graph.py render --domain {d} --slug {s}`로 그대로 다시 봄
 - **레포 판정**: upstream(없으면 origin) URL을 정규화해 노드의 `remote`와 맞추고 실패하면 URL 마지막 경로 요소를 slug로 씀 — 개인 포크에서 열어도 같은 slug로 모이므로 노드에는 정본 remote만 둠. 미등록이면 규약·등록 안내·도메인 목록만 주입
 - **커서 신호**: 레포 커서가 HEAD보다 뒤처지면 몇 커밋 뒤인지가 헤더에 표시됨
 - **소프트 예산**: 목록은 어떤 크기에서도 줄이지 않으며 주입이 약 8,000토큰을 넘으면 정리 권고 한 줄이 붙음
@@ -47,7 +47,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 ├── deps.json                       # register·update·add가 편집: 레포 간 의존 간선
 ├── state/{slug}.json               # update만 편집: {"cursor", "at"}
 ├── .gitignore                      # .local/
-├── .local/paths.json               # 머신별 로컬 경로 (미추적, 훅·register가 기록)
+├── .local/mirrors/{slug}.git       # 위키 전용 bare 미러 (미추적, update.py mirror가 clone·fetch)
 └── knowledge/
     └── {조직}-{도메인}/             # 도메인 루트 — 레포 밖이 알아야 하거나 겪는 사실
         ├── adr/                    # 선택
@@ -60,7 +60,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 ## 무인 갱신 범위
 
 - **선택**: 도메인·레포 구분 없이 미처리 머지(PR 단위)를 머지 시각 순으로 세워 전역 40건(`--max-merges`)만큼 처리 — 사용자에게 묻지 않으며 `--repo`·`--range`는 지목 실행용
-- **대상**: `.local/paths.json`에 로컬 경로가 있고 `status`가 `active`인 등록 레포만 — 그 레포에서 세션을 한 번 열면 훅이 경로를 기록함
+- **대상**: `status`가 `active`인 등록 레포 — 세션을 연 체크아웃이 아니라 registry `remote`로 받은 위키 전용 bare 미러의 기본 브랜치를 읽으므로 워크트리를 지워도 대상에서 빠지지 않음
 - **범위**: 커서부터 대상 브랜치까지의 first-parent 커밋 — 추출은 레포 안에서 머지 5건 또는 diff 500KB 중 먼저 닿는 묶음 단위로 서브에이전트 1회씩(diff 1건은 400KB에서 절단)
 - **권한**: 새 사실은 추가, 기존 값과 다른 사실은 plan·feedback·커밋 메시지에서 의도가 인용될 때만 교체하고 나머지는 건너뛰어 최종 보고의 건너뜀 표에 남김 — 시각 순은 적용 순서만 정하며, 건너뛴 행은 `/llm-wiki:add`로 처리
 

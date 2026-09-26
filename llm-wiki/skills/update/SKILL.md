@@ -14,7 +14,7 @@ disable-model-invocation: true
 - **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러(없음·규약에 없는 값·adr 위치 불일치)가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — type 에러 문서에 반영하면 6장 되돌림에 걸려 사실이 보고 없이 사라짐
 - **실행**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" pending --wiki {WIKI_ROOT} --out {스크래치} {인자}` — 전 도메인 미처리 머지를 시각 순으로 골라 diff 파일·레포별 `commits`·`batches[{id, shas, bytes}]`·`remaining`과 전역 순서 `order[{slug, sha7, date}]`를 `work.json`에 씀, 묶음은 다시 나누지 않음
 - **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류(stderr 전달 후 중단)
-- **이월**: `skipped`(로컬 경로 없음·force-push 의심·대상 ref 없음·휴면)와 `notes`는 그대로 보고로
+- **이월**: `skipped`(미러 준비 실패·force-push 의심·대상 ref 없음·휴면)와 `notes`는 그대로 보고로
 - **부트스트랩**: 커서 없던 레포는 머지 0건이어도 6장에서 HEAD를 커서로 기록
 
 ## 2. 추출 — 묶음 1개 = 에이전트 1회
