@@ -78,7 +78,7 @@ disable-model-invocation: true
 방금 사실을 반영한 위키 문서 한 장에서 규약 위반만 고칩니다.
 
 입력: 문서 {doc_abs}, 이번 변경 `git -C {WIKI_ROOT} diff -- {doc_abs}`(신규 문서는 전체), 근거 레포·머지 {repo_path}@{sha} 목록, 도메인 루트 목록 `python3 {catalog_py} --root {WIKI_ROOT}/knowledge/{domain} --shallow`.
-기준: `sed -n '/^## 1\./,/^## 8\./p' {doc_contract_path}` — 1~7장, 1장 판정은 `git -C {repo_path} grep {패턴} {sha}`·`git -C {repo_path} show {sha}:{경로}`로 머지 시점 레포를 읽어 수행.
+기준: `sed -n '/^## 1\./,/^## 8\./p' {doc_contract_path}` — 1~7장, 1장 판정의 코드 확인은 `git -C {repo_path} grep {패턴} {sha}`·`git -C {repo_path} show {sha}:{경로}`로 머지 시점 레포를 읽어 수행.
 범위: 이번 변경 줄과 description만 — 기존 줄은 audit 몫.
 금지: 새 사실 추가, 이 문서 밖 편집.
 
