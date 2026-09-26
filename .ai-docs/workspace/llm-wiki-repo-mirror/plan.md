@@ -95,3 +95,11 @@
 - **인증**: 비공개 레포 clone은 이 머신의 git 자격 증명(HTTPS credential helper)에 의존하며, 실패는 `미러 clone 실패` 사유로 update 보고·register 상태 표에 드러남
 - **디스크**: 레포마다 전체 이력 한 벌을 둠 — `--filter=blob:none`은 `git grep {rev}`가 blob을 지연 다운로드해 느려지므로 쓰지 않음
 - **후속 작업**: 없음
+
+## Re-plan 2026-09-26 — 구현 후 필요성 점검에서 중복·일회성 코드 제거
+
+- **미러 노출 단일화**: 지도 헤더의 `# 미러 …` 부분과 `graph.py repo`의 `- 미러:` 필드를 넣지 않음 — 미러 경로는 `update.py mirror` 출력으로만 얻으며, `graph.py`는 미러를 모르고 `render_session`·`render_repo`·`map_block`은 `wiki` 인자 없이 동작함. `mirror_path`는 `update.py` 안으로 옮김
+- **훅 정리 삭제**: 남은 `.local/paths.json`의 `unlink`를 두지 않음 — 어디서도 읽지 않는 미추적 파일이라 남아도 영향 없음
+- **work.json `ref` 삭제**: 미러에서는 `branch`와 같은 값이고 소비처 없음
+- **register 상태 표**: 전 레포 clone·fetch를 부르는 `update.py mirror` 대신 `{WIKI_ROOT}/.local/mirrors/{slug}.git` 폴더 유무로 `있음`·`없음`
+- **검증 기대값 변경**: 커밋 2 ①의 헤더 2행은 `# clone https://github.com/argon1025/{slug}.git`, ②의 `- 미러:` 줄은 없음, ⑤·커밋 3 ①의 `paths.json` 잔존 결과는 0줄

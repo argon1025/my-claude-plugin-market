@@ -163,7 +163,7 @@ type: policy
 - **그룹 맵**: `from`을 그룹 키로 모으고 항목에는 적지 않음 — 레포 하나를 갱신한 diff가 자기 블록에만 남아 동시 반영의 rebase가 충돌하지 않음
 - **방향**: `from`이 `to`의 계약에 의존 — `to`를 바꾸면 `from`이 파급 대상, `kind`와 무관
 - **메시지 방향**: 리스너를 가진 쪽이 `to`, 발행하는 쪽이 `from` — 발행/소비는 `contracts` 문장이 밝힘
-- **대상 판정**: `to`는 식별자에서 읽히는 slug와 상대 레포 코드(`update.py mirror --repo {slug}`가 낸 미러에서 `git -C {미러} grep {패턴} {브랜치}`) 확인으로 정함 — `library`·`http`·`data`는 artifactId·Feign `name`·호스트 앞머리의 이름으로, `message`는 같은 익스체인지·라우팅 키를 소비하는 레포를 `@RabbitListener`·바인딩으로 확인하고, `http`는 경로 접두가 상대 레포에 라우트로 실재하는지까지 봄
+- **대상 판정**: `to`는 식별자에서 읽히는 slug와 상대 레포 코드(`update.py mirror --repo {slug}`가 낸 미러) 확인으로 정함 — `library`·`http`·`data`는 artifactId·Feign `name`·호스트 앞머리의 이름으로, `message`는 같은 익스체인지·라우팅 키를 소비하는 레포를 `@RabbitListener`·바인딩으로 확인하고, `http`는 경로 접두가 상대 레포에 라우트로 실재하는지까지 봄
 - **호스트 대조**: `~{host}`와 빈 대상은 scheme·끝 슬래시·대소문자를 지운 호스트를 registry `hosts` 전수와 비교해 slug로 바꿈
 - **상대 미정**: 대상을 정하지 못했거나 registry 밖 외부 시스템이면 간선을 만들지 않고 `상대 미정`으로 보고 — 외부 시스템의 소재는 책임 문장이 짐
 - **선언 위치**: `from`은 호출·발행·import 선언이 실제로 있는 레포 — 공용 라이브러리가 Feign을 선언하면 그 라이브러리가 `from`(http)이고 쓰는 레포는 `library` 간선만, 자체 선언이 있을 때만 직접 간선

@@ -18,7 +18,7 @@ disable-model-invocation: true
   3. 위로 정해지지 않거나 `포크 의심`이면 3장에서 묻고, 답이 없으면 빈 값으로 두고 보고에 `정본 remote 미상`으로 남김
 - **도메인 예비 판정**: 조사 전에 한 번 정함 — 어느 도메인의 `repos.{slug}`가 있으면 그 도메인, 없고 등록 도메인이 하나뿐이면 그 도메인, 둘 이상이면 `미정`
 - **slug**: 정본 remote의 마지막 경로 요소에서 `.git` 제거·소문자·비허용 문자 하이픈 치환, remote가 없으면 `git rev-parse --path-format=absolute --git-common-dir`의 부모 디렉터리명 — owner가 달라도 레포 이름이 같으면 slug가 겹치므로 겹치면 `{domain}-{name}`을 제안
-- **기존 등록**: 어느 도메인에 `repos.{slug}`가 이미 있고 `--resurvey`가 없으면 3장에서 도메인 이동·정본 remote 교체만 묻고 2장 조사를 생략, 둘 다 아니면 변경 없이 6장으로 — 이 경로는 커밋·push 없음
+- **기존 등록**: 어느 도메인에 `repos.{slug}`가 이미 있고 `--resurvey`가 없으면 3장에서 도메인 이동·정본 remote 교체만 묻고 2장 조사를 생략, 둘 다 아니면 커밋·push 없이 6장으로
 - **휴면 레포**: `--dormant`가 있으면 조사·질문 없이 `status: dormant` 노드를 기록하고 4장으로 — `defaultBranch` 기본값은 `main`, `stack`·`summary`·`responsibilities`는 아는 만큼 인자로 받거나 빈 배열·빈 문자열로 두고 나중에 add가 보강함
 
 ## 2. 조사 — 4레인 병렬
@@ -89,7 +89,7 @@ disable-model-invocation: true
 
 ## 6. 상태 표·보고
 
-- **상태 표**: `registry.json`·`state/*.json`을 Read하고 `update.py mirror --wiki {WIKI_ROOT}` 출력과 합쳐 `| 레포 | 도메인 | 상태 | 책임 | 간선(out/in) | 브랜치 | 커서 | 미러 |` 표를 출력 — `책임`은 문장 건수 — 커서 없음은 `없음`, 미러는 `있음` 또는 실패 사유(휴면은 기본 출력에서 빠지므로 `-`)
+- **상태 표**: `registry.json`·`state/*.json`과 `{WIKI_ROOT}/.local/mirrors/` 목록으로 `| 레포 | 도메인 | 상태 | 책임 | 간선(out/in) | 브랜치 | 커서 | 미러 |` 표를 출력 — `책임`은 문장 건수 — 커서 없음은 `없음`, 미러는 `{slug}.git` 폴더 유무로 `있음`·`없음`
 - **상대 미정**: 4장에서 간선이 되지 못한 `deps[]` 항목을 `| 식별자 | 외부·내부 미등록 | 근거 |`로 나열 — 내부 미등록 상대는 그 레포를 등록하거나 `/llm-wiki:add`로 간선을 직접 넣으면 이어짐
 - **조사 품질**: 2.5장의 `미소비 N행`(재질의 뒤에도 어느 레인도 보지 않은 인벤토리 행)과 `선언 위치 위반 N건`(라이브러리 심볼 import를 근거로 낸 http 항목)을 레인별로 적음
 - **다음**: 세션을 다시 열면 레포 지도·의존이 주입되고, 머지 반영은 `/llm-wiki:update`, 자료 반영은 `/llm-wiki:add`

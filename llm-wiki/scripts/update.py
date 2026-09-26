@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """무인 갱신의 범위 계산 — 등록 레포를 커서부터 훑어 머지별 diff를 파일로 꺼낸다.
 
-스킬이 이 스크립트를 쓰는 이유는 재현성이다. 레포 N개 순회·부트스트랩·대상 ref 선택·
+스킬이 이 스크립트를 쓰는 이유는 재현성이다. 레포 N개 순회·미러 확보·부트스트랩·
 force-push 검사·diff 절단·제외 pathspec을 에이전트가 bash 여러 번으로 하면 실행마다
 결과가 달라진다. 판정과 문서 편집은 스킬이 하고, 여기서는 "무엇을 볼지"만 정한다.
 
@@ -14,13 +14,13 @@ work.json `order`가 선택된 머지의 전역 순서다. 종료 코드는 0(�
 diff의 실제 바이트는 파일을 쓴 뒤에만 알 수 있고, 스킬이 묶으면 실행마다 경계가 달라진다.
 묶음은 레포 안에서만 만든다.
 
-`mirror`는 등록 레포마다 위키 전용 bare 미러({wiki}/.local/mirrors/{slug}.git)를 clone·fetch한다.
-레포 읽기를 세션을 연 체크아웃이 아니라 이 미러로 하는 이유는 워크트리를 지워도 경로가
-사라지지 않게 하려는 것이다. pending도 같은 함수로 미러를 확보한다.
+레포는 세션을 연 체크아웃이 아니라 위키 전용 bare 미러({wiki}/.local/mirrors/{slug}.git)로
+읽는다 — 체크아웃 경로는 워크트리를 지우면 사라진다. `mirror`는 그 미러를 clone·fetch해 경로를
+내고, 에이전트가 다른 레포 코드를 읽을 때도 이 출력을 쓴다.
 
 `advance`는 state/{slug}.json의 커서를 전진시킨다. 커서 파일을 레포별로 나눈 것은 여러
 사람과 여러 머신이 서로 다른 레포를 갱신할 때 같은 파일에서 충돌하지 않게 하려는 것이다.
-레포별 상태 표는 여기 없다 — registry.json·state/*.json 2파일과 미러 존재를 보면 되는 일이라
+레포별 상태 표는 여기 없다 — registry.json·state/*.json과 미러 폴더를 보면 되는 일이라
 register 스킬이 직접 조립한다.
 """
 
@@ -66,6 +66,7 @@ EXCLUDE_PATHSPECS = [
 # bare clone은 fetch refspec을 두지 않아 이후 fetch가 FETCH_HEAD만 갱신한다. heads만 받는 것은
 # --mirror가 GitHub의 refs/pull/*까지 받아 무거워지기 때문이다.
 MIRROR_REFSPEC = "+refs/heads/*:refs/heads/*"
+
 SKIP_NOT_ANCESTOR = "커서가 HEAD 조상이 아님(force-push 의심) — advance로 재설정"
 SKIP_DORMANT = "휴면 레포 — registry.json의 status가 dormant"
 
@@ -89,6 +90,10 @@ def load_json(path: Path, fallback):
         return fallback
 
 
+def mirror_path(wiki: Path, slug: str) -> Path:
+    return wiki / ".local" / "mirrors" / f"{slug}.git"
+
+
 def clone_url(remote: str) -> str:
     """노드 remote의 clone URL. 스킴이나 scp 꼴이면 그대로, 아니면 graph.py map의 `https://{remote}.git`."""
     return remote if "://" in remote or remote.startswith("git@") else f"https://{remote}.git"
@@ -104,7 +109,7 @@ def ensure_mirror(wiki: Path, slug: str, info: dict) -> tuple[str | None, str]:
     if not remote:
         return None, "remote 없음 — /llm-wiki:register"
     url = clone_url(remote)
-    path = graph.mirror_path(wiki, slug)
+    path = mirror_path(wiki, slug)
     if not path.is_dir():
         path.parent.mkdir(parents=True, exist_ok=True)
         code, out = git(path.parent, "clone", "--bare", "--quiet", url, str(path), timeout=600)
@@ -232,10 +237,9 @@ def cmd_pending(args) -> int:
         notes = [note] if note else []
 
         branch = info.get("defaultBranch") or "main"
-        ref = branch
-        code, head = git(path, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+        code, head = git(path, "rev-parse", "--verify", "--quiet", f"{branch}^{{commit}}")
         if code != 0:
-            work["skipped"][slug] = f"대상 ref를 찾지 못함 ({ref})"
+            work["skipped"][slug] = f"대상 ref를 찾지 못함 ({branch})"
             continue
 
         state = load_json(wiki / "state" / f"{slug}.json", {})
@@ -250,7 +254,7 @@ def cmd_pending(args) -> int:
             span = f"{cursor}..{head}"
         else:
             bootstrapped = True
-            cursor = baseline_before(path, ref, args.baseline_days) if args.baseline_days else None
+            cursor = baseline_before(path, branch, args.baseline_days) if args.baseline_days else None
             cursor = cursor or head
             span = f"{cursor}..{head}"
 
@@ -269,7 +273,6 @@ def cmd_pending(args) -> int:
             "domain": info.get("domain"),
             "path": path,
             "branch": branch,
-            "ref": ref,
             "head": head,
             "cursor": cursor,
             "bootstrapped": bootstrapped,
@@ -321,8 +324,8 @@ def cmd_advance(args) -> int:
         print(f"# 등록되지 않은 레포: {args.slug}", file=sys.stderr)
         return 1
 
-    # 미러 없이 짧은 sha를 검증 없이 쓰면 이후 pending의 조상 판정이 어긋나므로 미러를 요구한다.
-    path = graph.mirror_path(wiki, args.slug)
+    # 검증 없이 적은 커서는 다음 pending의 조상 판정을 깨므로, 미러가 없으면 거부한다.
+    path = mirror_path(wiki, args.slug)
     branch = info.get("defaultBranch") or "main"
     if not path.is_dir():
         print(f"# 미러 없음 — update.py mirror --repo {args.slug} 먼저", file=sys.stderr)

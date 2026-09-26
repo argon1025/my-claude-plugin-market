@@ -13,7 +13,7 @@
 
 - **레포 하나**(스택·호스트·remote·간선 계약·문서 목록): `python3 {GRAPH_PY} repo {slug} --wiki {WIKI_ROOT}`
 - **도메인 전체**(책임 문장·간선 전수, 여러 레포 작업의 수정 순서): `python3 {GRAPH_PY} map --domain {domain} --wiki {WIKI_ROOT}`
-- **상대 레포 코드**: `python3 {UPDATE_PY} mirror --repo {slug} --wiki {WIKI_ROOT}`가 낸 `{미러}@{브랜치}`로 `git -C {미러} grep {패턴} {브랜치}`·`git -C {미러} show {브랜치}:{경로}` — 기본 브랜치에 병합된 코드만 보임
+- **상대 레포 코드**: `python3 {UPDATE_PY} mirror --repo {slug} --wiki {WIKI_ROOT}`가 낸 `{미러}@{브랜치}`에서 `git -C {미러} grep|show {브랜치}` — 기본 브랜치에 병합된 코드만 보임
 
 ## 규칙
 

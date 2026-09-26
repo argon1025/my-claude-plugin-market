@@ -10,3 +10,4 @@
   - evidence: llm-wiki/hooks/session_start.sh, llm-wiki/scripts/update.py
 - `constraint` llm-wiki `update.py`의 `extract_diff`가 쓰는 `-- .` pathspec과 `:(exclude)` 제외 규칙은 bare 미러에서도 그대로 동작하므로 `-- :/`로 바꿀 필요가 없음 — pigeon-trade 머지 b292dfa 추출에서 14개 파일 diff로 확인함
   - evidence: llm-wiki/scripts/update.py
+- `why` llm-wiki에서 미러 경로는 `update.py mirror` 출력 하나로만 에이전트에게 전달하고 세션 주입 지도·`graph.py repo`에는 싣지 않음 — 이 명령이 확보·fetch까지 하므로 경로만 보여주면 낡은 미러를 읽게 되고, 같은 정보를 두 곳에 두면 주입 토큰만 늘어남

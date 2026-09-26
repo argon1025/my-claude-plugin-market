@@ -94,9 +94,6 @@ registry = graph.load_registry(wiki_root)
 edges = graph.load_edges(wiki_root)
 slug, domain = graph.resolve_repo(registry, remote, common_dir)
 
-# 레포 읽기는 위키 전용 미러(.local/mirrors)로 한다. 이전 버전이 남긴 경로 기록은 지운다.
-(wiki_root / ".local" / "paths.json").unlink(missing_ok=True)
-
 header = []
 if sync_note:
     header.append(sync_note)
@@ -126,7 +123,7 @@ if domain:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
 # 그래프 블록은 저장된 문서가 아니라 registry.json 노드와 deps.json 간선에서 파생한다.
-graph_block = graph.render_session(registry, edges, domain or "", slug, wiki)
+graph_block = graph.render_session(registry, edges, domain or "", slug)
 
 # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
 # 에이전트는 description만으로 문서를 열지 말지 정하므로 목록에서 빠진 문서는 없는 문서가 된다.
