@@ -2,7 +2,7 @@
 """레포 의존 그래프 화면 — registry.json 노드와 deps.json 간선을 브라우저용 자기완결 HTML로 낸다.
 
 `graph.py map/repo`는 텍스트 출력뿐이라 도메인 4개·레포 45개·간선 64건을 한눈에 보기 어렵다.
-이 스크립트는 같은 로더(graph.load_registry·load_edges·load_paths)로 읽은 데이터를 화면용
+이 스크립트는 같은 로더(graph.load_registry·load_edges)로 읽은 데이터를 화면용
 JSON 하나로 바꿔 templates/graph.html 안에 인라인 삽입하고 `{wiki}/.local/graph.html`에 쓴다.
 
 정적 HTML이 데이터를 fetch하는 방식은 쓰지 않는다 — `file://`에서는 fetch가 CORS로 막혀
@@ -27,7 +27,7 @@ PLACEHOLDER = "/*__GRAPH_DATA__*/"
 DEFAULT_OUT = Path(".local") / "graph.html"
 
 
-def build_view(registry: dict, edges: list[dict], paths: dict, wiki: str = "") -> dict:
+def build_view(registry: dict, edges: list[dict], wiki: str = "") -> dict:
     """화면용 JSON. 노드 id는 graph.py의 endpoint 형식(`도메인/slug`)이라 간선 from/to와 바로 조인된다."""
     repos = []
     out_degree: dict[str, int] = {}
@@ -53,7 +53,6 @@ def build_view(registry: dict, edges: list[dict], paths: dict, wiki: str = "") -
             "project": str(info.get("project") or ""),
             "remote": str(info.get("remote") or ""),
             "defaultBranch": str(info.get("defaultBranch") or ""),
-            "local": paths.get(slug) if isinstance(paths.get(slug), str) else None,
             "outDegree": out_degree.get(node_id, 0),
             "inDegree": in_degree.get(node_id, 0),
         })
@@ -103,7 +102,7 @@ def main() -> int:
     args = parser.parse_args()
 
     wiki = Path(args.wiki).expanduser()
-    view = build_view(graph.load_registry(wiki), graph.load_edges(wiki), graph.load_paths(wiki), str(wiki))
+    view = build_view(graph.load_registry(wiki), graph.load_edges(wiki), str(wiki))
     html = render_html(TEMPLATE.read_text(encoding="utf-8"), view)
 
     out = Path(args.out).expanduser() if args.out else wiki / DEFAULT_OUT

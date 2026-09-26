@@ -3,7 +3,7 @@
 
 노드(레포의 스택·소관·책임·호스트)는 registry.json `domains.{d}.repos.{slug}`에, 간선은
 deps.json `deps.{from}[]`에 있고 그 둘이 정본이다. 레포 지도(도메인별 레포와 책임·소관,
-owner)와 좌표 패턴(로컬 경로·clone URL의 공통 규칙과 예외)은 저장하지 않고
+owner)와 좌표 패턴(미러 경로·clone URL의 공통 규칙과 예외)은 저장하지 않고
 매번 여기서 계산한다 — 같은 사실을 사람이 쓰는 문서에도 두면 갱신 규칙이 하나 더 늘고 두
 값이 갈린다.
 
@@ -223,25 +223,6 @@ def mirror_path(wiki: str | Path, slug: str) -> Path:
     return Path(wiki) / ".local" / "mirrors" / f"{slug}.git"
 
 
-def local_pattern(paths: dict) -> tuple[str, dict[str, str]]:
-    """(공통 상위 경로, {패턴을 벗어난 slug: 경로}).
-
-    로컬 경로는 전수가 `{prefix}/{slug}` 꼴이라 세션에는 패턴 한 줄과 표시만 싣는다. prefix는
-    가장 많은 레포가 따르는 상위 경로이고, 그 아래에 있지 않은 레포만 경로를 그대로 낸다.
-    """
-    rows = {slug: path.strip().rstrip("/") for slug, path in paths.items()
-            if isinstance(slug, str) and isinstance(path, str) and path.strip()}
-    counts: dict[str, int] = {}
-    for slug, path in rows.items():
-        parent, _, name = path.rpartition("/")
-        if parent and name == slug:
-            counts[parent] = counts.get(parent, 0) + 1
-    if not counts:
-        return "", rows
-    prefix = max(sorted(counts), key=counts.__getitem__)
-    return prefix, {slug: path for slug, path in rows.items() if path != f"{prefix}/{slug}"}
-
-
 def remote_pattern(registry: dict) -> tuple[str, str, dict[str, str]]:
     """(clone 패턴의 호스트, 단일 owner 또는 빈 문자열, {패턴을 벗어난 slug: remote}).
 
@@ -390,12 +371,12 @@ def domain_heading(registry: dict, name: str, current: bool) -> str:
     return row
 
 
-def map_block(registry: dict, domain: str, slug: str, paths: dict) -> str:
+def map_block(registry: dict, domain: str, slug: str, wiki: str | Path) -> str:
     """레포 지도 — 도메인별 레포 전수와 좌표 패턴. 도메인이 없으면 도메인 목록만.
 
     현재 도메인을 먼저 두고 그 행에는 책임 문장을, 다른 도메인 행에는 소관 한 줄을 싣는다.
     휴면 노드는 값이 없어도 이름을 남긴다 — 소비처로 남아 있을 수 있어 파급 확인에 든다.
-    로컬 경로·remote는 헤더의 패턴 한 줄로 갈음하고 패턴을 벗어난 레포만 행 끝에 적는다.
+    미러 경로·remote는 헤더의 패턴 한 줄로 갈음하고 remote가 패턴을 벗어난 레포만 행 끝에 적는다.
     """
     domains = sorted(registry["domains"])
     if not domains:
@@ -409,31 +390,23 @@ def map_block(registry: dict, domain: str, slug: str, paths: dict) -> str:
         return "\n".join([head, *rows])
 
     head += f" · 현재 {domain}/{slug}"
-    prefix, local_odd = local_pattern(paths)
     host, owner, remote_odd = remote_pattern(registry)
-    patterns = []
-    if prefix:
-        patterns.append(f"● 로컬 {prefix}/{{slug}}")
+    patterns = [f"미러 {mirror_path(wiki, '{slug}')}"]
     if host:
         patterns.append(f"clone https://{host}/{owner or '{owner}'}/{{slug}}.git")
-    header = [head] + (["# " + " · ".join(patterns)] if patterns else [])
+    header = [head, "# " + " · ".join(patterns)]
 
     blocks = ["\n".join(header)]
     for name in [domain, *(other for other in domains if other != domain)]:
         rows = [domain_heading(registry, name, name == domain)]
         for repo_slug, info in domain_repos(registry, name):
             row = f"- {repo_slug}"
-            local = paths.get(repo_slug)
-            if isinstance(local, str) and local.strip():
-                row += " ●"
             if is_dormant(info):
                 row += " (휴면)"
             text = " · ".join(text_list(info.get("responsibilities"))) if name == domain else ""
             text = text or str(info.get("summary") or "").strip()
             if text:
                 row += f" — {text}"
-            if repo_slug in local_odd:
-                row += f" · 로컬 {local_odd[repo_slug]}"
             if repo_slug in remote_odd:
                 row += f" · remote {remote_odd[repo_slug]}"
             rows.append(row)
@@ -442,10 +415,10 @@ def map_block(registry: dict, domain: str, slug: str, paths: dict) -> str:
 
 
 def render_session(registry: dict, edges: list[dict], domain: str, slug: str,
-                   paths: dict) -> str:
+                   wiki: str | Path) -> str:
     """훅이 헤더와 문서 목록 사이에 끼우는 블록. 도메인이 없으면 도메인 목록까지만."""
     blocks: list[str] = []
-    block = map_block(registry, domain, slug, paths)
+    block = map_block(registry, domain, slug, wiki)
     if block:
         blocks.append(block)
     if not domain:
@@ -461,7 +434,7 @@ def render_session(registry: dict, edges: list[dict], domain: str, slug: str,
     return "\n\n".join(blocks)
 
 
-def render_repo(registry: dict, edges: list[dict], slug: str, paths: dict,
+def render_repo(registry: dict, edges: list[dict], slug: str, wiki: str | Path,
                 knowledge: Path) -> str:
     """`repo` 출력 — 노드 전 필드, 그 레포 기준 두 묶음 간선, 레포 문서 목록."""
     info = registry["repos"].get(slug)
@@ -483,14 +456,14 @@ def render_repo(registry: dict, edges: list[dict], slug: str, paths: dict,
     envs = [*(env for env in HOST_ENVS if env in hosts), *sorted(set(hosts) - set(HOST_ENVS))]
     remote = str(info.get("remote") or "").strip()
     branch = str(info.get("defaultBranch") or "").strip()
-    local = paths.get(slug)
+    mirror = mirror_path(wiki, slug)
 
     field("소관", str(info.get("summary") or "").strip())
     field("스택", " · ".join(text_list(info.get("stack"))))
     field("책임", " · ".join(text_list(info.get("responsibilities"))))
     field("호스트", " · ".join(f"{env} {str(hosts[env]).strip()}" for env in envs if str(hosts[env]).strip()))
     field("저장소", " · ".join(part for part in (remote, f"브랜치 {branch}" if branch else "") if part))
-    field("로컬", local.strip() if isinstance(local, str) and local.strip() else "없음")
+    field("미러", str(mirror) if mirror.is_dir() else f"없음 — update.py mirror --repo {slug}")
     blocks = ["\n".join(rows)]
 
     outgoing, incoming, _ = edge_groups(edges, domain, slug)
@@ -1036,24 +1009,16 @@ def cmd_map(args) -> int:
     return 0
 
 
-def load_paths(wiki: Path) -> dict:
-    """`.local/paths.json` — 이 머신의 레포 로컬 경로. 없거나 깨지면 빈 값이다."""
-    paths = catalog.load_json(wiki / ".local" / "paths.json", {})
-    return paths if isinstance(paths, dict) else {}
-
-
 def cmd_render(args) -> int:
     """훅이 import로 부르는 render_session을 그대로 낸다 — 주입 형상 회귀를 명령 하나로 본다."""
     wiki = Path(args.wiki).expanduser()
-    print(render_session(load_registry(wiki), load_edges(wiki), args.domain, args.slug,
-                         load_paths(wiki)))
+    print(render_session(load_registry(wiki), load_edges(wiki), args.domain, args.slug, wiki))
     return 0
 
 
 def cmd_repo(args) -> int:
     wiki = Path(args.wiki).expanduser()
-    print(render_repo(load_registry(wiki), load_edges(wiki), args.slug, load_paths(wiki),
-                      wiki / "knowledge"))
+    print(render_repo(load_registry(wiki), load_edges(wiki), args.slug, wiki, wiki / "knowledge"))
     return 0
 
 

@@ -101,7 +101,6 @@ ul{margin:0;padding:0;list-style:none}
 .repo-item.is-active{background:var(--ink);color:var(--on-primary)}
 .repo-item.is-dormant{color:var(--stone)}
 .repo-item.is-match{background:var(--sub-c4-bg)}
-.repo-item .local{font-size:9px;flex:none;width:8px}
 
 /* ---- 상단 바 ---- */
 .topbar{background:var(--canvas);border-bottom:1px solid var(--hairline);padding:var(--sp-sm) var(--sp-xl);display:flex;align-items:center;gap:var(--sp-md);min-height:var(--topbar-h);flex:none}
@@ -236,7 +235,7 @@ ul{margin:0;padding:0;list-style:none}
         <div class="legend-row"><span class="line" style="border-color:var(--kind-http)"></span>http (호출)</div>
         <div class="legend-row"><span class="line dotted" style="border-color:var(--kind-message)"></span>message (발행/소비)</div>
         <div class="legend-row"><span class="line dashed" style="border-color:var(--kind-data)"></span>data (조회)</div>
-        <div class="legend-row"><span class="box"></span>레포 · <span class="box dormant"></span>휴면 · ● 로컬 사본</div>
+        <div class="legend-row"><span class="box"></span>레포 · <span class="box dormant"></span>휴면</div>
         <div class="mode">from → to : from이 to의 계약에 의존</div>
       </div>
     </div>
@@ -337,7 +336,6 @@ ul{margin:0;padding:0;list-style:none}
     listBox.appendChild(g);
     DATA.repos.filter(function (r) { return r.domain === d.id; }).forEach(function (r) {
       var item = el('div', 'repo-item' + (r.status === 'dormant' ? ' is-dormant' : ''));
-      item.appendChild(el('span', 'local', r.local ? '●' : ''));
       item.appendChild(el('span', null, r.slug));
       item.addEventListener('click', function () { selectRepo(r.id, true); });
       listBox.appendChild(item);
@@ -395,7 +393,7 @@ ul{margin:0;padding:0;list-style:none}
     kicker.textContent = r.domain;
     body.innerHTML = '';
     var head = el('div');
-    head.appendChild(el('div', 'cp-title', (r.local ? '● ' : '') + r.slug));
+    head.appendChild(el('div', 'cp-title', r.slug));
     var sub = el('div', 'cp-sub', r.status === 'dormant' ? '휴면' + (r.reason ? ' — ' + r.reason : '') : 'active · 의존 ' + r.outDegree + ' · 피의존 ' + r.inDegree);
     head.appendChild(sub);
     body.appendChild(head);
@@ -430,7 +428,6 @@ ul{margin:0;padding:0;list-style:none}
     addKv('project', r.project, r.project);
     addKv('remote', r.remote, r.remote ? 'https://' + r.remote : '');
     addKv('branch', r.defaultBranch);
-    addKv('local', r.local);
     co.appendChild(ckv); body.appendChild(co);
 
     var outs = (outEdges[r.id] || []).slice().sort(function (a, b) { return a.to.localeCompare(b.to); });
@@ -531,7 +528,7 @@ ul{margin:0;padding:0;list-style:none}
       els.push({ data: { id: d.id, label: d.id, isDomain: true, color: domainColor[d.id] }, selectable: false });
     });
     DATA.repos.forEach(function (r) {
-      els.push({ data: { id: r.id, parent: r.domain, label: (r.local ? '● ' : '') + r.slug, slug: r.slug, dormant: r.status === 'dormant' }, classes: r.status === 'dormant' ? 'dormant' : '' });
+      els.push({ data: { id: r.id, parent: r.domain, label: r.slug, slug: r.slug, dormant: r.status === 'dormant' }, classes: r.status === 'dormant' ? 'dormant' : '' });
     });
     DATA.edges.forEach(function (e) {
       els.push({ data: { id: e.id, source: e.from, target: e.to, kind: e.kind }, classes: 'kind-' + e.kind });
