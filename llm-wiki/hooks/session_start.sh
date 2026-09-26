@@ -85,24 +85,14 @@ SOFT_BUDGET = 8000
 wiki_root = Path(wiki)
 knowledge = wiki_root / "knowledge"
 graph_py = os.path.join(plugin, "scripts", "graph.py")
+update_py = os.path.join(plugin, "scripts", "update.py")
 
 guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-guide = guide.replace("{WIKI_ROOT}", wiki).replace("{GRAPH_PY}", graph_py)
+guide = guide.replace("{WIKI_ROOT}", wiki).replace("{GRAPH_PY}", graph_py).replace("{UPDATE_PY}", update_py)
 
 registry = graph.load_registry(wiki_root)
 edges = graph.load_edges(wiki_root)
 slug, domain = graph.resolve_repo(registry, remote, common_dir)
-
-# 무인 갱신은 이 파일에 경로가 있는 레포만 처리한다 — 그 레포에서 세션을 한 번 여는 것이 등록이다.
-# .local/은 .gitignore 대상이라 clean-tree 판정에 걸리지 않는다.
-paths = catalog.load_json(wiki_root / ".local" / "paths.json", {})
-if not isinstance(paths, dict):
-    paths = {}
-if domain and toplevel and paths.get(slug) != toplevel:
-    paths[slug] = toplevel
-    local = wiki_root / ".local" / "paths.json"
-    local.parent.mkdir(parents=True, exist_ok=True)
-    local.write_text(json.dumps(paths, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 header = []
 if sync_note:
@@ -133,7 +123,7 @@ if domain:
             header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
 
 # 그래프 블록은 저장된 문서가 아니라 registry.json 노드와 deps.json 간선에서 파생한다.
-graph_block = graph.render_session(registry, edges, domain or "", slug, paths)
+graph_block = graph.render_session(registry, edges, domain or "", slug)
 
 # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
 # 에이전트는 description만으로 문서를 열지 말지 정하므로 목록에서 빠진 문서는 없는 문서가 된다.
