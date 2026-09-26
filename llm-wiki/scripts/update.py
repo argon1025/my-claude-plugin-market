@@ -76,6 +76,8 @@ def git(cwd: str | Path, *args: str, timeout: int = 60) -> tuple[int, str]:
         result = subprocess.run(
             ["git", "-C", str(cwd), *args],
             capture_output=True, text=True, timeout=timeout,
+            # 무인 실행에서 자격 증명 프롬프트가 뜨면 timeout까지 멈춘다 — 묻지 않고 실패시킨다.
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
         )
     except (OSError, subprocess.SubprocessError) as exc:
         return 1, str(exc)
@@ -94,21 +96,17 @@ def mirror_path(wiki: Path, slug: str) -> Path:
     return wiki / ".local" / "mirrors" / f"{slug}.git"
 
 
-def clone_url(remote: str) -> str:
-    """노드 remote의 clone URL. 스킴이나 scp 꼴이면 그대로, 아니면 graph.py map의 `https://{remote}.git`."""
-    return remote if "://" in remote or remote.startswith("git@") else f"https://{remote}.git"
-
-
 def ensure_mirror(wiki: Path, slug: str, info: dict) -> tuple[str | None, str]:
     """(미러 경로 또는 None, 사유·노트). 없으면 clone, 있으면 fetch한다.
 
     blob 없는 부분 clone(--filter=blob:none)은 쓰지 않는다 — `git grep {rev}`가 blob을 지연
-    다운로드해 느려진다. url과 refspec은 매번 다시 적어 register가 remote를 바꿔도 따라간다.
+    다운로드해 느려진다. url은 매번 다시 적어 register가 remote를 바꿔도 따라간다. remote는
+    scheme 없는 정규화 꼴이라(graph.py check) clone은 graph.py map과 같은 `https://{remote}.git`이다.
     """
     remote = str(info.get("remote") or "").strip()
     if not remote:
         return None, "remote 없음 — /llm-wiki:register"
-    url = clone_url(remote)
+    url = f"https://{remote}.git"
     path = mirror_path(wiki, slug)
     if not path.is_dir():
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -117,6 +115,8 @@ def ensure_mirror(wiki: Path, slug: str, info: dict) -> tuple[str | None, str]:
             shutil.rmtree(path, ignore_errors=True)
             first = out.splitlines()[0] if out else "원인 미상"
             return None, f"미러 clone 실패 — {first}"
+        git(path, "config", "remote.origin.fetch", MIRROR_REFSPEC)
+        return str(path), ""
     git(path, "config", "remote.origin.url", url)
     git(path, "config", "remote.origin.fetch", MIRROR_REFSPEC)
     if git(path, "fetch", "--prune", "--quiet", "origin", timeout=600)[0] != 0:

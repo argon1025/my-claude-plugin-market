@@ -11,3 +11,5 @@
 - `constraint` llm-wiki `update.py`의 `extract_diff`가 쓰는 `-- .` pathspec과 `:(exclude)` 제외 규칙은 bare 미러에서도 그대로 동작하므로 `-- :/`로 바꿀 필요가 없음 — pigeon-trade 머지 b292dfa 추출에서 14개 파일 diff로 확인함
   - evidence: llm-wiki/scripts/update.py
 - `why` llm-wiki에서 미러 경로는 `update.py mirror` 출력 하나로만 에이전트에게 전달하고 세션 주입 지도·`graph.py repo`에는 싣지 않음 — 이 명령이 확보·fetch까지 하므로 경로만 보여주면 낡은 미러를 읽게 되고, 같은 정보를 두 곳에 두면 주입 토큰만 늘어남
+- `constraint` llm-wiki 미러 clone은 registry `remote`(scheme 없는 정규화 꼴)로 만든 `https://{remote}.git`만 쓰므로 SSH 키로만 인증하는 비공개 레포는 `미러 clone 실패`가 됨 — 그런 머신은 `git config --global url."git@github.com:".insteadOf https://github.com/`로 우회하며, update.py의 git 호출은 `GIT_TERMINAL_PROMPT=0`이라 자격 증명 프롬프트로 멈추지 않고 실패함
+  - evidence: llm-wiki/scripts/update.py
