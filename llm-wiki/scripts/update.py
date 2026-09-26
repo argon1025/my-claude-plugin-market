@@ -14,10 +14,14 @@ work.json `order`가 선택된 머지의 전역 순서다. 종료 코드는 0(�
 diff의 실제 바이트는 파일을 쓴 뒤에만 알 수 있고, 스킬이 묶으면 실행마다 경계가 달라진다.
 묶음은 레포 안에서만 만든다.
 
+`mirror`는 등록 레포마다 위키 전용 bare 미러({wiki}/.local/mirrors/{slug}.git)를 clone·fetch한다.
+레포 읽기를 세션을 연 체크아웃이 아니라 이 미러로 하는 이유는 워크트리를 지워도 경로가
+사라지지 않게 하려는 것이다. pending도 같은 함수로 미러를 확보한다.
+
 `advance`는 state/{slug}.json의 커서를 전진시킨다. 커서 파일을 레포별로 나눈 것은 여러
 사람과 여러 머신이 서로 다른 레포를 갱신할 때 같은 파일에서 충돌하지 않게 하려는 것이다.
-레포별 상태 표는 여기 없다 — registry.json·state/*.json·.local/paths.json 3파일을 읽으면
-되는 일이라 register 스킬이 직접 조립한다.
+레포별 상태 표는 여기 없다 — registry.json·state/*.json 2파일과 미러 존재를 보면 되는 일이라
+register 스킬이 직접 조립한다.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import date, datetime
@@ -58,7 +63,9 @@ EXCLUDE_PATHSPECS = [
     ":(exclude)**/node_modules/**",
 ]
 
-SKIP_NO_PATH = "로컬 경로 없음 — 그 레포에서 세션을 한 번 열면 등록됨"
+# bare clone은 fetch refspec을 두지 않아 이후 fetch가 FETCH_HEAD만 갱신한다. heads만 받는 것은
+# --mirror가 GitHub의 refs/pull/*까지 받아 무거워지기 때문이다.
+MIRROR_REFSPEC = "+refs/heads/*:refs/heads/*"
 SKIP_NOT_ANCESTOR = "커서가 HEAD 조상이 아님(force-push 의심) — advance로 재설정"
 SKIP_DORMANT = "휴면 레포 — registry.json의 status가 dormant"
 
@@ -82,10 +89,34 @@ def load_json(path: Path, fallback):
         return fallback
 
 
-def target_ref(path: str, branch: str) -> str:
-    """대상 ref. 원격 추적 ref가 있으면 그것을 쓴다 — 워킹트리가 어느 브랜치에 있든 같은 결과."""
-    code, _ = git(path, "rev-parse", "--verify", "--quiet", f"origin/{branch}")
-    return f"origin/{branch}" if code == 0 else branch
+def clone_url(remote: str) -> str:
+    """노드 remote의 clone URL. 스킴이나 scp 꼴이면 그대로, 아니면 graph.py map의 `https://{remote}.git`."""
+    return remote if "://" in remote or remote.startswith("git@") else f"https://{remote}.git"
+
+
+def ensure_mirror(wiki: Path, slug: str, info: dict) -> tuple[str | None, str]:
+    """(미러 경로 또는 None, 사유·노트). 없으면 clone, 있으면 fetch한다.
+
+    blob 없는 부분 clone(--filter=blob:none)은 쓰지 않는다 — `git grep {rev}`가 blob을 지연
+    다운로드해 느려진다. url과 refspec은 매번 다시 적어 register가 remote를 바꿔도 따라간다.
+    """
+    remote = str(info.get("remote") or "").strip()
+    if not remote:
+        return None, "remote 없음 — /llm-wiki:register"
+    url = clone_url(remote)
+    path = graph.mirror_path(wiki, slug)
+    if not path.is_dir():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        code, out = git(path.parent, "clone", "--bare", "--quiet", url, str(path), timeout=600)
+        if code != 0:
+            shutil.rmtree(path, ignore_errors=True)
+            first = out.splitlines()[0] if out else "원인 미상"
+            return None, f"미러 clone 실패 — {first}"
+    git(path, "config", "remote.origin.url", url)
+    git(path, "config", "remote.origin.fetch", MIRROR_REFSPEC)
+    if git(path, "fetch", "--prune", "--quiet", "origin", timeout=600)[0] != 0:
+        return str(path), "fetch 실패 — 미러 기존 ref 기준"
+    return str(path), ""
 
 
 def first_parent(path: str, rev_range: str) -> list[dict]:
@@ -179,7 +210,6 @@ def cmd_pending(args) -> int:
         print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:register", file=sys.stderr)
         return 1
 
-    paths = load_json(wiki / ".local" / "paths.json", {})
     out_dir = Path(args.out).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -195,18 +225,15 @@ def cmd_pending(args) -> int:
         if graph.is_dormant(info):
             work["skipped"][slug] = SKIP_DORMANT
             continue
-        path = paths.get(slug)
-        if not path or not Path(path).is_dir():
-            work["skipped"][slug] = SKIP_NO_PATH
+        path, note = ensure_mirror(wiki, slug, info)
+        if path is None:
+            work["skipped"][slug] = note
             continue
-
-        notes = []
-        if git(path, "fetch", "--quiet", "origin")[0] != 0:
-            notes.append("fetch 실패 — 로컬 ref 기준")
+        notes = [note] if note else []
 
         branch = info.get("defaultBranch") or "main"
-        ref = target_ref(path, branch)
-        code, head = git(path, "rev-parse", ref)
+        ref = branch
+        code, head = git(path, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
         if code != 0:
             work["skipped"][slug] = f"대상 ref를 찾지 못함 ({ref})"
             continue
@@ -294,15 +321,16 @@ def cmd_advance(args) -> int:
         print(f"# 등록되지 않은 레포: {args.slug}", file=sys.stderr)
         return 1
 
-    paths = load_json(wiki / ".local" / "paths.json", {})
-    path = paths.get(args.slug)
+    # 미러 없이 짧은 sha를 검증 없이 쓰면 이후 pending의 조상 판정이 어긋나므로 미러를 요구한다.
+    path = graph.mirror_path(wiki, args.slug)
     branch = info.get("defaultBranch") or "main"
-    if path and Path(path).is_dir():
-        ref = target_ref(path, branch)
-        if git(path, "merge-base", "--is-ancestor", args.sha, ref)[0] != 0:
-            print(f"# {args.sha[:7]}는 {ref}의 조상이 아님 — 커서를 전진시키지 않음", file=sys.stderr)
-            return 1
-        args.sha = git(path, "rev-parse", args.sha)[1]
+    if not path.is_dir():
+        print(f"# 미러 없음 — update.py mirror --repo {args.slug} 먼저", file=sys.stderr)
+        return 1
+    if git(path, "merge-base", "--is-ancestor", args.sha, branch)[0] != 0:
+        print(f"# {args.sha[:7]}는 {branch}의 조상이 아님 — 커서를 전진시키지 않음", file=sys.stderr)
+        return 1
+    args.sha = git(path, "rev-parse", args.sha)[1]
 
     state_path = wiki / "state" / f"{args.slug}.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -313,6 +341,25 @@ def cmd_advance(args) -> int:
         "at": date.today().isoformat(),
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"{args.slug} 커서 {args.sha[:7]}")
+    return 0
+
+
+def cmd_mirror(args) -> int:
+    wiki = Path(args.wiki).expanduser()
+    repos = graph.load_registry(wiki)["repos"]
+    # 지목하지 않으면 휴면을 뺀다 — 휴면 레포 코드는 update가 읽지 않는다. 지목은 휴면도 받는다.
+    slugs = args.repo or [slug for slug, info in sorted(repos.items()) if not graph.is_dormant(info)]
+    for slug in slugs:
+        info = repos.get(slug)
+        if info is None:
+            print(f"{slug} 없음 — 등록되지 않은 레포")
+            continue
+        path, note = ensure_mirror(wiki, slug, info)
+        if path is None:
+            print(f"{slug} 없음 — {note}")
+            continue
+        branch = info.get("defaultBranch") or "main"
+        print(f"{slug} {path}@{branch}" + (f" · {note}" if note else ""))
     return 0
 
 
@@ -337,6 +384,10 @@ def main() -> int:
     pending.add_argument("--batch-bytes", metavar="N", type=int, default=DEFAULT_BATCH_BYTES,
                          help=f"추출 묶음 하나의 diff 파일 합계 상한 (기본값: {DEFAULT_BATCH_BYTES})")
     pending.set_defaults(func=cmd_pending)
+
+    mirror = sub.add_parser("mirror", parents=[common], help="등록 레포의 bare 미러를 clone·fetch한다")
+    mirror.add_argument("--repo", metavar="SLUG", action="append", help="대상 레포 한정 (반복 가능, 휴면 포함)")
+    mirror.set_defaults(func=cmd_mirror)
 
     advance = sub.add_parser("advance", parents=[common], help="레포 커서를 전진시킨다")
     advance.add_argument("slug")

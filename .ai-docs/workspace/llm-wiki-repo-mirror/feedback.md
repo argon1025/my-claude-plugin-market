@@ -8,3 +8,5 @@
 - `why` llm-wiki 미러를 `git clone --mirror`가 아니라 `--bare`와 heads 전용 refspec으로 만드는 이유는 `--mirror`가 GitHub의 `refs/pull/*`까지 받아 무거워지기 때문이며, `--filter=blob:none` 부분 clone은 `git grep {rev}`가 blob을 지연 다운로드해 느려지므로 쓰지 않음
 - `correction` `.local/paths.json`은 세션을 연 git toplevel로 덮어써지므로 워크트리(예: `/Users/rok/orca/workspaces/pigeon-trade/issue-5`)에서 세션을 연 뒤 워크트리를 지우면 로컬 사본이 있어도 update가 `로컬 경로 없음`으로 건너뜀 — 경로 기록 방식 자체가 재발 원인임
   - evidence: llm-wiki/hooks/session_start.sh, llm-wiki/scripts/update.py
+- `constraint` llm-wiki `update.py`의 `extract_diff`가 쓰는 `-- .` pathspec과 `:(exclude)` 제외 규칙은 bare 미러에서도 그대로 동작하므로 `-- :/`로 바꿀 필요가 없음 — pigeon-trade 머지 b292dfa 추출에서 14개 파일 diff로 확인함
+  - evidence: llm-wiki/scripts/update.py

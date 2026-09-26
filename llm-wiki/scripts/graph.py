@@ -218,6 +218,11 @@ def project_host(info: dict) -> str:
     return normalize_host(str(info.get("project") or "")).split("/", 1)[0]
 
 
+def mirror_path(wiki: str | Path, slug: str) -> Path:
+    """위키 전용 bare 미러 경로. update.py·훅·render가 같은 규칙을 쓴다."""
+    return Path(wiki) / ".local" / "mirrors" / f"{slug}.git"
+
+
 def local_pattern(paths: dict) -> tuple[str, dict[str, str]]:
     """(공통 상위 경로, {패턴을 벗어난 slug: 경로}).
 
