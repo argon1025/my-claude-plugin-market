@@ -97,14 +97,14 @@ type: policy
 | 레포 등록·도메인 이동 | `chore(register): {slug} → {domain}` |
 
 - **커밋 본문**: 발견 근거 한 줄(update `{slug} @{sha7}`, add 자료명 또는 `사용자 확인`, register `register 조사`)과 교체면 `기존 {값} / 새 {값}` 한 줄 — 이력의 정본은 git history이고 문서에는 현재 값만 남김
-- **건너뜀 보고**: 반영하지 않은 사실은 스킬 최종 보고에 `| 주제 | 위치 | 기존 값 | 새 값·사유 |` 표로 남김 — 위치는 update `{slug} @{sha7}`, audit `{문서:절}`
+- **건너뜀 보고**: 반영하지 않은 사실은 스킬 최종 보고에 `| 주제 | 위치 | 기존 값 | 새 값·사유 |` 표로 남기며 update는 PR 본문 사실 원장이 이를 대신함 — 위치는 update `{slug} @{sha7}`, audit `{문서:절}`
 - **편집 주체**: 노드·간선·커서는 아래 스킬만 고침
 
 | 스킬 | 노드 | 간선 | 커서 |
 |---|---|---|---|
 | register | 전체(생성·재조사·도메인 이동·status) | 조사 간선 추가, 도메인 이동 시 끝점 치환 | — |
 | add | `summary`·`project` 교체, `responsibilities`·`hosts` 보강 | 자료·대화의 간선 추가·삭제 | — |
-| update | `responsibilities`·`hosts` 추가와 7장 조건의 교체 | diff의 간선 추가·`contracts` 식별자 보탬과 7장 조건의 교체 | `state/` 전진 |
+| update | `responsibilities`·`hosts` 추가와 7장 조건의 교체 | diff의 간선 추가·`contracts` 식별자 보탬과 7장 조건의 교체 | `state/` 전진(PR 경유) |
 | audit | 승인된 책임 문장 통합 | — | — |
 
 ## 9. registry.json — 레포 노드
