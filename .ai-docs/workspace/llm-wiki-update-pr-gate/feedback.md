@@ -13,3 +13,7 @@
 - `why` llm-wiki update의 `wiki-update/*` 브랜치는 `pending` 종료 코드 0이고 `--dry-run`이 아닐 때만 만듦 — 미처리 없음·dry-run 실행이 빈 브랜치를 남기지 않게 하기 위함
 - `constraint` llm-wiki update PR의 커밋 링크는 `work.json`에 remote가 없어 `registry.json` 노드의 `remote`(scheme 없는 정규화 꼴)로 `https://{remote}/commit/{sha}`를 만듦
   - evidence: llm-wiki/scripts/update.py mirror_path
+- `constraint` llm-wiki `/llm-wiki:update`는 PR로만 반영하므로 위키에 GitHub 원격과 `gh` 인증이 필요하며, 없으면 열린 PR 검사 단계에서 보고 후 중단함 — 원격 없는 로컬 전용 위키에서는 update를 쓸 수 없음
+- `why` llm-wiki update는 작업 브랜치 생성 뒤 어느 단계에서 끝나든 미커밋 편집을 `stash -u`로 치우고 `main`으로 복귀함 — 브랜치에 남은 편집을 세션 주입이나 add·register·audit가 `main` 기준으로 읽고 커밋하지 않게 하되, 폐기 대신 stash로 원인 조사 여지를 남김
+- `why` llm-wiki update 4장 반영 출력은 `skipped`를 따로 두지 않고 `verdicts[{id, verdict, summary, old}]` 한 목록에 건너뜀까지 담음 — 건너뜀 사유는 7장 판정상 항상 "의도 인용 없음"이고 slug·sha는 `id`로 3장 사실 행에서 얻으므로 PR 원장이 `id` 하나로 모든 판정을 잇게 하기 위함
+- `context` 간선 기각(상대 미정·선언 위치·contracts 상한)은 사실 `id`가 없어 `assign.json` `rejected`에 `id` 없이 식별자 원문으로 남기고 PR 본문 `그래프` 절에 실음
