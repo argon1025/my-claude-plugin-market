@@ -6,7 +6,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 | --- | --- | --- |
 | `/llm-wiki:init` | "위키 초기화", "위키 세팅" | 위키 clone 또는 생성, 원격 연결, 골격(`registry.json`·`deps.json`·`state/`·`knowledge/`) 생성 |
 | `/llm-wiki:register` | "이 레포 위키에 등록", "도메인 이동" | 정본 remote를 판별하고 현재 레포를 4레인 병렬 조사·인벤토리 대조로 노드·의존 간선 기록, 근거 없는 호스트는 질문, 도메인·owner 선택, 상태 표 |
-| `/llm-wiki:update` | "위키 업데이트", "머지 반영" | 전 도메인 미처리 머지를 시각 순으로 무인 반영 — 새 사실은 추가, 기존 값은 의도 인용이 있을 때만 교체, 나머지는 건너뛰어 최종 보고에 기록, 커서 전진 |
+| `/llm-wiki:update` | "위키 업데이트", "머지 반영" | 전 도메인 미처리 머지를 시각 순으로 무인 반영 — 새 사실은 추가, 기존 값은 의도 인용이 있을 때만 교체, 나머지는 건너뛰어 PR 본문 사실 원장에 기록, 문서·커서 커밋을 PR로 올려 머지로 승인 |
 | `/llm-wiki:add` | "위키에 정리해줘", "정책으로 기록해줘" | 건넨 자료·대화·update가 건너뛴 행의 사실을 반영, 기존 값과 다른 건은 두 값을 보이고 질문 한 라운드 |
 | `/llm-wiki:audit` | "위키 정리", "중복 정리" | 조각·중복·과길이 description·위치·규약 위반을 승인 표 하나로 정리 |
 
@@ -31,7 +31,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 ## 동작 방식
 
 - **SessionStart**: 규약(`rules/agent-guide.md`) → 상태 헤더 → 그래프 파생 블록(레포 지도 → 현재 레포 기준 의존 3묶음) → 도메인 루트와 현재 레포 문서 목록 순으로 주입하며, matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 실행됨. 프로젝트 조건 없이 항상 주입하며 끄려면 `/plugin`에서 비활성화함
-- **동기화**: 위키에 `origin`이 있으면 startup·resume에서 마지막 fetch가 10분(`LLM_WIKI_SYNC_MINUTES`)을 넘었을 때 `pull --ff-only`를 걸고 3초까지 기다림 — 늦거나 실패하면 이전 사본으로 주입하고 헤더에 알림. 쓰기 스킬은 시작에 `pull --ff-only`, 끝에 `pull --rebase && git push`
+- **동기화**: 위키에 `origin`이 있으면 startup·resume에서 마지막 fetch가 10분(`LLM_WIKI_SYNC_MINUTES`)을 넘었을 때 `pull --ff-only`를 걸고 3초까지 기다림 — 늦거나 실패하면 이전 사본으로 주입하고 헤더에 알림. 쓰기 스킬은 시작에 `pull --ff-only`, 끝에 `pull --rebase && git push`(update는 `wiki-update/*` 브랜치 push 후 PR)
 - **그래프 파생**: 레포 지도(도메인별 레포와 책임·소관, owner)와 좌표 패턴(clone URL의 공통 규칙과 예외), 라이브러리를 거쳐 닿는 파급 대상(`(경유 {lib})` 1홉)은 저장하지 않고 `scripts/graph.py`가 `registry.json` 노드와 `deps.json` 간선에서 매번 계산함 — 노드 필드의 상한·열거도 같은 스크립트의 상수 하나에서 나와 `schema` 출력과 `check` 에러가 갈리지 않음
 - **그래프 화면(디버깅용)**: `python3 scripts/view.py --wiki ~/.ai-docs/wiki`가 노드·간선을 `templates/graph.html`에 인라인 삽입한 자기완결 HTML을 `{wiki}/.local/graph.html`에 쓰고 macOS에서 브라우저로 염(`--out PATH`·`--no-open`). 도메인 상자·간선 종류별 색·상세 패널·검색·휴면 토글을 제공하며 Cytoscape.js와 fcose는 jsdelivr CDN에서 받음. 사람이 위키 데이터를 점검하는 용도라 세션 주입·규약에는 실리지 않음
 - **주입 범위**: 레포 지도는 전 도메인 레포 전수(현재 도메인 행은 책임 문장, 타 도메인 행은 소관 한 줄, 휴면 노드는 이름만)와 좌표 패턴 한 줄, 의존은 현재 레포의 선행 조건·파급 대상 간선(계약 포함, 파급 대상에는 공용 라이브러리를 거쳐 닿는 `(경유 {lib})` 파생 행이 붙음)과 도메인의 다른 의존(from → to kind만), 문서는 현재 도메인 루트 전수(레포 폴더 제외) + 현재 레포 폴더 전수 — 스택·호스트·remote·간선 계약·문서 목록을 레포 하나 기준으로 보려면 `python3 scripts/graph.py repo {slug}`, 다른 도메인의 책임 문장·간선 전수는 `graph.py map --domain {d}`, 훅이 주입하는 블록 전체는 `graph.py render --domain {d} --slug {s}`로 그대로 다시 봄
