@@ -9,3 +9,7 @@
 - `why` llm-wiki update는 커서(`state/{slug}.json`) 커밋도 PR에 태워 PR close가 전체 거절이 되게 하고, 대신 열린 `wiki-update/` PR이 있으면 같은 머지를 두 번 추출하지 않도록 실행을 중단함
 - `why` llm-wiki update PR 본문은 렌더 스크립트 없이 메인 에이전트가 extract·assign·applied·review JSON을 순회해 `templates/update-pr.md` 규칙대로 작성하며, 이를 위해 assign.json에 기각 사실(`rejected`), 반영 출력에 `summary`, 검토 출력에 `ids`를 둠
 - `constraint` llm-wiki update PR은 squash 머지하면 문서별 커밋 본문(규약 8장 발견 근거·기존/새 값)이 사라지므로 rebase 또는 merge commit으로만 머지함
+- `why` llm-wiki update SKILL.md는 push·PR 생성을 6장이 아니라 7장에 둠 — PR 본문 `pr.md`를 먼저 써야 `gh pr create --body-file`이 가능하므로 6장은 커밋까지, 7장이 본문 작성·push·PR·`main` 복귀를 맡음
+- `why` llm-wiki update의 `wiki-update/*` 브랜치는 `pending` 종료 코드 0이고 `--dry-run`이 아닐 때만 만듦 — 미처리 없음·dry-run 실행이 빈 브랜치를 남기지 않게 하기 위함
+- `constraint` llm-wiki update PR의 커밋 링크는 `work.json`에 remote가 없어 `registry.json` 노드의 `remote`(scheme 없는 정규화 꼴)로 `https://{remote}/commit/{sha}`를 만듦
+  - evidence: llm-wiki/scripts/update.py mirror_path
