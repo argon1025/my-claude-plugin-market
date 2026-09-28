@@ -30,7 +30,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 
 ## 동작 방식
 
-- **SessionStart**: `hooks/session_start.py`가 startup·resume·clear·compact·fork 모두에서 등록 레포에는 규약(`rules/agent-guide.md`) → 동기화 알림 → 레포 지도 → 문서 목록을, 미등록 레포와 git 밖에는 규약 없이 위키 경로·도메인·등록 안내 3줄만 주입하며, 끄려면 `/plugin`에서 비활성화함
+- **SessionStart**: `hooks/session_start.py`가 startup·resume·clear·compact·fork 모두에서 등록 레포에는 규약(`rules/agent-guide.md`) → 동기화 알림 → 레포 지도 → 문서 목록을, 미등록 레포와 git 밖에는 규약 대신 위키 경로·도메인 목록을 담은 짧은 블록만 주입하며, 끄려면 `/plugin`에서 비활성화함
 - **동기화**: 위키에 `origin`이 있으면 startup·resume에서 마지막 fetch가 10분(`LLM_WIKI_SYNC_MINUTES`)을 넘었을 때 `pull --ff-only`를 걸고 3초까지 기다림 — 늦거나 실패하면 이전 사본으로 주입하고 헤더에 알림. 쓰기 스킬은 시작에 `pull --ff-only`, 끝에 `pull --rebase && git push`(update는 `wiki-update/*` 브랜치 push 후 PR)
 - **그래프 파생**: 레포 지도(현재 도메인 레포의 책임과 현재 레포와의 의존 힌트)와 라이브러리를 거쳐 닿는 파급 대상(`(경유 {lib})` 1홉)은 저장하지 않고 `scripts/graph.py`가 `registry.json` 노드와 `deps.json` 간선에서 매번 계산함 — 노드 필드의 상한·열거도 같은 스크립트의 상수 하나에서 나와 `schema` 출력과 `check` 에러가 갈리지 않음
 - **그래프 화면(디버깅용)**: `python3 scripts/view.py --wiki ~/.ai-docs/wiki`가 노드·간선을 `templates/graph.html`에 인라인 삽입한 자기완결 HTML을 `{wiki}/.local/graph.html`에 쓰고 macOS에서 브라우저로 염(`--out PATH`·`--no-open`). 도메인 상자·간선 종류별 색·상세 패널·검색·휴면 토글을 제공하며 Cytoscape.js와 fcose는 jsdelivr CDN에서 받음. 사람이 위키 데이터를 점검하는 용도라 세션 주입·규약에는 실리지 않음

@@ -58,3 +58,5 @@
   - evidence: llm-wiki/rules/agent-guide.md
 - `why` llm-wiki SessionStart 훅만 다른 플러그인의 `session_start.sh` 관례와 달리 Python 한 파일인 이유는 본문이 `graph`·`catalog` import와 JSON 조립이라 bash 래퍼는 인자 전달·stdin 파싱용 python 호출·출력 두 벌만 더하기 때문이며, `python3`가 없으면 훅 실행이 실패해 주입이 없는 것은 전과 같음
   - evidence: llm-wiki/hooks/session_start.py, llm-wiki/hooks/hooks.json
+- `why` llm-wiki 규약의 모순 보고는 요청 전체가 아니라 "이유 없이 문서와 다른 요청"만 병기 대상으로 둠 — 요청 전체를 넣으면 사용자가 이유를 밝혀 결정을 바꾼 경우에도 에이전트가 고르지 않고 멈추며, 이유를 밝힌 요청을 따르는 것은 모델 기본 동작이라 별도 문장이 필요 없음
+  - evidence: llm-wiki/rules/agent-guide.md

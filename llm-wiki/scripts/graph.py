@@ -208,12 +208,12 @@ def edge_groups(edges: list[dict], domain: str, slug: str) -> tuple[list[dict], 
     두 묶음을 가르는 이유는 읽는 사람이 할 일이 다르기 때문이다 — 나가는 간선은 코드를
     쓰기 전 선대응 확인이고, 들어오는 간선은 계약을 바꾼 뒤 파급 확인이다.
     """
-    me = f"{domain}/{slug}" if domain and slug else ""
+    me = f"{domain}/{slug}"
     outgoing, incoming = [], []
     for edge in edges:
-        if me and edge["from"] == me:
+        if edge["from"] == me:
             outgoing.append(edge)
-        elif me and edge["to"] == me:
+        elif edge["to"] == me:
             incoming.append(edge)
 
     def key(edge: dict) -> tuple[str, str, str]:
@@ -250,9 +250,7 @@ def via_pairs(edges: list[dict], domain: str, slug: str,
     간선이 없다. 파급 확인에서 그 레포가 빠지지 않게 파생만 하고, 계약은 경유 레포의 직접
     간선이 진다. 세션 지도와 `repo` 출력이 표기만 달리해 함께 쓴다.
     """
-    me = f"{domain}/{slug}" if domain and slug else ""
-    if not me or not incoming:
-        return []
+    me = f"{domain}/{slug}"
     direct = {edge["from"] for edge in incoming}
     users: dict[str, list[str]] = {}
     for edge in edges:

@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 sys.dont_write_bytecode = True  # 플러그인 캐시에 __pycache__를 남기지 않는다
-PLUGIN = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
+PLUGIN = Path(__file__).resolve().parent.parent
 SCRIPTS = PLUGIN / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 try:
@@ -54,7 +54,7 @@ def sync(wiki: Path, source: str) -> str:
         return ""
     minutes = os.environ.get("LLM_WIKI_SYNC_MINUTES", "")
     fetched = Path(git_dir, "FETCH_HEAD")
-    if fetched.is_file() and time.time() - fetched.stat().st_mtime < (int(minutes) if minutes.isdigit() else 10) * 60:
+    if fetched.is_file() and time.time() - fetched.stat().st_mtime < (int(minutes) if minutes.isdecimal() else 10) * 60:
         return ""
     pull = subprocess.Popen(["git", "-C", str(wiki), "pull", "--ff-only", "--quiet"],
                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -114,7 +114,7 @@ def build(source: str) -> str:
 def main() -> None:
     try:
         raw = "" if sys.stdin.isatty() else sys.stdin.read()
-        source = (json.loads(raw) if raw.strip() else {}).get("source") or "startup"
+        source = json.loads(raw).get("source") or "startup"
     except (ValueError, AttributeError, OSError):
         source = "startup"
     try:
