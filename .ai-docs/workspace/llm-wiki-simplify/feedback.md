@@ -1,0 +1,32 @@
+# llm-wiki-simplify 작업 기록
+
+- `context` '다른 레포의 계약·동작·사용처는 추측하지 않고 코드로 확인 {특정 폴더} 내에 자유롭게 클론 허용' 과같이 단순하게 제안할 수 있는 것을 복잡하게 여러 단계에 걸쳐 자체 스크립트나 프로세스로 안내하는 경우 정리 대상.. 최대한 단순한 구조와 에이전트가 자유롭게 작업할 수 있도록 해주길 원함 — llm-wiki 단순화 검토는 저장소 루트 `llm-wiki-simplify-review.md`에 축별로 정리함
+  - source: 사용자 확인 2026-09-29
+- `constraint` llm-wiki 위키 전용 미러는 작업 트리가 없는 bare 저장소라 에이전트가 Read·Grep·Glob을 쓰지 못하고 Bash `git -C` 명령으로만 읽음 — pigeon 계열 세션 기록(2026-09-26~28)에서 6개 세션이 `update.py mirror`를 6회 실행한 뒤 미러에 `git -C` grep·show·ls-tree·branch·for-each-ref를 약 16회 실행함
+  - evidence: ~/.claude/projects/*pigeon*/*.jsonl, llm-wiki/scripts/update.py ensure_mirror
+- `constraint` llm-wiki 규약의 `graph.py repo`·`graph.py map` 안내는 pigeon 계열 세션 기록 83개(2026-09-24~28)의 개발 작업에서 한 번도 실행되지 않았고, 같은 기간 에이전트는 위키 문서를 경로 직접 읽기로 약 190회, 위키 grep으로 9회 열었음
+  - evidence: ~/.claude/projects/*pigeon*/*.jsonl
+- `constraint` llm-wiki 규약의 "작업 끝에 `/llm-wiki:add` 제안"은 pigeon 계열 세션에서 에이전트 응답 62회로 나타났으나 add 실행은 3회였고, pigeon-trade는 `.ai-docs/workspace/*/feedback.md`·`plan.md` 38개 파일을 커밋하므로 그 사실은 머지 diff로 `/llm-wiki:update` 추출에 이미 들어감
+  - evidence: ~/.claude/projects/*pigeon*/*.jsonl, git -C ~/Desktop/Projects/pigeon-trade ls-files .ai-docs
+- `constraint` llm-wiki registry 노드의 `project` 키는 `graph.py` `render_map`의 접근 좌표와 `view.py` 상세 패널 표시에서만 읽히며 값은 `remote`의 host·owner에서 도출됨 — `map` 서브커맨드를 지우면 표시 외 소비처가 없음
+  - evidence: llm-wiki/scripts/graph.py render_map, llm-wiki/scripts/view.py build_view
+- `context` 목표는 단순한 구조, 에이전트가 이미 알고있는 방법을 위주로 사용(새로운 스크립트나 프로세스를 만들면 다시 설명해야함으로 토큰 낭비), 토큰 절약임 — llm-wiki 단순화 결정은 새 명령·절차를 더하는 안보다 에이전트 기본 도구(파일 읽기·grep·git)로 대체하는 안을 우선함
+  - source: 사용자 확인 2026-09-29
+- `context` 사용자 프로젝트에 해당 레포 있으면 활용, 없으면 위키 전용 폴더에 클론 허용으로 안내하면 될듯 — llm-wiki 규약의 다른 레포 코드 줄은 `{REPOS_DIR}/{slug}` 사본이 있으면 그것을, 없으면 `{WIKI_ROOT}/.local/repos/{slug}` 일반 clone을 쓰고, `/llm-wiki:update`는 위키 전용 폴더 clone만 읽어 `update.py mirror`와 bare 미러를 없앰
+  - source: 사용자 확인 2026-09-29
+- `why` llm-wiki 규약의 다른 레포 코드 줄에 "기준은 fetch한 기본 브랜치"를 두는 이유는 사용자 작업 사본이 기능 브랜치나 낡은 상태에 머물 수 있어 작업 트리를 그대로 읽으면 현재 계약과 다른 코드를 보기 때문임
+- `context` llm-wiki registry 노드의 `project` 키는 이번 단순화에서 삭제함 — `remote`의 host·owner와 중복이며, register owner 질문·check 검사·doc-contract 9장 서술·view.py 표시를 함께 정리하고 registry.json 노드에서 키를 지움
+  - source: 사용자 확인 2026-09-29
+- `context` 둘다 포함 찬성 survey.py 는 근데 update에서 사용하지 않나 ? update에 영향 없으면 괜찮음 — llm-wiki `scripts/survey.py`와 register 2.5장 ① 인벤토리 대조·6장 조사 품질의 미소비 보고를 삭제하고, `update.py`의 `--batch-merges`·`--batch-bytes`·`--baseline-days` 인자를 삭제하되 묶음 상한 상수는 유지함
+  - source: 사용자 확인 2026-09-29
+- `constraint` llm-wiki `scripts/survey.py`는 register SKILL.md 2.5장 ①과 README 한 줄에서만 참조되며 update·add·audit·훅은 import·실행하지 않음 — `graph.py schema --for survey`는 register 조사 레인 스키마 이름이라 survey.py와 무관함
+  - evidence: llm-wiki/skills/register/SKILL.md, llm-wiki/scripts/graph.py schema_block
+- `why` llm-wiki update의 `--baseline-days` 소급 인자를 지우는 이유는 과거 머지 반영이 git 범위 문법의 `--range`로 대신되어 에이전트에게 새 인자를 설명할 필요가 없기 때문임
+- `context` llm-wiki 단순화 확정 항목(축 1~5)은 한 릴리스 5.6.0으로 묶어 계획 하나를 세우고 축 단위 커밋으로 한 PR에 올리며, registry.json `project` 키 삭제와 기존 `.local/mirrors/` 정리를 포함함
+  - source: 사용자 확인 2026-09-29
+- `constraint` llm-wiki 5.5.0 `graph.py check`는 `project` 키 없는 노드에 `필수 키 없음: project`를, 5.6.0 check는 `project` 키 있는 노드에 `허용되지 않는 키: project`를 내므로, registry.json의 `project` 삭제는 5.6.0 플러그인 갱신 직후에 붙여 실행해야 그 사이 add·update·register가 check에서 멈추지 않음
+  - evidence: llm-wiki/scripts/graph.py REPO_KEYS, check_repo
+- `why` llm-wiki `/llm-wiki:update`·`/llm-wiki:audit`가 위키 전용 clone `{WIKI_ROOT}/.local/repos/{slug}`를 작업 트리가 아니라 `origin/{defaultBranch}` ref로 읽는 이유는 같은 폴더를 세션 에이전트가 자유롭게 고치고 브랜치를 바꾸므로 작업 트리가 기본 브랜치 최신과 다를 수 있기 때문이며, fetch는 작업 트리·로컬 브랜치를 건드리지 않아 두 용도가 한 폴더를 공유함
+  - evidence: llm-wiki/scripts/update.py ensure_clone, llm-wiki/skills/audit/SKILL.md
+- `why` llm-wiki 규약의 다른 레포 코드 줄이 사용자 사본을 `{REPOS_DIR}/{slug}` 한 곳만 확인하고 디스크 전체 탐색을 안내하지 않는 이유는 이름 탐색이 같은 이름의 비레포 폴더까지 잡아 remote 대조 절차가 붙고(홈 전체 find에서 `pigeon-trade` 폴더 3곳 중 레포는 1곳, 나머지는 worktree 상위 폴더와 위키 문서 폴더), 폴더 이름이 slug와 다른 사본은 이름으로 찾지 못하며, 읽기 기준이 fetch한 기본 브랜치라 위키 clone만으로 충분하기 때문임 — 레포를 한 폴더에 모으지 않은 사용자는 위키 clone으로 넘어가 사용자 사본 재사용만 잃음
+  - evidence: llm-wiki/rules/agent-guide.md, llm-wiki/hooks/session_start.py build

@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 등록 레포의 머지된 코드를 위키에 무인으로 반영합니다. 사용자에게 묻지 않으며 반영은 `wiki-update/*` 브랜치 PR의 머지로 승인됩니다. 작업 브랜치를 만든 뒤에는 어느 단계에서 끝나든 미커밋 편집을 `git -C {WIKI_ROOT} stash -u`로 치우고 `main`으로 돌아옵니다 — 세션 주입과 다른 쓰기 스킬이 미승인 편집을 읽지 않게 함. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다.
 
-인자: `--repo {slug}`(대상 한정, 반복 가능), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(전역 예산, 기본 40), `--batch-merges N`·`--batch-bytes N`(추출 묶음 상한, 기본 5건·500,000바이트), `--baseline-days N`(커서 없는 레포 소급), `--dry-run`(3장까지).
+인자: `--repo {slug}`(대상 한정, 반복 가능), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(전역 예산, 기본 40), `--dry-run`(3장까지).
 
 ## 1. 범위
 
@@ -16,7 +16,7 @@ disable-model-invocation: true
 - **실행**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" pending --wiki {WIKI_ROOT} --out {스크래치} {인자}` — 전 도메인 미처리 머지를 시각 순으로 골라 diff 파일·레포별 `commits`·`batches[{id, shas, bytes}]`·`remaining`과 전역 순서 `order[{slug, sha7, date}]`를 `work.json`에 씀, 묶음은 다시 나누지 않음
 - **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류(stderr 전달 후 중단)
 - **작업 브랜치**: 종료 코드 0이고 `--dry-run`이 아니면 `git -C {WIKI_ROOT} switch -c wiki-update/{YYYYMMDD-HHMM}`
-- **이월**: `skipped`(미러 준비 실패·force-push 의심·대상 ref 없음·휴면)와 `notes`는 PR 본문 `레포` 절 비고로
+- **이월**: `skipped`(clone 준비 실패·force-push 의심·대상 ref 없음·휴면)와 `notes`는 PR 본문 `레포` 절 비고로
 - **부트스트랩**: 커서 없던 레포는 머지 0건이어도 6장에서 HEAD를 커서로 기록
 
 ## 2. 추출 — 묶음 1개 = 에이전트 1회

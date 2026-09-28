@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """레포 의존 그래프 화면 — registry.json 노드와 deps.json 간선을 브라우저용 자기완결 HTML로 낸다.
 
-`graph.py map/repo`는 텍스트 출력뿐이라 도메인 4개·레포 45개·간선 64건을 한눈에 보기 어렵다.
-이 스크립트는 같은 로더(graph.load_registry·load_edges)로 읽은 데이터를 화면용
+registry.json·deps.json은 텍스트라 도메인 4개·레포 45개·간선 64건을 한눈에 보기 어렵다.
+이 스크립트는 graph의 로더(load_registry·load_edges)로 읽은 데이터를 화면용
 JSON 하나로 바꿔 templates/graph.html 안에 인라인 삽입하고 `{wiki}/.local/graph.html`에 쓴다.
 
 정적 HTML이 데이터를 fetch하는 방식은 쓰지 않는다 — `file://`에서는 fetch가 CORS로 막혀
@@ -50,7 +50,6 @@ def build_view(registry: dict, edges: list[dict], wiki: str = "") -> dict:
             "responsibilities": graph.text_list(info.get("responsibilities")),
             "stack": graph.text_list(info.get("stack")),
             "hosts": {env: str(url) for env, url in hosts.items() if isinstance(url, str) and url},
-            "project": str(info.get("project") or ""),
             "remote": str(info.get("remote") or ""),
             "defaultBranch": str(info.get("defaultBranch") or ""),
             "outDegree": out_degree.get(node_id, 0),

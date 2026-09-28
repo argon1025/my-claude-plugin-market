@@ -28,8 +28,10 @@ except Exception:
     sys.exit(0)
 
 ALERT = "첫 응답에서 사용자에게 알릴 것"
-# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다.
-SOFT_BUDGET = 8000
+# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다. Claude Code는
+# additionalContext를 10,000자에서 경고 없이 자르므로(공식 문서 미기재,
+# https://github.com/anthropics/claude-code/issues/94358) 한도 전에 권고가 보이도록 여유를 둔다.
+WARN_CHARS = 9_000
 
 
 def git(cwd, *args: str) -> str:
@@ -79,13 +81,13 @@ def build(source: str) -> str:
     common_dir = git(project, "rev-parse", "--path-format=absolute", "--git-common-dir")
     registry = graph.load_registry(wiki)
     slug, domain = graph.resolve_repo(registry, remote, common_dir)
-    graph_py = SCRIPTS / "graph.py"
 
     if not domain:
         rows = [f"# 위키 {wiki} — " + (f"미등록 레포 {slug}, 등록은 `/llm-wiki:register`" if slug else "git 레포 밖")]
         domains = graph.domain_line(registry)
         if domains:
-            rows.append(f"- **도메인**: {domains} — 레포 지도는 `python3 {graph_py} map --domain {{domain}}`")
+            rows.append(f"- **도메인**: {domains} — 노드·간선은 `{wiki}/registry.json`·`deps.json`, "
+                        f"문서는 `{wiki}/knowledge/{{domain}}`")
         rows.append("- **수정**: 위키는 `/llm-wiki:` 스킬로만 고침")
         return "\n".join([note, *rows] if note else rows)
 
@@ -93,8 +95,8 @@ def build(source: str) -> str:
     # 계산한다 — worktree에서 열어도 본 저장소 옆을 가리킨다.
     knowledge = wiki / "knowledge" / domain
     guide = (PLUGIN / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-    for key, value in {"{WIKI_ROOT}": wiki, "{GRAPH_PY}": graph_py, "{UPDATE_PY}": SCRIPTS / "update.py",
-                       "{REPOS_DIR}": Path(common_dir).parent.parent, "{DOMAIN_DIR}": knowledge}.items():
+    for key, value in {"{WIKI_ROOT}": wiki, "{REPOS_DIR}": Path(common_dir).parent.parent,
+                       "{DOMAIN_DIR}": knowledge}.items():
         guide = guide.replace(key, str(value))
 
     # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
@@ -105,9 +107,9 @@ def build(source: str) -> str:
         if (knowledge / slug).is_dir():
             blocks.append(catalog.build(knowledge / slug, f"레포 {slug}"))
     context = "\n\n".join(block for block in blocks if block)
-    tokens = catalog.estimate_tokens(context)
-    if tokens > SOFT_BUDGET:
-        context = f"# 위키 목록이 약 {tokens:,}토큰 — /llm-wiki:audit 로 정리 권장\n\n" + context
+    if len(context) > WARN_CHARS:
+        context = (f"# 위키 주입 {len(context):,}자 — 10,000자를 넘으면 뒤가 잘리므로 /llm-wiki:audit 로 정리 권장\n\n"
+                   + context)
     return context
 
 

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""레포 그래프 — registry.json의 노드와 deps.json의 간선에서 주입 블록·도메인 지도를 파생한다.
+"""레포 그래프 — registry.json의 노드와 deps.json의 간선에서 세션 주입 블록을 파생하고 검사한다.
 
 노드(레포의 스택·소관·책임·호스트)는 registry.json `domains.{d}.repos.{slug}`에, 간선은
 deps.json `deps.{from}[]`에 있고 그 둘이 정본이다. 레포 지도(현재 도메인 레포의 책임과
 현재 레포와의 의존 힌트)는 저장하지 않고 매번 여기서 계산한다 — 같은 사실을 사람이 쓰는
 문서에도 두면 갱신 규칙이 하나 더 늘고 두 값이 갈린다.
 
-세션 주입(render_session)·`repo` 출력(render_repo)·`map` 출력(render_map)이 같은 파생
-함수를 쓰기 때문에, 훅이 보여준 것과 에이전트가 명령으로 다시 본 것이 어긋나지 않는다.
-세션에는 레포 지도만 싣고, 스택·호스트·remote·다른 레포 문서처럼 작업마다 필요하지 않은
-것은 `repo {slug}`로 넘긴다.
+세션 주입(render_session)만 파생을 쓰고, 스택·호스트·remote·전체 간선은 에이전트가
+registry.json·deps.json을 직접 읽는다.
 
 로드는 관용, 검사는 엄격이다. load_registry·load_edges는 깨진 파일을 빈 값으로 돌려줘
 세션 시작을 막지 않고, 필수 키·형식은 check_errors만 본다 — 훅이 종료 코드 0으로 끝나야
@@ -39,12 +37,9 @@ DOMAIN_RE = re.compile(r"^[a-z0-9]+-[a-z0-9-]+$")
 SLUG_RE = re.compile(r"^[a-z0-9-]+$")
 # 간선 끝점은 `{도메인}/{레포}` 꼴이라 도메인을 나눠도 파급 조회가 끊기지 않는다.
 ENDPOINT_RE = re.compile(r"^[a-z0-9]+-[a-z0-9-]+/[a-z0-9-]+$")
-# owner URL(`https://{host}/{owner}`). 마지막 경로 요소가 owner라 경로는 정확히 한 단계다.
-PROJECT_RE = re.compile(r"^https?://[^\s/]+/[^\s/]+$")
 
 DOMAIN_KEYS = ("description", "repos")
-REPO_KEYS = ("project", "remote", "defaultBranch", "status", "stack", "summary",
-             "responsibilities", "hosts")
+REPO_KEYS = ("remote", "defaultBranch", "status", "stack", "summary", "responsibilities", "hosts")
 # dormant는 신규 개발이 없을 뿐 소비처가 남아 있을 수 있어, 지식 필드를 비우지 않는다.
 REPO_STATUS = ("active", "dormant")
 SUMMARY_LIMIT = 80
@@ -141,10 +136,6 @@ def is_dormant(info: dict) -> bool:
     return (info.get("status") or "active") == "dormant"
 
 
-def endpoint_domain(endpoint: str) -> str:
-    return endpoint.split("/", 1)[0]
-
-
 def label_for(endpoint: str, current_domain: str) -> str:
     """현재 도메인 안이면 slug만, 밖이면 `{domain}/{slug}` — 도메인 이름이 파급 판단의 신호다."""
     domain, _, slug = endpoint.partition("/")
@@ -179,29 +170,6 @@ def domain_line(registry: dict, exclude: str = "") -> str:
     return " · ".join(rows)
 
 
-def owner_label(url: str) -> str:
-    """접근 좌표의 owner 표기. github.com이면 `GitHub`, 아니면 호스트명을 앞에 붙인다."""
-    host = normalize_host(url).split("/", 1)[0]
-    owner = url.rstrip("/").rsplit("/", 1)[-1]
-    return f"GitHub {owner}" if host == "github.com" else f"{host} {owner}"
-
-
-def responsibility_rows(registry: dict, domain: str) -> list[str]:
-    """`- {slug} — 문장 · 문장` 행. 요구 낱말에서 레포로 가는 경로다.
-
-    영역 키에서 파생하던 역인덱스를 대신한다 — 문장에는 그룹핑 키가 없으므로 표를 만들지
-    않고 레포마다 한 줄로 싣고, 걸린 문장의 행위 낱말이 수정할 층을 가른다.
-    """
-    rows = []
-    for slug, info in domain_repos(registry, domain):
-        lines = text_list(info.get("responsibilities"))
-        if not lines:
-            continue
-        head = f"{slug} (휴면)" if is_dormant(info) else slug
-        rows.append(f"- {head} — " + " · ".join(lines))
-    return rows
-
-
 def edge_groups(edges: list[dict], domain: str, slug: str) -> tuple[list[dict], list[dict]]:
     """(이 레포가 의존, 이 레포에 의존).
 
@@ -225,30 +193,13 @@ def edge_groups(edges: list[dict], domain: str, slug: str) -> tuple[list[dict], 
 # --- 렌더 ---------------------------------------------------------------
 
 
-def edge_row(edge: dict, hide: str = "", domain: str = "") -> str:
-    """`- {kind} {from} → {to} — {계약}`. 끝점은 domain 안이면 slug만, 밖이면 `{domain}/{slug}`.
-
-    hide는 비울 끝점이다 — 두 묶음에서 현재 레포 쪽을 지우는데, 그때는 화살표도 함께 지운다.
-    방향은 묶음 머리글이 이미 말하고, 남은 화살표는 계약 구분자 ` — `와 붙어 읽히기 때문이다.
-    """
-    kind = str(edge.get("kind") or "?").strip()
-    if hide:
-        row = f"- {kind} {label_for(edge['from' if hide == 'to' else 'to'], domain)}"
-    else:
-        row = f"- {kind} {label_for(edge['from'], domain)} → {label_for(edge['to'], domain)}"
-    contracts = text_list(edge.get("contracts"))
-    if contracts:
-        row += " — " + " · ".join(contracts)
-    return row
-
-
 def via_pairs(edges: list[dict], domain: str, slug: str,
               incoming: list[dict]) -> list[tuple[str, str, str]]:
     """[(from, 경유 lib, kind)] — 내게 들어오는 간선의 `from`을 library로 쓰는 레포, 1홉.
 
     간선은 선언 위치로 저장하므로 공용 라이브러리를 거쳐 나를 부르는 레포에는 나와의 저장
     간선이 없다. 파급 확인에서 그 레포가 빠지지 않게 파생만 하고, 계약은 경유 레포의 직접
-    간선이 진다. 세션 지도와 `repo` 출력이 표기만 달리해 함께 쓴다.
+    간선이 진다.
     """
     me = f"{domain}/{slug}"
     direct = {edge["from"] for edge in incoming}
@@ -308,101 +259,6 @@ def render_session(registry: dict, edges: list[dict], domain: str, slug: str) ->
     return "\n".join(lines)
 
 
-def render_repo(registry: dict, edges: list[dict], slug: str, knowledge: Path) -> str:
-    """`repo` 출력 — 노드 전 필드, 그 레포 기준 두 묶음 간선, 레포 문서 목록."""
-    info = registry["repos"].get(slug)
-    if not isinstance(info, dict):
-        known = ", ".join(sorted(registry["domains"])) or "없음"
-        return (f"# 레포 {slug}가 registry.json에 없음 — 등록된 도메인: {known}, "
-                "레포 전수는 `graph.py map --domain`")
-
-    domain = str(info.get("domain") or "")
-    state = (f"휴면 — {str(info.get('reason') or '').strip() or '사유 미기재'}"
-             if is_dormant(info) else "active")
-    rows = [f"# {domain}/{slug} · {state}"]
-
-    def field(label: str, value: str) -> None:
-        if value:
-            rows.append(f"- {label}: {value}")
-
-    hosts = info.get("hosts") if isinstance(info.get("hosts"), dict) else {}
-    envs = [*(env for env in HOST_ENVS if env in hosts), *sorted(set(hosts) - set(HOST_ENVS))]
-    remote = str(info.get("remote") or "").strip()
-    branch = str(info.get("defaultBranch") or "").strip()
-
-    field("소관", str(info.get("summary") or "").strip())
-    field("스택", " · ".join(text_list(info.get("stack"))))
-    field("책임", " · ".join(text_list(info.get("responsibilities"))))
-    field("호스트", " · ".join(f"{env} {str(hosts[env]).strip()}" for env in envs if str(hosts[env]).strip()))
-    field("저장소", " · ".join(part for part in (remote, f"브랜치 {branch}" if branch else "") if part))
-    blocks = ["\n".join(rows)]
-
-    outgoing, incoming = edge_groups(edges, domain, slug)
-    lines: list[str] = []
-    if outgoing:
-        lines.append("# 이 레포가 의존 — 선행 조건")
-        lines += [edge_row(edge, hide="from", domain=domain) for edge in outgoing]
-    if incoming:
-        lines.append("# 이 레포에 의존 — 파급 대상")
-        lines += [edge_row(edge, hide="to", domain=domain) for edge in incoming]
-        lines += [f"- {kind} {label_for(origin, domain)} (경유 {label_for(via, domain)})"
-                  for origin, via, kind in via_pairs(edges, domain, slug, incoming)]
-    if lines:
-        blocks.append("\n".join(lines))
-
-    # 폴더가 없으면 catalog.build가 0건 목록을 낸다 — 문서 없음도 답이다.
-    blocks.append(catalog.build(Path(knowledge) / domain / slug, f"레포 {slug}"))
-    return "\n\n".join(blocks)
-
-
-def render_map(registry: dict, edges: list[dict], domain: str) -> str:
-    """`map` 출력. 세션에 주입되지 않는 도메인을 에이전트가 한 번에 볼 때 쓴다."""
-    if domain not in registry["domains"]:
-        known = ", ".join(sorted(registry["domains"])) or "없음"
-        return f"# 도메인 {domain}가 registry.json에 없음 — 등록된 도메인: {known}"
-
-    description = str((registry["domains"][domain] or {}).get("description") or "").strip()
-    blocks = [f"# {domain} 지도" + (f" — {description}" if description else "")]
-
-    # 접근 좌표는 소속 레포 `project`의 distinct라 손으로 유지하는 자리가 없다.
-    urls = {str(info.get("project") or "").strip().rstrip("/") for _, info in domain_repos(registry, domain)}
-    rows = [f"- {owner_label(url)} — {url}" for url in sorted(urls - {""})]
-    if rows:
-        blocks.append("\n".join([
-            "## 접근 좌표", "", "clone은 각 레포 remote로 `https://{remote}.git`", "", *rows,
-        ]))
-
-    nodes = domain_repos(registry, domain)
-    if nodes:
-        rows = []
-        for slug, info in nodes:
-            state = f"휴면 — {str(info.get('reason') or '').strip() or '사유 미기재'}" if is_dormant(info) else "active"
-            stack = " · ".join(text_list(info.get("stack"))) or "—"
-            summary = str(info.get("summary") or "").strip() or "—"
-            rows.append(f"| {slug} | {state} | {stack} | {summary} |")
-        blocks.append("\n".join(
-            ["## 레포 구성", "", "| 레포 | 상태 | 스택 | 소관 |", "|---|---|---|---|", *rows]
-        ))
-
-    rows = responsibility_rows(registry, domain)
-    if rows:
-        blocks.append("\n".join([f"## 레포 책임 {len(rows)}개 레포", "", *rows]))
-
-    touching = sorted(
-        (edge for edge in edges
-         if domain in (endpoint_domain(edge["from"]), endpoint_domain(edge["to"]))),
-        key=lambda edge: (edge["from"], edge["to"], str(edge.get("kind") or "")),
-    )
-    if touching:
-        blocks.append("\n".join([
-            f"## 의존 간선 {len(touching)}건 (kind from → to — 계약 식별자, from이 to에 의존)",
-            "",
-            *(edge_row(edge, domain=domain) for edge in touching),
-        ]))
-
-    return "\n\n".join(blocks)
-
-
 # --- 검사 ---------------------------------------------------------------
 
 
@@ -428,8 +284,7 @@ def check_domains(raw: dict, errors: list[tuple[str, str]]) -> None:
             errors.append((REGISTRY_NAME, f"{label}: repos는 `{{slug: 노드}}` 객체"))
 
 
-def check_repo(domain: str, slug: str, info: dict, domains: set[str],
-               errors: list[tuple[str, str]]) -> None:
+def check_repo(domain: str, slug: str, info: dict, errors: list[tuple[str, str]]) -> None:
     """노드 하나. 도메인이 다르면 같은 이름의 검사가 두 번 나가므로 라벨에 도메인을 붙인다."""
     label = f"레포 {domain}/{slug}"
     if not SLUG_RE.match(slug):
@@ -446,15 +301,6 @@ def check_repo(domain: str, slug: str, info: dict, domains: set[str],
         errors.append((REGISTRY_NAME, f"{label}: 허용되지 않는 키: {', '.join(unknown)}"))
     if status not in REPO_STATUS:
         errors.append((REGISTRY_NAME, f"{label}: status는 {'·'.join(REPO_STATUS)} 중 하나 (현재 {status!r})"))
-
-    raw_project = info.get("project")
-    project = raw_project.strip() if isinstance(raw_project, str) else ""
-    if "project" in info and not project:
-        errors.append((REGISTRY_NAME, f"{label}: project 없음 — owner URL(`https://{{host}}/{{owner}}`)"))
-    elif project and not PROJECT_RE.match(project):
-        errors.append((REGISTRY_NAME,
-                       f"{label}: project {project!r}가 owner URL이 아님 — "
-                       "`https://{host}/{owner}` 꼴"))
 
     raw_remote = info.get("remote")
     remote = raw_remote.strip() if isinstance(raw_remote, str) else ""
@@ -540,7 +386,6 @@ def check_repo(domain: str, slug: str, info: dict, domains: set[str],
 
 def check_repos(domains_raw: dict, errors: list[tuple[str, str]]) -> None:
     """도메인 중첩을 훑으며 노드를 검사하고, slug가 위키 전체에서 유일한지 본다."""
-    names = set(domains_raw)
     owner: dict[str, str] = {}
     for domain in sorted(domains_raw):
         section = domains_raw[domain].get("repos") if isinstance(domains_raw[domain], dict) else None
@@ -555,7 +400,7 @@ def check_repos(domains_raw: dict, errors: list[tuple[str, str]]) -> None:
                 errors.append((REGISTRY_NAME,
                                f"레포 {domain}/{slug}: slug가 {first}에도 있음 — "
                                "노드 식별자는 위키 전체에서 유일, register가 `{domain}-{name}`을 제안"))
-            check_repo(domain, slug, info, names, errors)
+            check_repo(domain, slug, info, errors)
 
 
 def check_deps(wiki_root: Path, registry: dict | None, errors: list[tuple[str, str]]) -> None:
@@ -884,20 +729,6 @@ def cmd_schema(args) -> int:
     return 0
 
 
-def cmd_map(args) -> int:
-    wiki = Path(args.wiki).expanduser()
-    print(render_map(load_registry(wiki), load_edges(wiki), args.domain))
-    return 0
-
-
-def cmd_repo(args) -> int:
-    wiki = Path(args.wiki).expanduser()
-    # 지도·간선 행의 다른 도메인 라벨(`{domain}/{slug}`)을 그대로 받는다.
-    slug = args.slug.rsplit("/", 1)[-1]
-    print(render_repo(load_registry(wiki), load_edges(wiki), slug, wiki / "knowledge"))
-    return 0
-
-
 def cmd_check(args) -> int:
     wiki = Path(args.wiki).expanduser()
     errors = check_errors(wiki)
@@ -917,21 +748,12 @@ def cmd_check(args) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="registry.json 노드와 deps.json 간선에서 도메인 지도를 파생하고 검사한다.",
+        description="registry.json 노드와 deps.json 간선을 검사하고 서브에이전트 스키마를 낸다.",
     )
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--wiki", metavar="PATH", default=DEFAULT_WIKI,
                         help=f"위키 저장소 (기본값: {DEFAULT_WIKI})")
     sub = parser.add_subparsers(dest="command", required=True)
-
-    map_cmd = sub.add_parser("map", parents=[common], help="도메인 하나의 지도를 마크다운으로 낸다")
-    map_cmd.add_argument("--domain", metavar="NAME", required=True, help="대상 도메인")
-    map_cmd.set_defaults(func=cmd_map)
-
-    repo_cmd = sub.add_parser("repo", parents=[common],
-                              help="레포 하나의 노드 전 필드·간선·문서 목록을 낸다")
-    repo_cmd.add_argument("slug", metavar="SLUG", help="대상 레포")
-    repo_cmd.set_defaults(func=cmd_repo)
 
     schema_cmd = sub.add_parser("schema", parents=[common],
                                 help="서브에이전트 프롬프트에 붙일 그래프 3키 스키마를 낸다")
