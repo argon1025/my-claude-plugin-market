@@ -158,3 +158,39 @@
 - **미러 읽기 권한**: 기본 권한 모드의 팀원은 `git -C {미러}` 실행마다 확인을 받음 — 기존 동작이며 허용 규칙 안내는 별도 검토
 - **남은 중복**: 명령마다 붙는 `--wiki {WIKI_ROOT}`(규약 3회)는 축 5에서 `DEFAULT_WIKI`를 훅과 맞춘 뒤 제거
 - **후속**: 축 1(문서 접근)·3(예산)·4(규약 문장)·5(코드 구조)는 별도 계획
+
+## Re-plan 2026-09-29 — 라인별 필요성 검토 재작성
+
+- **계기**: 사용자 지시 "에이전트는 기존 항목을 유지하면서 최소한의 수정을 진행하는 경향이 있음 라인별로 꼭 필요한가를 검토해보고 효율적인 구조로 재작성, 삭제 정리 검토 진행"
+- **범위**: 이 브랜치의 세션 주입 경로(규약·훅·레포 지도 렌더·관련 CLI와 문서) — 문서 목록 방식(축 1)·예산 `SOFT_BUDGET`(축 3)·스킬 본문은 그대로
+- **판정 기준**: 모델 기본 동작이거나 주입 내용·다른 줄에서 드러나는 줄은 삭제하고, 에이전트가 도출할 수 없는 사실(경로·명령·데이터 한계·위키 규칙)만 유지
+
+| 대상 | 삭제 | 재작성 |
+|---|---|---|
+| 규약 | 사용자 지시 우선, `##` 소제목 3개, 세 쓰임 열거, clone·`/add-dir` 절차, 열람 순서, "그래도 없으면 열지 않음", 이유를 밝힌 사용자 설명 우선, 기록 예시·"임의로 기록하지 않음", 명령마다 붙던 `--wiki` | 평면 불릿 7개, 정본 문장에 문서 우선 흡수, 모순 보고에 요청 포함, grep 경로는 훅이 `{DOMAIN_DIR}`로 치환 |
+| 레포 지도 | 머리글의 도메인 설명과 `· 현재 {slug}`(행의 `(현재)`와 중복), 도메인 없음 분기(훅이 먼저 거름) | 현재 도메인 행과 힌트 끝점 행을 한 루프로 |
+| 미등록 블록 | "레포 지도·문서 목록 주입 없음", git 밖의 등록 안내, 도메인이 없을 때의 도메인 줄 | 3줄 |
+| 훅 | bash 래퍼(인자 6개 전달, stdin 파싱용 python 호출, JSON 출력 두 벌), `TOPLEVEL` 조회와 폴백 | `hooks/session_start.py` 한 파일, `{REPOS_DIR}`는 common dir 상위 두 단계 — submodule·bare는 없는 경로가 나와 규약의 위치 질문으로 넘어감 |
+| graph.py | `render` 서브커맨드(훅 실행으로 같은 확인 가능), 호출처 하나뿐인 `edge_blocks`·`access_block`·`domain_projects`·`domain_label`, `text_list`의 미사용 `limit`, `repo` 머리글 건수와 `(경유 N건 포함)` | `DEFAULT_WIKI`를 빈 환경 변수에도 기본 경로로, `repo`가 `{domain}/{slug}`도 받음 |
+| update.py | — | `DEFAULT_WIKI` 같은 정렬, `mirror --repo`가 `{domain}/{slug}`도 받음 |
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 4 | `docs(plan): 라인별 필요성 검토 재계획` — 이 절 | — |
+| 5 | `refactor(llm-wiki): 레포 지도 렌더·그래프 CLI 불필요 코드 삭제` — graph.py, update.py | 픽스처 `render_session` 출력이 아래 기대 출력과 무차이, `repo`·`map`·`check`·`view.py` 종료 코드 0, `repo ex-pay/pay-api`·`mirror --repo personal-stock-trading/pigeon-trade`가 slug와 같은 결과 |
+| 6 | `refactor(llm-wiki): SessionStart 훅 Python 단일화와 규약 재작성` — session_start.py, hooks.json, agent-guide.md | 기존 훅 실행 5건 조건(`clone` 조건은 제외), 위키 없음·깨진 JSON에서 종료 코드 0, 픽스처 레포 세션의 레포 지도가 기대 출력과 무차이, `LLM_WIKI_ROOT=""`에서 기본 위키 사용 |
+| 7 | `docs(llm-wiki): 재작성 반영` — README.md, doc-contract.md, feedback.md | `grep -rn 'session_start.sh\|graph.py render' llm-wiki` 0건 |
+
+```
+# 레포 지도 — ex-shop
+- shop-api (현재) — 주문 API 제공
+- shop-fe — 주문 화면 제공
+  - 현재 레포에 의존 http (경유 shop-lib)
+- shop-lib — 주문 클라이언트 제공
+  - 현재 레포에 의존 http: GET /orders* — 주문 조회
+- shop-old (휴면) — 구 주문 화면 제공
+  - 현재 레포에 의존 http: GET /orders* — 구 주문
+- ex-pay/pay-api — 결제 백엔드
+  - 현재 레포가 의존 http: POST /pay* — 결제 승인
+다른 도메인: ex-pay(결제 레포 모음)
+```
