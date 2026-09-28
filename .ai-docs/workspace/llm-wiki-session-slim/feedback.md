@@ -1,0 +1,62 @@
+# llm-wiki-session-slim 작업 기록
+
+- `context` 목표는 구조적으로 간결하며 토큰을 적게 소비 하는 형태를 만드는 것 해당 플러그인은 항상 로드되며 다른 팀 컴퓨터 환경에서도 실행됨으로 간결하게 유지가 가능한 구조여야함
+  - source: 사용자 확인 2026-09-28
+- `context` 레포 의존 관련은 해당 작업을 할 때 필요하다면 관련 프로젝트를 직접 참조 하라는 가이드를 주기 위함임 예를들면 공통코드를 관리하는 프로젝트가 있고 현재는 백엔드 프로젝트라면 먼저 공통코드를 추가해야하는 작업이 선행되어야할 때 추가되었는지 직접 확인하거나 아니면 이번 세션에서 함께 작업을 처리하거나임 — llm-wiki 세션 주입의 레포 지도·의존 블록은 `| 레포 | 책임 | 관계 |` 표 하나로 합치는 방향으로 합의함
+  - source: 사용자 확인 2026-09-28
+- `context` 문서를 로드할 때 설명을 보고 로드할때도 있지만 grep을 통해서 로드하는 케이스가 많았음 도메인 용어나 관련 코드로 grep 함 — llm-wiki 문서 접근 방식은 골든 셋 검증으로 정하며 결과는 저장소 루트 `llm-wiki-review.md` 축 1에 있음
+  - source: 사용자 확인 2026-09-28
+- `context` 세션 헤더의 커서 거리 신호는 담당자가 매일 업데이트함으로 해당 기능은 삭제해도 무방함
+  - source: 사용자 확인 2026-09-28
+- `context` 각 개선항목에 대해 동시에 작업하기 힘든것같음 일단 각각 세부적으로 검토 가능하도록 큰 축으로 개편항목을 분류 — llm-wiki 개편은 `llm-wiki-review.md`의 5개 축(문서 접근·주입 구성·용량 한도·프롬프트 정리·코드 구조)마다 따로 계획함
+  - source: 사용자 확인 2026-09-28
+- `constraint` Claude Code 훅의 `additionalContext`는 필드당 10,000자이며 넘으면 전문을 세션 디렉터리 파일로 저장하고 컨텍스트에는 앞 2,000자 미리보기와 경로만 남기며 경고가 없으므로, llm-wiki 세션 주입이 10,000자를 넘으면 규약 뒤의 레포 지도·문서 목록이 조용히 빠짐 — 공식 문서 미기재, Claude Code 2.1.257 이후 동작
+  - source: https://github.com/anthropics/claude-code/issues/94358
+- `constraint` llm-wiki `session_start.sh`의 `SOFT_BUDGET` 8,000토큰은 `catalog.CHARS_PER_TOKEN` 1.8 환산 약 14,400자라 10,000자 한도를 넘긴 뒤에야 정리 권고가 붙음
+  - evidence: llm-wiki/hooks/session_start.sh, llm-wiki/scripts/catalog.py
+- `constraint` llm-wiki 세션 주입에서 문서 목록을 빼고 검색만 두면 도메인 루트 문서(policy·domain·external)는 업무 낱말로 닿지만 레포 폴더의 컨벤션 문서(spec 위치·클래스 구성·Swagger·외부 연동 계층)는 작업 종류로만 걸려 놓침 — 개인 위키 골든 셋 20과제에서 검색만 26/30, 검색 + 현재 레포 문서 이름 29/30, 현행 목록 29/30
+  - evidence: llm-wiki-review.md 부록 A·B
+- `constraint` llm-wiki 세션 헤더의 커서 거리는 `git rev-list --count {cursor}..HEAD`라 기능 브랜치의 로컬 커밋과 머지된 PR 내부 커밋까지 세어 update가 처리할 머지 수와 다름
+  - evidence: llm-wiki/hooks/session_start.sh
+- `constraint` llm-wiki `graph.py`·`update.py`의 `DEFAULT_WIKI`는 `os.environ.get("LLM_WIKI_ROOT", "~/.ai-docs/wiki")`라 환경 변수가 빈 문자열이면 cwd를 보고, 훅은 `${LLM_WIKI_ROOT:-…}`라 기본 경로를 봐서 세션 주입의 명령에서 `--wiki`를 빼려면 두 기본값을 먼저 맞춰야 함
+  - evidence: llm-wiki/scripts/graph.py, llm-wiki/scripts/update.py, llm-wiki/hooks/session_start.sh
+- `constraint` 스킬 frontmatter `disable-model-invocation: true`는 설명을 모델 컨텍스트에서 빼므로 llm-wiki에서 상시 로드되는 스킬 설명은 `add`(460자)·`audit`(327자) 둘뿐임
+  - source: https://code.claude.com/docs/en/skills
+- `context` 해당 레포 표를 제공하는 이유는 MSA 구조라 각 레포별로 책임이 다르고 의존성이 있음, 작업 시 하나의 레포만 검토 해야하는것이 아닌 다양한 레포를 한번에 보거나 선행으로 작업해야하는 경우가 존재함 (예를들어 외부 연동 클래스 정의는 다른 프로젝트에 있는 경우 먼저 작업 전에 외부연동 클래스를 선반영 해야함), 이런경우 사용자가 직접 에이전트에 가이드를 주지 않아도 찾아갈 수 있는 환경을 만들어주는것이 목적임, 또 코드리뷰 등 의존성 파악해서 문제점 진단 등 실무에서 사용가능한 다양한 use case 를 고려해서 깔끔한 주입방식으로 개선해야함 — llm-wiki 세션 주입의 레포 지도는 선행 작업·원인 추적·변경 파급 세 쓰임을 모두 받쳐야 함
+  - source: 사용자 확인 2026-09-29
+- `context` 지금도 백엔드 프론트 나눠져 있는 경우 프론트에서 작업 할 때 백엔드의 API 문제인지 등을 직접 뒤져볼 수 있음 — llm-wiki 규약의 "현재 레포가 의존" 용도는 새 계약이 필요할 때의 선행 확인만이 아니라 동작 이상의 원인을 상대 레포 코드까지 따라가는 추적을 포함함
+  - source: 사용자 확인 2026-09-29
+- `context` llm-wiki 개편은 한 번에 진행하기 무리가 있어 빠르게 적용 가능한 축부터 하나씩 적용하며, 목표는 단순한 구조와 실제 쓰임에 맞는 효과적인 구성임
+  - source: 사용자 확인 2026-09-29
+- `context` 일부러 의존 관점에서 묶지 않은 이유가 deps가 일치하지 않을때가 있을 수 있음 그래서 의존관계에 있는 레포만 주는게 아니라 전체 다 주고 어느정도 의존은 힌트 정도로만 제공하려고 했음 — llm-wiki 세션 주입의 레포 지도는 현재 도메인 레포 전수를 책임 문장과 함께 싣는 것이 주이고, 현재 레포와의 의존은 그 행에 붙는 힌트이며 관계별 묶음처럼 의존이 없는 레포를 무관해 보이게 하는 구성은 쓰지 않음
+  - source: 사용자 확인 2026-09-29
+- `constraint` llm-wiki deps.json은 설계상 하한이라 전수가 아님 — register·update는 상대 레포를 정하지 못한 의존(큐 소유 레포 미확인, 미등록 레포)을 `상대 미정`으로 보고만 하고 간선을 만들지 않으므로, 주입의 의존 표시가 없다는 것이 의존이 없다는 뜻이 아님
+  - evidence: llm-wiki/references/doc-contract.md 10장 상대 미정, llm-wiki/skills/register/SKILL.md 4장, llm-wiki/skills/update/SKILL.md
+- `correction` llm-wiki 위키 전용 미러는 `+refs/heads/*:refs/heads/*` refspec으로 원격의 모든 브랜치를 받으므로 기본 브랜치에 병합된 코드만 보이는 것이 아니라 push된 기능 브랜치도 `git -C {미러} grep {브랜치}`로 보이며, 보이지 않는 것은 push되지 않은 로컬 변경뿐임 — pigeon-trade 미러에 `argon1025/issue-5` 등 기능 브랜치가 있음
+  - evidence: llm-wiki/scripts/update.py MIRROR_REFSPEC, ~/.ai-docs/wiki/.local/mirrors/pigeon-trade.git
+- `constraint` llm-wiki 위키 전용 미러는 `fetch --prune`과 강제 refspec으로 로컬 브랜치를 원격 상태로 덮고 지우므로 편집용 worktree나 브랜치를 만들 수 없는 읽기 전용 캐시이며, 다른 레포 수정에는 별도 작업 사본이 필요함
+  - evidence: llm-wiki/scripts/update.py ensure_mirror
+- `why` llm-wiki 세션 레포 지도를 `| 레포 | 책임 | 관계 |` 표가 아니라 레포 행 아래 힌트 줄을 붙이는 중첩 목록으로 두는 이유는 같은 크기(팀 규모 합성 그래프 약 900~1,200자)에서 계약 식별자까지 담을 수 있고 관계 없는 행의 빈 칸과 계약 안 `|` 이스케이프가 없기 때문이며, 계약 식별자는 프론트의 호출 경로로 담당 백엔드를 가르고 힌트를 코드에서 grep으로 확인하는 근거라 유지함
+  - source: 사용자 확인 2026-09-29
+- `why` llm-wiki 의존 힌트 라벨을 `upstream`·`downstream`이 아니라 `현재 레포가 의존`·`현재 레포에 의존`으로 두는 이유는 이 모델의 message 간선이 발행 쪽을 `from`으로 두어 데이터 흐름 관례(발행 = upstream)와 반대로 읽히고, 같은 훅이 포크 판정에 git `upstream` remote를 쓰며, 힌트 줄이 다른 레포 행 아래 붙어 "이 레포"는 그 행 레포로 오독되기 때문임
+  - source: 사용자 확인 2026-09-29
+- `why` llm-wiki 규약의 상대 레포 작업 사본 위치 `{REPOS_DIR}/{slug}`는 경로를 저장하지 않고 훅이 세션마다 `--git-common-dir`의 상위 두 단계(이름이 `.git`이 아니면 toplevel 상위)로 계산함 — `.local/paths.json`이 worktree 삭제로 낡던 문제를 피하고, worktree에서 열어도 본 저장소의 상위 폴더가 나옴
+  - source: 사용자 확인 2026-09-29
+- `constraint` Claude Code 기본 권한 모드에서 작업 디렉터리 밖 파일 편집은 매번 확인이 뜨고 에이전트는 작업 디렉터리를 스스로 추가할 수 없어 사용자가 `/add-dir {경로}`를 실행해야 하므로, llm-wiki 규약은 상대 레포 수정 시 이 명령을 사용자에게 안내하게 함
+  - source: https://code.claude.com/docs/en/permissions.md#working-directories
+- `constraint` llm-wiki 세션 레포 지도의 다른 도메인 행은 `{domain}/{slug}` 라벨로 나가지만 `update.py mirror --repo`·`graph.py repo`는 도메인 없는 slug만 받아 라벨을 그대로 넘기면 `등록되지 않은 레포`로 답하므로, 규약의 `{slug}` 자리표시자가 도메인 접두를 뺀 값이라는 점은 규약 문장(축 4)에서 밝히거나 두 명령이 `{domain}/{slug}`도 받게 해야 함
+  - evidence: llm-wiki/scripts/graph.py render_session, llm-wiki/scripts/update.py, llm-wiki/rules/agent-guide.md
+- `context` 에이전트는 기존 항목을 유지하면서 최소한의 수정을 진행하는 경향이 있음 라인별로 꼭 필요한가를 검토해보고 효율적인 구조로 재작성, 삭제 정리 검토 진행 — llm-wiki 세션 주입 경로(규약·훅·레포 지도·관련 CLI)는 모델 기본 동작이거나 다른 줄·주입 내용에서 드러나는 줄을 지우고 에이전트가 도출할 수 없는 경로·명령·데이터 한계·위키 규칙만 남김
+  - source: 사용자 확인 2026-09-29
+- `correction` llm-wiki `graph.py` `DEFAULT_WIKI`는 이제 `os.environ.get("LLM_WIKI_ROOT") or "~/.ai-docs/wiki"`이고 `update.py`·훅이 이 값을 그대로 써서 빈 환경 변수에서도 셋이 같은 위키를 보므로, 세션 규약의 명령은 `--wiki` 없이 실행됨
+  - evidence: llm-wiki/scripts/graph.py DEFAULT_WIKI, llm-wiki/scripts/update.py, llm-wiki/hooks/session_start.py
+- `correction` llm-wiki `graph.py repo`와 `update.py mirror --repo`는 레포 지도의 다른 도메인 라벨 `{domain}/{slug}`를 그대로 받아 마지막 경로 요소를 slug로 쓰므로, 규약의 `{slug}` 자리에 도메인 접두를 떼라는 문장은 필요 없음
+  - evidence: llm-wiki/scripts/graph.py cmd_repo, llm-wiki/scripts/update.py cmd_mirror
+- `correction` llm-wiki 규약의 작업 사본 위치 `{REPOS_DIR}`는 toplevel 폴백 없이 `--git-common-dir`의 상위 두 단계로만 계산하며, submodule·bare 저장소에서는 없는 경로가 나와 규약의 "없으면 사용자에게 위치를 물음"으로 넘어감
+  - evidence: llm-wiki/hooks/session_start.py build
+- `why` llm-wiki 규약은 상대 레포 수정 시 작업 사본 위치와 미러 읽기 전용만 안내하고 clone·`/add-dir` 절차는 싣지 않음 — 작업 디렉터리 밖 편집은 하네스가 권한 확인을 띄워 사용자가 처리하고, 위치를 물은 뒤의 clone은 모델 기본 동작이라 매 세션 주입할 이유가 없음
+  - evidence: llm-wiki/rules/agent-guide.md
+- `why` llm-wiki SessionStart 훅만 다른 플러그인의 `session_start.sh` 관례와 달리 Python 한 파일인 이유는 본문이 `graph`·`catalog` import와 JSON 조립이라 bash 래퍼는 인자 전달·stdin 파싱용 python 호출·출력 두 벌만 더하기 때문이며, `python3`가 없으면 훅 실행이 실패해 주입이 없는 것은 전과 같음
+  - evidence: llm-wiki/hooks/session_start.py, llm-wiki/hooks/hooks.json
+- `why` llm-wiki 규약의 모순 보고는 요청 전체가 아니라 "이유 없이 문서와 다른 요청"만 병기 대상으로 둠 — 요청 전체를 넣으면 사용자가 이유를 밝혀 결정을 바꾼 경우에도 에이전트가 고르지 않고 멈추며, 이유를 밝힌 요청을 따르는 것은 모델 기본 동작이라 별도 문장이 필요 없음
+  - evidence: llm-wiki/rules/agent-guide.md

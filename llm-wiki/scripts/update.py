@@ -39,7 +39,7 @@ from pathlib import Path
 # 필요하고, 같은 변환을 여기 한 벌 더 두면 스키마를 고칠 때 한쪽만 남는다.
 import graph
 
-DEFAULT_WIKI = os.environ.get("LLM_WIKI_ROOT", "~/.ai-docs/wiki")
+DEFAULT_WIKI = graph.DEFAULT_WIKI
 DEFAULT_MAX_MERGES = 40
 DIFF_MAX_BYTES = 400_000
 # 추출 에이전트 1회가 읽는 묶음의 상한. 건수는 사실 병합의 품질, 바이트는 컨텍스트 예산이다.
@@ -351,7 +351,9 @@ def cmd_mirror(args) -> int:
     wiki = Path(args.wiki).expanduser()
     repos = graph.load_registry(wiki)["repos"]
     # 지목하지 않으면 휴면을 뺀다 — 휴면 레포 코드는 update가 읽지 않는다. 지목은 휴면도 받는다.
-    slugs = args.repo or [slug for slug, info in sorted(repos.items()) if not graph.is_dormant(info)]
+    # 지도·간선 행의 다른 도메인 라벨(`{domain}/{slug}`)을 그대로 받는다.
+    slugs = ([repo.rsplit("/", 1)[-1] for repo in args.repo] if args.repo
+             else [slug for slug, info in sorted(repos.items()) if not graph.is_dormant(info)])
     for slug in slugs:
         info = repos.get(slug)
         if info is None:
