@@ -37,7 +37,7 @@ description: Use when material the user hands over or a decision settled in conv
 
 - **초안**: 문서별 경로·`type`·`description`·바뀌는 절과 불릿, 노드 변경 행과 간선 행(`{kind} {from} → {to} — {contracts}`)을 보이고 승인 — 삭제·분할·이동은 따로 표시
 - **병합**: 규약 7장 병합 방식, 신규 문서는 규약 2~4장
-- **노드·간선**: 레포 소관·책임·호스트·프로젝트와 레포 간 의존이 확정되면 규약 9·10장 형식으로 `registry.json`·`deps.json` 편집 — 기존 값 교체·삭제는 4장 선택을 거침, 커밋은 `docs(graph): {요약}`
+- **노드·간선**: 레포 소관·책임·호스트와 레포 간 의존이 확정되면 규약 9·10장 형식으로 `registry.json`·`deps.json` 편집 — 기존 값 교체·삭제는 4장 선택을 거침, 커밋은 `docs(graph): {요약}`
 - **검사·커밋**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge {바꾼 파일}`(노드·간선을 고쳤으면 `{WIKI_ROOT}/registry.json`·`{WIKI_ROOT}/deps.json`도) 에러 0 뒤 문서마다 커밋, 본문은 규약 8장
 - **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 실패는 로컬 커밋 상태와 함께 보고
 

@@ -62,22 +62,21 @@ disable-model-invocation: true
 조사 초안을 보이고 AskUserQuestion 한 라운드로 확인합니다. 초안 수정은 자유 입력으로 받고 `알아서`는 초안 채택입니다.
 
 - **도메인**: `registry.json`의 `domains` 목록 중 선택 또는 신규 `{조직}-{도메인}`(`^[a-z0-9]+-[a-z0-9-]+$`) — 신규면 `description` 한 줄을 같은 라운드에 받음
-- **owner**: 그 도메인 기존 노드의 `project` distinct를 보여 고르게 하고, 값이 여럿이면 정본 remote의 owner 조각과 같은 것을 초안으로 제시 — 도메인의 첫 레포라 기존 값이 없으면 정본 remote에서 만든 `https://{host}/{owner}`를 초안으로 제시
 - **정본 remote 확인**: 1장이 정하지 못했거나 `포크 의심`으로 표시한 remote는 추측하지 않고 같은 라운드에서 정본 remote를 직접 물음
 - **기본 브랜치**: `git symbolic-ref refs/remotes/origin/HEAD`의 꼬리를 초안으로 제시(없으면 `main`)
 - **상태**: `active` 기본, `dormant`를 고르면 사유를 받음
 - **기존 등록 레포**: 도메인 이동(대상 도메인)과 정본 remote 교체 여부를 같은 라운드에 물음
-- **조사 초안 표**: `| 항목 | 초안 | 근거 |`로 스택·소관·정본 remote·owner를 싣고, 책임은 문장마다 한 행, 호스트는 환경마다 한 행으로 실어 수정을 받음
+- **조사 초안 표**: `| 항목 | 초안 | 근거 |`로 스택·소관·정본 remote를 싣고, 책임은 문장마다 한 행, 호스트는 환경마다 한 행으로 실어 수정을 받음
 - **상대 미정·책임 후보**: 2.5장이 남긴 상대는 `| 상대 미정 | {식별자} | {호스트·근거} |` 행으로, 이름이 책임 문장에 없는 외부 시스템은 `| 책임 후보 | {시스템 이름} | {근거} |` 행으로 같은 표에 실어 수정을 받음
 - **호스트 확인**: `hosts_missing`이 참이거나 `미상` 행이 있으면 그 라운드를 `호스트 확인 필요`로 표시하고 사용자 답 없이 기록하지 않음 — `알아서`로 넘어오면 그 환경 키를 빼고 기록하며, 추측 값이나 빈 값을 넣지 않음
 
 ## 4. registry.json·deps.json
 
-- **노드**: `domains.{d}.repos.{slug}`에 규약 9장 8키(+`dormant`면 `reason`)를 기록
+- **노드**: `domains.{d}.repos.{slug}`에 규약 9장 7키(+`dormant`면 `reason`)를 기록
 - **도메인**: 신규 도메인이면 `domains.{d}`에 `description`과 빈 `repos` 기록
 - **간선 상대 판정**: 2.5③에서 정해진 target만 그 slug가 registry에 실재하는지 확인
 - **간선**: 상대가 정해진 것만 `deps.json`에 간선으로 추가 — `from_me`가 참이면 `deps.{현재 레포}`에 `to: {상대}`로, 거짓이면 `deps.{상대}`에 `to: {현재 레포}`로 넣고 `contracts`는 2.5⑤가 합친 것을 그대로 씀. 상대를 정하지 못한 대상은 보고의 `상대 미정`으로만 남기고 간선을 만들지 않음
-- **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, 노드를 `domains.{old}.repos`에서 `domains.{new}.repos`로 옮기고 `deps.json`의 그룹 키와 `to`에 있는 `{old}/{slug}` 끝점을 `{new}/{slug}`로 치환 — `project`가 달라지면 3장에서 함께 물음
+- **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, 노드를 `domains.{old}.repos`에서 `domains.{new}.repos`로 옮기고 `deps.json`의 그룹 키와 `to`에 있는 `{old}/{slug}` 끝점을 `{new}/{slug}`로 치환
 - **레포 폴더**: `knowledge/{d}/{slug}/`는 만들지 않음 — 첫 레포 종속 문서가 생길 때 add·update가 만듦
 
 ## 5. 검사·커밋·push

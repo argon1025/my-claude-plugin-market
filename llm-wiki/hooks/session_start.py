@@ -79,13 +79,13 @@ def build(source: str) -> str:
     common_dir = git(project, "rev-parse", "--path-format=absolute", "--git-common-dir")
     registry = graph.load_registry(wiki)
     slug, domain = graph.resolve_repo(registry, remote, common_dir)
-    graph_py = SCRIPTS / "graph.py"
 
     if not domain:
         rows = [f"# 위키 {wiki} — " + (f"미등록 레포 {slug}, 등록은 `/llm-wiki:register`" if slug else "git 레포 밖")]
         domains = graph.domain_line(registry)
         if domains:
-            rows.append(f"- **도메인**: {domains} — 레포 지도는 `python3 {graph_py} map --domain {{domain}}`")
+            rows.append(f"- **도메인**: {domains} — 노드·간선은 `{wiki}/registry.json`·`deps.json`, "
+                        f"문서는 `{wiki}/knowledge/{{domain}}`")
         rows.append("- **수정**: 위키는 `/llm-wiki:` 스킬로만 고침")
         return "\n".join([note, *rows] if note else rows)
 
@@ -93,8 +93,8 @@ def build(source: str) -> str:
     # 계산한다 — worktree에서 열어도 본 저장소 옆을 가리킨다.
     knowledge = wiki / "knowledge" / domain
     guide = (PLUGIN / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-    for key, value in {"{WIKI_ROOT}": wiki, "{GRAPH_PY}": graph_py,
-                       "{REPOS_DIR}": Path(common_dir).parent.parent, "{DOMAIN_DIR}": knowledge}.items():
+    for key, value in {"{WIKI_ROOT}": wiki, "{REPOS_DIR}": Path(common_dir).parent.parent,
+                       "{DOMAIN_DIR}": knowledge}.items():
         guide = guide.replace(key, str(value))
 
     # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —

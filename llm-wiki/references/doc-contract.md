@@ -103,7 +103,7 @@ type: policy
 | 스킬 | 노드 | 간선 | 커서 |
 |---|---|---|---|
 | register | 전체(생성·재조사·도메인 이동·status) | 조사 간선 추가, 도메인 이동 시 끝점 치환 | — |
-| add | `summary`·`project` 교체, `responsibilities`·`hosts` 보강 | 자료·대화의 간선 추가·삭제 | — |
+| add | `summary` 교체, `responsibilities`·`hosts` 보강 | 자료·대화의 간선 추가·삭제 | — |
 | update | `responsibilities`·`hosts` 추가와 7장 조건의 교체 | diff의 간선 추가·`contracts` 식별자 보탬과 7장 조건의 교체 | `state/` 전진(PR 경유) |
 | audit | 승인된 책임 문장 통합 | — | — |
 
@@ -118,7 +118,6 @@ type: policy
       "description": "쇼핑몰 셀러 콘솔·주문 레포 모음",
       "repos": {
         "shop-api": {
-          "project": "https://github.com/example-org",
           "remote": "github.com/example-org/shop-api",
           "defaultBranch": "main",
           "status": "active",
@@ -134,7 +133,6 @@ type: policy
 ```
 
 - **중첩**: 노드는 소속 도메인 아래에 두고 `domain`을 따로 적지 않음 — 레포는 한 도메인에만 속하고 프로젝트 계층은 두지 않음
-- **project**: owner URL — `graph.py map` 접근 좌표의 owner가 여기서 파생됨
 - **status**: `dormant`는 update 대상에서 빠지고 지도 행에 `(휴면)`이 붙되 지식 필드와 끝점 간선은 유지 — 휴면 레포도 소비처로 남을 수 있음
 - **remote**: 정본 하나, 개인 포크 금지 — update와 세션의 clone이 `https://{remote}.git`을 씀
 - **defaultBranch**: update가 머지를 걷는 기준 브랜치
@@ -167,7 +165,7 @@ type: policy
 - **호스트 대조**: `~{host}`와 빈 대상은 scheme·끝 슬래시·대소문자를 지운 호스트를 registry `hosts` 전수와 비교해 slug로 바꿈
 - **상대 미정**: 대상을 정하지 못했거나 registry 밖 외부 시스템이면 간선을 만들지 않고 `상대 미정`으로 보고 — 외부 시스템의 소재는 책임 문장이 짐
 - **선언 위치**: `from`은 호출·발행·import 선언이 실제로 있는 레포 — 공용 라이브러리가 Feign을 선언하면 그 라이브러리가 `from`(http)이고 쓰는 레포는 `library` 간선만, 자체 선언이 있을 때만 직접 간선
-- **경유 파생**: 주입의 `현재 레포에 의존` 힌트와 `repo`의 `이 레포에 의존`은 들어오는 간선의 `from`을 `library`로 쓰는 레포를 `(경유 {from})` 1홉으로 파생 — 저장하지 않고 계약도 싣지 않음
+- **경유 파생**: 주입의 `현재 레포에 의존` 힌트는 들어오는 간선의 `from`을 `library`로 쓰는 레포를 `(경유 {from})` 1홉으로 파생 — 저장하지 않고 계약도 싣지 않음
 - **kind**: 필수 4값, 정의는 `graph.py schema --for facts` 출력 — 같은 두 레포가 `http`와 `message`로 함께 이어질 수 있음
 - **contracts**: 한 줄이 `{식별자} — {왜 쓰는지}`, 의존당 3건 이내 — 넘으면 접두나 묶음(`cmsapp.cmsapp-agent.*`)으로 접음, 식별자 삭제·교체, 자유 텍스트 변경, 간선 삭제·방향 변경은 7장 교체 조건, Feign `name`·호스트·프로퍼티 키는 식별자가 아님, 형식 밖 줄은 `graph.py check` 경고
 
