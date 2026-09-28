@@ -54,9 +54,6 @@ LOCATION_RE = re.compile(
 # knowledge/ 밖 형제 파일. 경로 대신 이 이름으로 --check 대상에 넣는다.
 GRAPH_FILES = ("registry.json", "deps.json")
 
-# 목록이 쓰는 토큰을 어림잡는 나눗셈 값. 한국어 섞인 목록에서 실측에 가깝다.
-CHARS_PER_TOKEN = 1.8
-
 
 def parse_frontmatter(path: Path) -> tuple[dict[str, str], str, bool]:
     """(필드, 실패 이유, 블록이 깨졌는지)를 돌려준다.
@@ -134,11 +131,6 @@ def sort_key(path: Path, root: Path) -> tuple[bool, str]:
     return (path.parent == root, path.relative_to(root).as_posix())
 
 
-def estimate_tokens(text: str) -> int:
-    """목록이 쓰는 토큰을 100 단위로 어림잡는다. 100에 못 미치면 0이 나온다."""
-    return round(len(text) / CHARS_PER_TOKEN / 100) * 100
-
-
 def build(root: Path, label: str = DEFAULT_LABEL, shallow: bool = False) -> str:
     """폴더 하나의 목록 텍스트. 경로는 그 폴더 기준 상대 경로다."""
     files = docs(root, shallow)
@@ -160,18 +152,12 @@ def build(root: Path, label: str = DEFAULT_LABEL, shallow: bool = False) -> str:
         doc_type = fields.get("type", "").strip() or "?"
         rows.append(f"{name} — [{doc_type}] {description}")
 
-    body = "\n".join(rows)
-
-    # 토큰 추정치를 머리에 늘 적는다. 이 목록은 매 세션과 매 압축마다 다시 주입되므로,
-    # 코퍼스가 커지는 비용이 아무 곳에도 안 보이면 아무도 audit을 돌리지 않는다.
-    tokens = estimate_tokens(body)
-    header = f"# {label} {len(files)}건"
-    if tokens:
-        header += f" · 약 {tokens:,}토큰"
-
+    # 행 이름은 폴더 기준 상대 경로라 머리에 경로 패턴을 적는다 — 에이전트가 경로를 조립하지
+    # 않고 바로 연다.
+    header = f"# {label} {len(files)}건 — {root}/{{이름}}.md"
     if not files:
         return "\n".join([header, "", "(아직 문서가 없음)"])
-    return "\n".join([header, "", body])
+    return "\n".join([header, "", "\n".join(rows)])
 
 
 def in_adr(path: Path, root: Path) -> bool:
@@ -377,8 +363,6 @@ def main() -> int:
     )
     parser.add_argument("--root", metavar="PATH", default=DEFAULT_ROOT,
                         help=f"문서 디렉토리 (기본값: {DEFAULT_ROOT})")
-    parser.add_argument("--label", metavar="TEXT", default=DEFAULT_LABEL,
-                        help=f"목록 머리에 붙는 이름 (기본값: {DEFAULT_LABEL})")
     parser.add_argument("--shallow", action="store_true",
                         help="도메인 루트 목록: --root 바로 아래 *.md와 adr/*.md만, 레포 폴더 제외")
     parser.add_argument("--check", action="store_true",
@@ -395,7 +379,7 @@ def main() -> int:
     if args.check:
         return check(root, selected_names(root, args.paths))
 
-    print(build(root, args.label, args.shallow))
+    print(build(root, shallow=args.shallow))
     return 0
 
 

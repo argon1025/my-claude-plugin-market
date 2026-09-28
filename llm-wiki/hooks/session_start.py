@@ -28,8 +28,10 @@ except Exception:
     sys.exit(0)
 
 ALERT = "첫 응답에서 사용자에게 알릴 것"
-# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다.
-SOFT_BUDGET = 8000
+# 주입 크기의 유일한 제어 수단은 이 권고 한 줄과 사용자의 문서 정리다. Claude Code는
+# additionalContext를 10,000자에서 경고 없이 자르므로(공식 문서 미기재,
+# https://github.com/anthropics/claude-code/issues/94358) 한도 전에 권고가 보이도록 여유를 둔다.
+WARN_CHARS = 9_000
 
 
 def git(cwd, *args: str) -> str:
@@ -105,9 +107,9 @@ def build(source: str) -> str:
         if (knowledge / slug).is_dir():
             blocks.append(catalog.build(knowledge / slug, f"레포 {slug}"))
     context = "\n\n".join(block for block in blocks if block)
-    tokens = catalog.estimate_tokens(context)
-    if tokens > SOFT_BUDGET:
-        context = f"# 위키 목록이 약 {tokens:,}토큰 — /llm-wiki:audit 로 정리 권장\n\n" + context
+    if len(context) > WARN_CHARS:
+        context = (f"# 위키 주입 {len(context):,}자 — 10,000자를 넘으면 뒤가 잘리므로 /llm-wiki:audit 로 정리 권장\n\n"
+                   + context)
     return context
 
 
