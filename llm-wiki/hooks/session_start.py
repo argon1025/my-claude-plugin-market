@@ -93,7 +93,7 @@ def build(source: str) -> str:
     # 계산한다 — worktree에서 열어도 본 저장소 옆을 가리킨다.
     knowledge = wiki / "knowledge" / domain
     guide = (PLUGIN / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-    for key, value in {"{WIKI_ROOT}": wiki, "{GRAPH_PY}": graph_py, "{UPDATE_PY}": SCRIPTS / "update.py",
+    for key, value in {"{WIKI_ROOT}": wiki, "{GRAPH_PY}": graph_py,
                        "{REPOS_DIR}": Path(common_dir).parent.parent, "{DOMAIN_DIR}": knowledge}.items():
         guide = guide.replace(key, str(value))
 
