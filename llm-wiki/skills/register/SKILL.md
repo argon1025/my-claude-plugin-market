@@ -51,11 +51,10 @@ disable-model-invocation: true
 
 메인이 순서대로 직접 합니다.
 
-- **① 인벤토리 대조**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/survey.py" inventory --root {git toplevel} --out {스크래치}/inventory.json`을 실행하고 인벤토리 행의 파일 집합에서 네 레인 `evidence`의 파일 집합을 뺀 잔여를 레인별로 나눠, 잔여가 있는 레인만 그 행 목록을 붙여 같은 프롬프트로 재질의 1회 — 두 번째 잔여는 6장에 `미소비 N행`으로 남기고 더 묻지 않음
-- **② 상호 대조**: http 레인 항목의 `evidence`가 library 레인이 낸 공용 라이브러리의 심볼 import이면 선언 위치 위반이라 버리고 건수를 6장에 남기고, `from_me`가 거짓인 message 항목마다 responsibilities에 `소비` 문장이 있는지 보아 없으면 3장 초안 표에 `책임 후보` 행으로 올림
-- **③ target 확정**: 규약 10장 대상 판정·호스트 대조·상대 미정
-- **④ 외부 시스템**: `상대 미정`으로 남은 상대마다 responsibilities에 그 시스템 이름이 든 문장이 있는지 보고 없으면 3장 초안 표에 `책임 후보` 행으로 올림
-- **⑤ 합치기**: 네 파일을 `{스크래치}/survey.json` 하나로 합침 — `deps`는 kind별로 이어 붙이고 같은 `(target, kind)`는 `contracts`를 합집합해 3건을 넘으면 접두·묶음으로 접음
+- **① 상호 대조**: http 레인 항목의 `evidence`가 library 레인이 낸 공용 라이브러리의 심볼 import이면 선언 위치 위반이라 버리고 건수를 6장에 남기고, `from_me`가 거짓인 message 항목마다 responsibilities에 `소비` 문장이 있는지 보아 없으면 3장 초안 표에 `책임 후보` 행으로 올림
+- **② target 확정**: 규약 10장 대상 판정·호스트 대조·상대 미정
+- **③ 외부 시스템**: `상대 미정`으로 남은 상대마다 responsibilities에 그 시스템 이름이 든 문장이 있는지 보고 없으면 3장 초안 표에 `책임 후보` 행으로 올림
+- **④ 합치기**: 네 파일을 `{스크래치}/survey.json` 하나로 합침 — `deps`는 kind별로 이어 붙이고 같은 `(target, kind)`는 `contracts`를 합집합해 3건을 넘으면 접두·묶음으로 접음
 
 ## 3. 질문 — 정지점 하나
 
@@ -74,8 +73,8 @@ disable-model-invocation: true
 
 - **노드**: `domains.{d}.repos.{slug}`에 규약 9장 7키(+`dormant`면 `reason`)를 기록
 - **도메인**: 신규 도메인이면 `domains.{d}`에 `description`과 빈 `repos` 기록
-- **간선 상대 판정**: 2.5③에서 정해진 target만 그 slug가 registry에 실재하는지 확인
-- **간선**: 상대가 정해진 것만 `deps.json`에 간선으로 추가 — `from_me`가 참이면 `deps.{현재 레포}`에 `to: {상대}`로, 거짓이면 `deps.{상대}`에 `to: {현재 레포}`로 넣고 `contracts`는 2.5⑤가 합친 것을 그대로 씀. 상대를 정하지 못한 대상은 보고의 `상대 미정`으로만 남기고 간선을 만들지 않음
+- **간선 상대 판정**: 2.5②에서 정해진 target만 그 slug가 registry에 실재하는지 확인
+- **간선**: 상대가 정해진 것만 `deps.json`에 간선으로 추가 — `from_me`가 참이면 `deps.{현재 레포}`에 `to: {상대}`로, 거짓이면 `deps.{상대}`에 `to: {현재 레포}`로 넣고 `contracts`는 2.5④가 합친 것을 그대로 씀. 상대를 정하지 못한 대상은 보고의 `상대 미정`으로만 남기고 간선을 만들지 않음
 - **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, 노드를 `domains.{old}.repos`에서 `domains.{new}.repos`로 옮기고 `deps.json`의 그룹 키와 `to`에 있는 `{old}/{slug}` 끝점을 `{new}/{slug}`로 치환
 - **레포 폴더**: `knowledge/{d}/{slug}/`는 만들지 않음 — 첫 레포 종속 문서가 생길 때 add·update가 만듦
 
@@ -89,5 +88,5 @@ disable-model-invocation: true
 
 - **상태 표**: `registry.json`·`state/*.json`으로 `| 레포 | 도메인 | 상태 | 책임 | 간선(out/in) | 브랜치 | 커서 |` 표를 출력 — `책임`은 문장 건수, 커서 없음은 `없음`
 - **상대 미정**: 4장에서 간선이 되지 못한 `deps[]` 항목을 `| 식별자 | 외부·내부 미등록 | 근거 |`로 나열 — 내부 미등록 상대는 그 레포를 등록하거나 `/llm-wiki:add`로 간선을 직접 넣으면 이어짐
-- **조사 품질**: 2.5장의 `미소비 N행`(재질의 뒤에도 어느 레인도 보지 않은 인벤토리 행)과 `선언 위치 위반 N건`(라이브러리 심볼 import를 근거로 낸 http 항목)을 레인별로 적음
+- **조사 품질**: 2.5장의 `선언 위치 위반 N건`(라이브러리 심볼 import를 근거로 낸 http 항목)을 레인별로 적음
 - **다음**: 세션을 다시 열면 레포 지도·의존이 주입되고, 머지 반영은 `/llm-wiki:update`, 자료 반영은 `/llm-wiki:add`

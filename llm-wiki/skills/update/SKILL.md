@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 등록 레포의 머지된 코드를 위키에 무인으로 반영합니다. 사용자에게 묻지 않으며 반영은 `wiki-update/*` 브랜치 PR의 머지로 승인됩니다. 작업 브랜치를 만든 뒤에는 어느 단계에서 끝나든 미커밋 편집을 `git -C {WIKI_ROOT} stash -u`로 치우고 `main`으로 돌아옵니다 — 세션 주입과 다른 쓰기 스킬이 미승인 편집을 읽지 않게 함. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다.
 
-인자: `--repo {slug}`(대상 한정, 반복 가능), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(전역 예산, 기본 40), `--batch-merges N`·`--batch-bytes N`(추출 묶음 상한, 기본 5건·500,000바이트), `--baseline-days N`(커서 없는 레포 소급), `--dry-run`(3장까지).
+인자: `--repo {slug}`(대상 한정, 반복 가능), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(전역 예산, 기본 40), `--dry-run`(3장까지).
 
 ## 1. 범위
 
