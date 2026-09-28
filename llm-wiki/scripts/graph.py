@@ -8,9 +8,8 @@ deps.json `deps.{from}[]`에 있고 그 둘이 정본이다. 레포 지도(현�
 
 세션 주입(render_session)·`repo` 출력(render_repo)·`map` 출력(render_map)이 같은 파생
 함수를 쓰기 때문에, 훅이 보여준 것과 에이전트가 명령으로 다시 본 것이 어긋나지 않는다.
-`render` 서브커맨드가 훅과 같은 함수를 CLI로 내므로 주입 형상은 명령 하나로 확인된다.
-세션에는 지도와 현재 레포 기준 간선만 싣고, 스택·호스트·remote·문서 목록처럼 작업마다
-필요하지 않은 것은 `repo {slug}`로 넘긴다.
+세션에는 레포 지도만 싣고, 스택·호스트·remote·다른 레포 문서처럼 작업마다 필요하지 않은
+것은 `repo {slug}`로 넘긴다.
 
 로드는 관용, 검사는 엄격이다. load_registry·load_edges는 깨진 파일을 빈 값으로 돌려줘
 세션 시작을 막지 않고, 필수 키·형식은 check_errors만 본다 — 훅이 종료 코드 0으로 끝나야
@@ -30,7 +29,8 @@ from pathlib import Path
 
 import catalog
 
-DEFAULT_WIKI = os.environ.get("LLM_WIKI_ROOT", "~/.ai-docs/wiki")
+# 빈 문자열도 미설정으로 본다 — 훅과 스크립트가 같은 위키를 봐야 주입 명령에서 --wiki를 뺄 수 있다.
+DEFAULT_WIKI = os.environ.get("LLM_WIKI_ROOT") or "~/.ai-docs/wiki"
 
 REGISTRY_NAME = "registry.json"
 DEPS_NAME = "deps.json"
@@ -151,12 +151,11 @@ def label_for(endpoint: str, current_domain: str) -> str:
     return slug if domain == current_domain else endpoint
 
 
-def text_list(value, limit: int = 0) -> list[str]:
-    """문자열 배열을 공백 없는 값만 남겨 돌려준다. limit이 있으면 앞에서 자른다."""
+def text_list(value) -> list[str]:
+    """문자열 배열을 공백 없는 값만 남겨 돌려준다."""
     if not isinstance(value, list):
         return []
-    rows = [item.strip() for item in value if isinstance(item, str) and item.strip()]
-    return rows[:limit] if limit else rows
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
 # --- 파생 ---------------------------------------------------------------
@@ -170,16 +169,14 @@ def domain_repos(registry: dict, domain: str) -> list[tuple[str, dict]]:
     )
 
 
-def domain_label(registry: dict, name: str) -> str:
-    """`{name}({description})`, 설명이 없으면 이름만."""
-    description = str((registry["domains"].get(name) or {}).get("description") or "").strip()
-    return f"{name}({description})" if description else name
-
-
 def domain_line(registry: dict, exclude: str = "") -> str:
-    """도메인 전수를 ` · `로 이은 한 줄. 세션 지도의 `다른 도메인:`과 훅의 미등록 블록이 함께 쓴다."""
-    return " · ".join(domain_label(registry, name)
-                      for name in sorted(registry["domains"]) if name != exclude)
+    """`{name}({description})`을 ` · `로 이은 한 줄. 세션 지도의 `다른 도메인:`과 훅의 미등록 블록이 쓴다."""
+    rows = []
+    for name, info in sorted(registry["domains"].items()):
+        description = str(info.get("description") or "").strip()
+        if name != exclude:
+            rows.append(f"{name}({description})" if description else name)
+    return " · ".join(rows)
 
 
 def owner_label(url: str) -> str:
@@ -187,20 +184,6 @@ def owner_label(url: str) -> str:
     host = normalize_host(url).split("/", 1)[0]
     owner = url.rstrip("/").rsplit("/", 1)[-1]
     return f"GitHub {owner}" if host == "github.com" else f"{host} {owner}"
-
-
-def domain_projects(registry: dict, domain: str) -> list[tuple[str, str]]:
-    """[(owner, owner URL)] — 소속 레포 `project`의 distinct.
-
-    손으로 유지하던 도메인 접근 좌표를 노드에서 파생한다. 마지막 경로 요소가 owner라
-    자연어에서 추출할 필요가 없다.
-    """
-    seen: dict[str, str] = {}
-    for _, info in domain_repos(registry, domain):
-        url = str(info.get("project") or "").strip().rstrip("/")
-        if url and url not in seen:
-            seen[url] = url.rsplit("/", 1)[-1]
-    return sorted(((key, url) for url, key in seen.items()), key=lambda row: (row[0], row[1]))
 
 
 def responsibility_rows(registry: dict, domain: str) -> list[str]:
@@ -286,74 +269,40 @@ def via_pairs(edges: list[dict], domain: str, slug: str,
     return [(origin, via, kind) for (origin, via), kind in sorted(found.items())]
 
 
-def edge_blocks(outgoing: list[dict], incoming: list[dict], domain: str,
-                edges: list[dict], slug: str) -> list[str]:
-    """`repo` 출력의 두 묶음 행. 머리글은 짧게 두고 무엇을 할지는 규약이 말한다."""
-    lines: list[str] = []
-    if outgoing:
-        lines.append(f"# 이 레포가 의존 {len(outgoing)}건 — 선행 조건")
-        lines.extend(edge_row(edge, hide="from", domain=domain) for edge in outgoing)
-    via = [f"- {kind} {label_for(origin, domain)} (경유 {label_for(lib, domain)})"
-           for origin, lib, kind in via_pairs(edges, domain, slug, incoming)]
-    if incoming:
-        head = f"# 이 레포에 의존 {len(incoming)}건 — 파급 대상"
-        lines.append(head + (f" (경유 {len(via)}건 포함)" if via else ""))
-        lines.extend(edge_row(edge, hide="to", domain=domain) for edge in incoming)
-        lines.extend(via)
-    return lines
-
-
-def access_block(registry: dict, domain: str) -> list[str]:
-    """접근 좌표 행. 소속 레포 `project`에서 파생하므로 손으로 유지하는 자리가 없다."""
-    return [f"- {owner_label(url)} — {url}" for _, url in domain_projects(registry, domain)]
-
-
 def render_session(registry: dict, edges: list[dict], domain: str, slug: str) -> str:
-    """훅이 규약과 문서 목록 사이에 끼우는 레포 지도. 도메인이 없으면 빈 문자열.
+    """훅이 규약과 문서 목록 사이에 끼우는 레포 지도.
 
     현재 도메인 레포 전수가 주이고 현재 레포와의 간선은 상대 레포 행 아래 힌트 줄이다 —
     deps.json은 하한이라 의존으로 묶으면 간선이 빠진 레포가 무관해 보인다. 휴면 노드도
     행을 남긴다 — 소비처로 남아 있을 수 있어 파급 확인에 든다. 다른 도메인은 현재 레포와
     이어진 레포만 소관 한 줄로 행을 두고 나머지는 도메인 이름 한 줄로 접는다.
     """
-    if not domain:
-        return ""
-
     outgoing, incoming = edge_groups(edges, domain, slug)
     hints: dict[str, list[str]] = {}
-
-    def hint(endpoint: str, head: str, contracts: list[str]) -> None:
-        row = f"  - {head}" + (": " + " · ".join(contracts) if contracts else "")
-        hints.setdefault(endpoint, []).append(row)
-
-    for edge in outgoing:
-        hint(edge["to"], f"현재 레포가 의존 {str(edge.get('kind') or '?').strip()}",
-             text_list(edge.get("contracts")))
-    for edge in incoming:
-        hint(edge["from"], f"현재 레포에 의존 {str(edge.get('kind') or '?').strip()}",
-             text_list(edge.get("contracts")))
+    pairs = [(edge["to"], "현재 레포가 의존", edge) for edge in outgoing]
+    pairs += [(edge["from"], "현재 레포에 의존", edge) for edge in incoming]
+    for endpoint, head, edge in pairs:
+        contracts = " · ".join(text_list(edge.get("contracts")))
+        hints.setdefault(endpoint, []).append(
+            f"  - {head} {str(edge.get('kind') or '?').strip()}" + (f": {contracts}" if contracts else ""))
     for origin, via, kind in via_pairs(edges, domain, slug, incoming):
-        hint(origin, f"현재 레포에 의존 {kind} (경유 {label_for(via, domain)})", [])
+        hints.setdefault(origin, []).append(f"  - 현재 레포에 의존 {kind} (경유 {label_for(via, domain)})")
 
-    lines = [f"# 레포 지도 — {domain_label(registry, domain)} · 현재 {slug}"]
-    listed: set[str] = set()
-    for repo_slug, info in domain_repos(registry, domain):
-        endpoint = f"{domain}/{repo_slug}"
-        listed.add(endpoint)
-        row = f"- {repo_slug}" + (" (현재)" if repo_slug == slug else "")
-        row += " (휴면)" if is_dormant(info) else ""
-        text = " · ".join(text_list(info.get("responsibilities"))) or str(info.get("summary") or "").strip()
-        lines.append(row + (f" — {text}" if text else ""))
+    # 현재 도메인 레포, 이어서 그 행에 없는 힌트 끝점(다른 도메인 레포)은 소관 한 줄로.
+    rows = [(f"{domain}/{name}", info, " · ".join(text_list(info.get("responsibilities"))))
+            for name, info in domain_repos(registry, domain)]
+    listed = {endpoint for endpoint, _, _ in rows}
+    rows += [(endpoint, registry["repos"].get(endpoint.partition("/")[2]) or {}, "")
+             for endpoint in sorted(set(hints) - listed)]
+
+    lines = [f"# 레포 지도 — {domain}"]
+    for endpoint, info, text in rows:
+        text = text or str(info.get("summary") or "").strip()
+        lines.append(f"- {label_for(endpoint, domain)}"
+                     + (" (현재)" if endpoint == f"{domain}/{slug}" else "")
+                     + (" (휴면)" if is_dormant(info) else "")
+                     + (f" — {text}" if text else ""))
         lines.extend(hints.get(endpoint, []))
-
-    # 현재 도메인 행에 없는 끝점 — 다른 도메인 레포, 또는 registry에 없는 끝점(check 에러).
-    for endpoint in sorted(set(hints) - listed):
-        info = registry["repos"].get(endpoint.partition("/")[2]) or {}
-        info = info if info.get("domain") == endpoint_domain(endpoint) else {}
-        row = f"- {label_for(endpoint, domain)}" + (" (휴면)" if is_dormant(info) else "")
-        text = str(info.get("summary") or "").strip()
-        lines.append(row + (f" — {text}" if text else ""))
-        lines.extend(hints[endpoint])
 
     others = domain_line(registry, exclude=domain)
     if others:
@@ -391,7 +340,15 @@ def render_repo(registry: dict, edges: list[dict], slug: str, knowledge: Path) -
     blocks = ["\n".join(rows)]
 
     outgoing, incoming = edge_groups(edges, domain, slug)
-    lines = edge_blocks(outgoing, incoming, domain, edges, slug)
+    lines: list[str] = []
+    if outgoing:
+        lines.append("# 이 레포가 의존 — 선행 조건")
+        lines += [edge_row(edge, hide="from", domain=domain) for edge in outgoing]
+    if incoming:
+        lines.append("# 이 레포에 의존 — 파급 대상")
+        lines += [edge_row(edge, hide="to", domain=domain) for edge in incoming]
+        lines += [f"- {kind} {label_for(origin, domain)} (경유 {label_for(via, domain)})"
+                  for origin, via, kind in via_pairs(edges, domain, slug, incoming)]
     if lines:
         blocks.append("\n".join(lines))
 
@@ -409,7 +366,9 @@ def render_map(registry: dict, edges: list[dict], domain: str) -> str:
     description = str((registry["domains"][domain] or {}).get("description") or "").strip()
     blocks = [f"# {domain} 지도" + (f" — {description}" if description else "")]
 
-    rows = access_block(registry, domain)
+    # 접근 좌표는 소속 레포 `project`의 distinct라 손으로 유지하는 자리가 없다.
+    urls = {str(info.get("project") or "").strip().rstrip("/") for _, info in domain_repos(registry, domain)}
+    rows = [f"- {owner_label(url)} — {url}" for url in sorted(urls - {""})]
     if rows:
         blocks.append("\n".join([
             "## 접근 좌표", "", "clone은 각 레포 remote로 `https://{remote}.git`", "", *rows,
@@ -933,16 +892,11 @@ def cmd_map(args) -> int:
     return 0
 
 
-def cmd_render(args) -> int:
-    """훅이 import로 부르는 render_session을 그대로 낸다 — 주입 형상 회귀를 명령 하나로 본다."""
-    wiki = Path(args.wiki).expanduser()
-    print(render_session(load_registry(wiki), load_edges(wiki), args.domain, args.slug))
-    return 0
-
-
 def cmd_repo(args) -> int:
     wiki = Path(args.wiki).expanduser()
-    print(render_repo(load_registry(wiki), load_edges(wiki), args.slug, wiki / "knowledge"))
+    # 지도·간선 행의 다른 도메인 라벨(`{domain}/{slug}`)을 그대로 받는다.
+    slug = args.slug.rsplit("/", 1)[-1]
+    print(render_repo(load_registry(wiki), load_edges(wiki), slug, wiki / "knowledge"))
     return 0
 
 
@@ -990,12 +944,6 @@ def main() -> int:
     schema_cmd.add_argument("--lane", metavar="NAME", default="", choices=("", *SURVEY_LANES),
                             help=f"survey 조사 레인 — {'·'.join(SURVEY_LANES)} (facts는 무시)")
     schema_cmd.set_defaults(func=cmd_schema)
-
-    render_cmd = sub.add_parser("render", parents=[common],
-                                help="훅이 주입하는 레포 지도 블록을 그대로 낸다")
-    render_cmd.add_argument("--domain", metavar="NAME", required=True, help="현재 도메인")
-    render_cmd.add_argument("--slug", metavar="SLUG", required=True, help="현재 레포")
-    render_cmd.set_defaults(func=cmd_render)
 
     check_cmd = sub.add_parser("check", parents=[common], help="노드·간선을 검사한다. 에러가 있으면 종료 코드 1")
     check_cmd.set_defaults(func=cmd_check)
