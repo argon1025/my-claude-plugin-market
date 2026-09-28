@@ -1,7 +1,7 @@
 #!/bin/bash
-# 위키 규약(rules/agent-guide.md), 상태 헤더, 그래프 파생 블록(레포 지도 → 현재 레포 기준
-# 의존 3묶음), 목록(도메인 루트 + 현재 레포)을 세션 컨텍스트로 주입한다.
-# 파생은 scripts/graph.py가 registry.json·deps.json에서 만든다.
+# 등록 레포는 규약(rules/agent-guide.md) → 동기화 알림 → 레포 지도(현재 도메인 레포와 현재 레포
+# 의존 힌트) → 목록(도메인 루트 + 현재 레포)을, 미등록·git 밖은 규약 없이 짧은 블록을 세션
+# 컨텍스트로 주입한다. 레포 지도는 scripts/graph.py가 registry.json·deps.json에서 파생한다.
 #
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact·fork 모두에서 다시 돈다.
 # 주입은 전 이벤트에서 하고, 원격 pull은 stdin의 source가 startup·resume일 때만 한다 —
@@ -71,7 +71,6 @@ TOPLEVEL="$(git -C "$PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null || true)
 python3 -B - "$PLUGIN" "$WIKI" "$REMOTE" "$COMMON_DIR" "$TOPLEVEL" "$SYNC_NOTE" <<'PY' 2>/dev/null || exit 0
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -87,56 +86,57 @@ knowledge = wiki_root / "knowledge"
 graph_py = os.path.join(plugin, "scripts", "graph.py")
 update_py = os.path.join(plugin, "scripts", "update.py")
 
-guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
-guide = guide.replace("{WIKI_ROOT}", wiki).replace("{GRAPH_PY}", graph_py).replace("{UPDATE_PY}", update_py)
+
+def emit(context: str) -> None:
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": context,
+        }
+    }, ensure_ascii=False))
+
 
 registry = graph.load_registry(wiki_root)
 edges = graph.load_edges(wiki_root)
 slug, domain = graph.resolve_repo(registry, remote, common_dir)
 
-header = []
-if sync_note:
-    header.append(sync_note)
+# 규약은 레포 지도·문서 목록을 읽는 법이라 그것이 없는 세션에는 싣지 않는다.
+if not domain:
+    where = f"미등록 레포 {slug}" if slug else "git 레포 밖"
+    rows = [
+        f"# 위키 {wiki} — {where}: 레포 지도·문서 목록 주입 없음",
+        f"- **도메인**: {graph.domain_line(registry) or '없음'}",
+        f"- **등록**: `/llm-wiki:register`, 도메인 지도는 `python3 {graph_py} map --domain {{domain}} --wiki {wiki}`",
+        "- **직접 수정 금지**: 위키는 `/llm-wiki:` 스킬로만 고침",
+    ]
+    emit("\n".join([sync_note, *rows] if sync_note else rows))
+    sys.exit(0)
 
-# 등록 레포의 도메인·slug는 레포 지도 머리글이 말하므로 여기서는 미등록만 알린다.
-if slug and not domain:
-    header.append(f"# 미등록 레포 {slug} — /llm-wiki:register 로 등록하면 레포 지도·의존이 주입됨")
+# 상대 레포 작업 사본의 부모 폴더. 경로를 저장하면 worktree 삭제로 낡으므로 세션마다 계산하고,
+# common dir에서 올라가 worktree에서 열어도 본 저장소 옆을 가리킨다.
+common = Path(common_dir)
+repos_dir = common.parent.parent if common.name == ".git" else Path(toplevel).parent
 
-# 위키가 이 레포를 얼마나 따라왔는지는 커서와 HEAD의 거리로 보인다.
-if domain:
-    state = catalog.load_json(wiki_root / "state" / f"{slug}.json", {})
-    cursor = state.get("cursor") if isinstance(state, dict) else None
-    if not cursor:
-        header.append("# 커서 없음 — 첫 update가 등록")
-    elif toplevel:
-        try:
-            result = subprocess.run(
-                ["git", "-C", toplevel, "rev-list", "--count", f"{cursor}..HEAD"],
-                capture_output=True, text=True, timeout=5,
-            )
-            behind = int(result.stdout.strip()) if result.returncode == 0 else None
-        except (OSError, ValueError, subprocess.SubprocessError):
-            behind = None
-        if behind:
-            header.append(f"# 커서 {cursor[:7]} · HEAD보다 {behind}커밋 뒤 — /llm-wiki:update 권장")
-        elif behind == 0:
-            header.append(f"# 커서 {cursor[:7]} · HEAD와 같음")
+guide = (Path(plugin) / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
+for key, value in (("{WIKI_ROOT}", wiki), ("{GRAPH_PY}", graph_py), ("{UPDATE_PY}", update_py),
+                   ("{REPOS_DIR}", str(repos_dir))):
+    guide = guide.replace(key, value)
 
-# 그래프 블록은 저장된 문서가 아니라 registry.json 노드와 deps.json 간선에서 파생한다.
-graph_block = graph.render_session(registry, edges, domain or "", slug)
+# 레포 지도는 저장된 문서가 아니라 registry.json 노드와 deps.json 간선에서 파생한다.
+graph_block = graph.render_session(registry, edges, domain, slug)
 
 # 도메인 루트는 레포 폴더를 뺀 평면(shallow), 레포 폴더는 전수. 어떤 예산에서도 줄이지 않는다 —
 # 에이전트는 description만으로 문서를 열지 말지 정하므로 목록에서 빠진 문서는 없는 문서가 된다.
 spaces = []
-if domain and (knowledge / domain).is_dir():
+if (knowledge / domain).is_dir():
     root = knowledge / domain
     spaces.append(catalog.build(root, f"도메인 {domain}", shallow=True))
     if (root / slug).is_dir():
         spaces.append(catalog.build(root / slug, f"레포 {slug}"))
 
 blocks = [guide]
-if header:
-    blocks.append("\n".join(header))
+if sync_note:
+    blocks.append(sync_note)
 if graph_block:
     blocks.append(graph_block)
 blocks.extend(spaces)
@@ -146,10 +146,5 @@ context = "\n\n".join(blocks)
 if catalog.estimate_tokens(context) > SOFT_BUDGET:
     context = f"# 위키 목록이 약 {catalog.estimate_tokens(context):,}토큰 — /llm-wiki:audit 로 정리 권장\n\n" + context
 
-print(json.dumps({
-    "hookSpecificOutput": {
-        "hookEventName": "SessionStart",
-        "additionalContext": context,
-    }
-}, ensure_ascii=False))
+emit(context)
 PY
