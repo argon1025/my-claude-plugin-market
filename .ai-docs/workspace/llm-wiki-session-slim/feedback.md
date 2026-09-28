@@ -46,3 +46,15 @@
   - source: https://code.claude.com/docs/en/permissions.md#working-directories
 - `constraint` llm-wiki 세션 레포 지도의 다른 도메인 행은 `{domain}/{slug}` 라벨로 나가지만 `update.py mirror --repo`·`graph.py repo`는 도메인 없는 slug만 받아 라벨을 그대로 넘기면 `등록되지 않은 레포`로 답하므로, 규약의 `{slug}` 자리표시자가 도메인 접두를 뺀 값이라는 점은 규약 문장(축 4)에서 밝히거나 두 명령이 `{domain}/{slug}`도 받게 해야 함
   - evidence: llm-wiki/scripts/graph.py render_session, llm-wiki/scripts/update.py, llm-wiki/rules/agent-guide.md
+- `context` 에이전트는 기존 항목을 유지하면서 최소한의 수정을 진행하는 경향이 있음 라인별로 꼭 필요한가를 검토해보고 효율적인 구조로 재작성, 삭제 정리 검토 진행 — llm-wiki 세션 주입 경로(규약·훅·레포 지도·관련 CLI)는 모델 기본 동작이거나 다른 줄·주입 내용에서 드러나는 줄을 지우고 에이전트가 도출할 수 없는 경로·명령·데이터 한계·위키 규칙만 남김
+  - source: 사용자 확인 2026-09-29
+- `correction` llm-wiki `graph.py` `DEFAULT_WIKI`는 이제 `os.environ.get("LLM_WIKI_ROOT") or "~/.ai-docs/wiki"`이고 `update.py`·훅이 이 값을 그대로 써서 빈 환경 변수에서도 셋이 같은 위키를 보므로, 세션 규약의 명령은 `--wiki` 없이 실행됨
+  - evidence: llm-wiki/scripts/graph.py DEFAULT_WIKI, llm-wiki/scripts/update.py, llm-wiki/hooks/session_start.py
+- `correction` llm-wiki `graph.py repo`와 `update.py mirror --repo`는 레포 지도의 다른 도메인 라벨 `{domain}/{slug}`를 그대로 받아 마지막 경로 요소를 slug로 쓰므로, 규약의 `{slug}` 자리에 도메인 접두를 떼라는 문장은 필요 없음
+  - evidence: llm-wiki/scripts/graph.py cmd_repo, llm-wiki/scripts/update.py cmd_mirror
+- `correction` llm-wiki 규약의 작업 사본 위치 `{REPOS_DIR}`는 toplevel 폴백 없이 `--git-common-dir`의 상위 두 단계로만 계산하며, submodule·bare 저장소에서는 없는 경로가 나와 규약의 "없으면 사용자에게 위치를 물음"으로 넘어감
+  - evidence: llm-wiki/hooks/session_start.py build
+- `why` llm-wiki 규약은 상대 레포 수정 시 작업 사본 위치와 미러 읽기 전용만 안내하고 clone·`/add-dir` 절차는 싣지 않음 — 작업 디렉터리 밖 편집은 하네스가 권한 확인을 띄워 사용자가 처리하고, 위치를 물은 뒤의 clone은 모델 기본 동작이라 매 세션 주입할 이유가 없음
+  - evidence: llm-wiki/rules/agent-guide.md
+- `why` llm-wiki SessionStart 훅만 다른 플러그인의 `session_start.sh` 관례와 달리 Python 한 파일인 이유는 본문이 `graph`·`catalog` import와 JSON 조립이라 bash 래퍼는 인자 전달·stdin 파싱용 python 호출·출력 두 벌만 더하기 때문이며, `python3`가 없으면 훅 실행이 실패해 주입이 없는 것은 전과 같음
+  - evidence: llm-wiki/hooks/session_start.py, llm-wiki/hooks/hooks.json
