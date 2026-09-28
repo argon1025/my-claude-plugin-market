@@ -26,3 +26,5 @@
   - source: 사용자 확인 2026-09-29
 - `constraint` llm-wiki 5.5.0 `graph.py check`는 `project` 키 없는 노드에 `필수 키 없음: project`를, 5.6.0 check는 `project` 키 있는 노드에 `허용되지 않는 키: project`를 내므로, registry.json의 `project` 삭제는 5.6.0 플러그인 갱신 직후에 붙여 실행해야 그 사이 add·update·register가 check에서 멈추지 않음
   - evidence: llm-wiki/scripts/graph.py REPO_KEYS, check_repo
+- `why` llm-wiki `/llm-wiki:update`·`/llm-wiki:audit`가 위키 전용 clone `{WIKI_ROOT}/.local/repos/{slug}`를 작업 트리가 아니라 `origin/{defaultBranch}` ref로 읽는 이유는 같은 폴더를 세션 에이전트가 자유롭게 고치고 브랜치를 바꾸므로 작업 트리가 기본 브랜치 최신과 다를 수 있기 때문이며, fetch는 작업 트리·로컬 브랜치를 건드리지 않아 두 용도가 한 폴더를 공유함
+  - evidence: llm-wiki/scripts/update.py ensure_clone, llm-wiki/skills/audit/SKILL.md
