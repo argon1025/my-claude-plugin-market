@@ -44,3 +44,5 @@
   - source: 사용자 확인 2026-09-29
 - `constraint` Claude Code 기본 권한 모드에서 작업 디렉터리 밖 파일 편집은 매번 확인이 뜨고 에이전트는 작업 디렉터리를 스스로 추가할 수 없어 사용자가 `/add-dir {경로}`를 실행해야 하므로, llm-wiki 규약은 상대 레포 수정 시 이 명령을 사용자에게 안내하게 함
   - source: https://code.claude.com/docs/en/permissions.md#working-directories
+- `constraint` llm-wiki 세션 레포 지도의 다른 도메인 행은 `{domain}/{slug}` 라벨로 나가지만 `update.py mirror --repo`·`graph.py repo`는 도메인 없는 slug만 받아 라벨을 그대로 넘기면 `등록되지 않은 레포`로 답하므로, 규약의 `{slug}` 자리표시자가 도메인 접두를 뺀 값이라는 점은 규약 문장(축 4)에서 밝히거나 두 명령이 `{domain}/{slug}`도 받게 해야 함
+  - evidence: llm-wiki/scripts/graph.py render_session, llm-wiki/scripts/update.py, llm-wiki/rules/agent-guide.md
