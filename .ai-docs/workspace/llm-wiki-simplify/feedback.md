@@ -28,3 +28,5 @@
   - evidence: llm-wiki/scripts/graph.py REPO_KEYS, check_repo
 - `why` llm-wiki `/llm-wiki:update`·`/llm-wiki:audit`가 위키 전용 clone `{WIKI_ROOT}/.local/repos/{slug}`를 작업 트리가 아니라 `origin/{defaultBranch}` ref로 읽는 이유는 같은 폴더를 세션 에이전트가 자유롭게 고치고 브랜치를 바꾸므로 작업 트리가 기본 브랜치 최신과 다를 수 있기 때문이며, fetch는 작업 트리·로컬 브랜치를 건드리지 않아 두 용도가 한 폴더를 공유함
   - evidence: llm-wiki/scripts/update.py ensure_clone, llm-wiki/skills/audit/SKILL.md
+- `why` llm-wiki 규약의 다른 레포 코드 줄이 사용자 사본을 `{REPOS_DIR}/{slug}` 한 곳만 확인하고 디스크 전체 탐색을 안내하지 않는 이유는 이름 탐색이 같은 이름의 비레포 폴더까지 잡아 remote 대조 절차가 붙고(홈 전체 find에서 `pigeon-trade` 폴더 3곳 중 레포는 1곳, 나머지는 worktree 상위 폴더와 위키 문서 폴더), 폴더 이름이 slug와 다른 사본은 이름으로 찾지 못하며, 읽기 기준이 fetch한 기본 브랜치라 위키 clone만으로 충분하기 때문임 — 레포를 한 폴더에 모으지 않은 사용자는 위키 clone으로 넘어가 사용자 사본 재사용만 잃음
+  - evidence: llm-wiki/rules/agent-guide.md, llm-wiki/hooks/session_start.py build
