@@ -1,10 +1,10 @@
-# /llm-wiki:update PR 본문
+# update PR 본문
 
 행이 없는 절은 절째 생략합니다.
 
 ## 채우는 법
 
-- **레포**: `work.json`의 `repos`와 `skipped` 레포마다 1행 — 처리 머지는 `https://{registry.json remote}/commit/{sha}` 링크와 `subject`(여러 건이면 `N건` 뒤 마지막 1건), `skipped` 사유·`notes`·`remaining`(예산 밖 이월 N건)은 비고에
+- **레포**: `work.json`의 `repos`와 `skipped` 레포마다 1행 — 처리 머지는 `publish.md` 커밋 링크와 `subject`(여러 건이면 `N건` 뒤 마지막 1건), `skipped` 사유·`notes`·`remaining`(예산 밖 이월 N건)은 비고에
 - **추출 사실**: `id` 순으로 `id` 있는 사실 전부 1행(동일 포함) — 판정·사유는 아래 표, 출처는 `{slug}@{sha7}`를 쉼표로
 - **문서**: 편집 문서마다 `### {도메인 루트 기준 상대경로} · 신규|수정` 아래 `**추가|교체**: {summary} (F번호)`와 `**삭제**: {bullet} — {reason} (F번호)`, 동일·건너뜀은 적지 않음
 - **그래프**: 3장 `graph` 배정 중 반영된 간선·책임·호스트와 `id` 없는 `rejected`(사유·식별자 원문)
@@ -26,7 +26,7 @@
 ## 레포
 | 레포 | 처리 머지 | 커서 | 비고 |
 |---|---|---|---|
-| pigeon-trade | [c61a8ab](https://github.com/{owner}/pigeon-trade/commit/{sha}) {subject} | 1c7f783 → c61a8ab | — |
+| pigeon-trade | [c61a8ab]({커밋 링크}) {subject} | 1c7f783 → c61a8ab | — |
 | pigeon-trade-dashboard | 0건 | 변화 없음 | 대상 브랜치 main 없음 — registry `defaultBranch` 수정 필요 |
 | pigeon-broker | 40건 | 9d2e0f1 → 3ab7c55 | 예산 밖 이월 12건 |
 
@@ -54,6 +54,6 @@
 ## 검토 방법
 - **승인**: rebase 또는 merge commit으로 머지 — squash는 문서별 커밋 근거를 지우므로 금지
 - **부분 수정**: 이 브랜치에서 해당 불릿을 고친 뒤 머지
-- **전체 거절**: PR close — 커서가 `main`에 반영되지 않아 다음 실행이 같은 머지를 다시 처리
-- **건너뜀 처리**: 판정 `건너뜀` 행은 머지 후 `/llm-wiki:add`로 반영
+- **전체 거절**: PR close — 커서가 기준 브랜치에 반영되지 않아 다음 실행이 같은 머지를 다시 처리
+- **건너뜀 처리**: 판정 `건너뜀` 행은 머지 후 `add` 스킬로 반영
 ````

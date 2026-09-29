@@ -186,7 +186,7 @@ def check_location(path: Path, root: Path, registry: dict | None = None) -> list
         return errors
 
     if domain not in (registry.get("domains") or {}):
-        errors.append(f"도메인 {domain}가 registry.json에 없음 — /llm-wiki:register")
+        errors.append(f"도메인 {domain}가 registry.json에 없음 — register 스킬로 등록")
     if repo:
         info = (registry.get("repos") or {}).get(repo)
         if not isinstance(info, dict) or info.get("domain") != domain:

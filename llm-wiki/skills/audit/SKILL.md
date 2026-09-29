@@ -1,13 +1,14 @@
 ---
 name: audit
-description: Use when the wiki must be swept after unattended updates or on a schedule ("위키 정리", "위키 감사", "문서 정리", "중복 정리") — flags fragments, duplicate facts, over-long descriptions and contract violations, then applies the rows you approve. Adds no new facts. NOT for landing new material or merged code (/llm-wiki:add, /llm-wiki:update).
+description: Sweep existing wiki docs for fragments, duplicates, over-long descriptions and contract violations, then apply the approved rows.
+disable-model-invocation: true
 ---
 
-기존 문서만 고치고 새 사실을 들이지 않습니다. 규약은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 절대 경로로 넘깁니다. 인자: `--scope {domain}|{domain}/{slug}`(기본 현재 도메인 루트 + 현재 레포), `--docs {경로...}`(지목 문서만).
+기존 문서만 고치고 새 사실을 들이지 않습니다. 규약은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 절대 경로로 넘기고, 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)를 따릅니다. 인자: `--scope {domain}|{domain}/{slug}`(기본 현재 도메인 루트 + 현재 레포), `--docs {경로...}`(지목 문서만).
 
 ## 1. 측정
 
-- **동기화**: `git -C {WIKI_ROOT} pull --ff-only`, 실패 시 중단
+- **동기화**: `publish.md` 1장
 - **검사·목록**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` 에러와 `catalog.py --root {WIKI_ROOT}/knowledge/{domain} --shallow`·`--root {WIKI_ROOT}/knowledge/{domain}/{slug}` 목록을 `{스크래치}/catalog.md`로 저장
 - **그래프**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/graph.py" check --wiki {WIKI_ROOT}`의 에러·contracts 형식 경고와 `contracts`가 상한 3건에 닿은 간선을 같은 `catalog.md`에 이어 저장 — 노드·간선은 메인이 봄
 - **레포**: 대상 도메인 레포마다 `{WIKI_ROOT}/.local/repos/{slug}`가 없으면 `git clone https://{remote}.git {경로}`, 있으면 `git -C {경로} fetch --prune`을 실행해 `{slug} {경로}@origin/{defaultBranch}`(실패는 `{slug} 없음 — {오류 첫 줄}`)를 같은 `catalog.md`에 이어 저장
@@ -53,6 +54,7 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 - **승인 불필요**: `재작성`·`설명`·`유형`은 `{스크래치}/approval.md`에만 두고 적용
 - **적용 제외**: `충돌`은 적용하지 않고 6장 건너뜀 표에만
 - **0행**: 승인 대상이 없으면 표 없이 4장으로
+- **브랜치**: 적용할 행이 있으면 `publish.md` 2장
 
 ## 4. 적용 — 문서 1장 = 에이전트 1회
 
@@ -69,12 +71,12 @@ description: Use when the wiki must be swept after unattended updates or on a sc
 응답: 적용 행 번호, 건너뛴 행과 사유, 삭제·생성 파일, check 결과, blocked 사유.
 ````
 
-## 5. 검증·커밋·push
+## 5. 검증·커밋·게시
 
 - **옮김 묶음**: `옮김` 행으로 이어진 원본·대상 문서 전체를 한 묶음으로 보고, 묶음 안 문서 하나라도 blocked이거나 `옮김` 행을 건너뛰었으면 묶음 전체를 `git -C {WIKI_ROOT} checkout -- {문서}`(신규는 삭제)로 되돌리고 6장 검사에 보고
 - **전수 검사**: 삭제·옮김 뒤 `catalog.py --check --root {WIKI_ROOT}/knowledge` 재실행 — description 중복은 문서 단위 검사가 보지 못함
 - **커밋**: 본문이 바뀐 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} audit {조치 요약}`, 책임 통합은 `docs(graph): audit 책임 통합 N건` 한 커밋
-- **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 실패는 로컬 커밋 상태와 함께 보고
+- **게시**: `publish.md` 3·4장
 
 ## 6. 보고
 

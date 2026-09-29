@@ -1,0 +1,54 @@
+# llm-wiki-overlay 작업 기록
+
+- `context` 해당 플러그인들은 지속적으로 버전업을 같이 해가면서 sync를 맞출 예정이라 이격 부분을 조사해서 리스트업 한 뒤 해당 이격을 유지할지 판단 후 해당 부분을 분리해서 관리하려고 함. 최우선은 토큰절약, 단순구조임
+  - source: 사용자 확인 2026-09-29
+- `context` 일단 회사꺼는 이작업 이후로 버전 sync 맞출 예정임으로 해당 프로젝트에서 모듈형으로 전환하면 다음 작업으로 회사 플러그인 버전업 sync 하면서 이격부분 채울예정
+  - source: 사용자 확인 2026-09-29
+- `context` 회사판 훅의 위키 자동 복제는 제거에 동의하나 세션 시작할 때 마다 그냥 pull 땡겼으면 좋겠음 — llm-wiki 훅의 10분 동기화 조건을 없애고 startup·resume마다 pull하기로 함
+  - source: 사용자 확인 2026-09-29
+- `constraint` 개인 마켓플레이스 레포 argon1025/my-claude-plugin-market은 PUBLIC이라 회사 오버레이(Bitbucket URL·사내 호스트·프로젝트 키)는 이 레포가 아니라 회사 마켓플레이스 레포에 두며, 개인판 파일과 예시에도 사내 식별자를 넣지 않음
+- `constraint` 회사판 4.0.0은 개인 레포 커밋 fd3664f(llm-wiki v4.0.0)와 같은 시점이라, 회사 전용 이격은 이 커밋의 llm-wiki와 회사판 플러그인 폴더의 diff로만 가려지고 개인판 HEAD와의 diff에는 버전 차이가 섞임
+  - evidence: 회사 마켓플레이스 레포의 회사판 .claude-plugin/plugin.json
+- `constraint` 회사 위키 registry.json의 노드는 `project` 키(Bitbucket 브라우즈 URL)를 가지나 개인판 5.x graph.py의 REPO_KEYS에는 `project`가 없어, 회사판을 5.x로 sync하면 `graph.py check`가 노드마다 허용되지 않는 키 에러를 내므로 키 제거 마이그레이션이 필요함
+  - evidence: llm-wiki/scripts/graph.py REPO_KEYS
+- `constraint` llm-wiki references/publish.md의 `##` 절 제목 4개(1. 시작·2. 브랜치·3. 게시·4. 종료)는 스킬 5종이 장 번호로 참조하는 계약이라 변형 오버레이의 publish.md도 같은 제목을 가져야 하며 tools/overlay.py가 이를 대조함
+  - evidence: llm-wiki/references/publish.md, tools/overlay.py
+- `why` 저장소 절차 이격은 references/publish.md 파일 통째 교체로 분리함 — pr-workflow식 호스트 자동 판별은 개인판 스킬에 사내 도구 문구가 상주하고 전 쓰기 PR·master 직접 push 금지 같은 정책 차이가 여전히 분기로 남으며, (파일, 원문, 대체문) 치환 규칙은 토큰은 최소지만 개인판 문장이 바뀔 때마다 규칙이 깨져 sync 비용이 남음. 대가는 쓰기 스킬 실행마다 publish.md Read 1회이며 세션 주입은 변하지 않음
+- `why` tools/overlay.py의 문자열 치환은 base에서 온 파일에만 적용하고 오버레이 교체 파일에는 적용하지 않음 — `LLM_WIKI_` 같은 원문이 대체문 `ACME_LLM_WIKI_` 안에 들어 있어 교체 파일에 다시 적용하면 이중 치환이 생기고, 같은 이유로 "치환 후 원문 잔존 없음" 검사 대신 키별 적중 수 0건 검사만 씀
+- `why` 회사판 훅의 자동 복제(락·스테이징·60분 실패 게이트)는 이식하지 않고 회사 사용자가 첫 세션에 init을 한 번 실행하게 함 — 훅 확장점과 동시성 코드를 개인판에 두지 않는 단순 구조를 택함
+- `context` 의도적 단순화: llm-wiki 훅이 startup·resume마다 pull하므로 여러 세션이 동시에 시작하면 pull이 겹쳐 한쪽이 `위키 동기화 실패`를 알릴 수 있음 — 사본은 다른 쪽 pull로 최신이 되며, 알림이 잦으면 짧은 주기 조건을 되살림
+- `constraint` llm-wiki init이 새로 만든 위키 저장소의 첫 push는 원격 추적 브랜치가 없어 publish.md 3장의 `pull --rebase && push`가 실패하므로, 이 경로만 init 스킬 안에 `git push -u origin {기준 브랜치}`로 남음
+  - evidence: llm-wiki/skills/init/SKILL.md
+- `correction` llm-wiki init에서 `publish.md` 3장의 `pull --rebase && push`가 실패하는 경로는 새로 만든 저장소만이 아니라 빈 원격을 clone한 저장소도 포함함 — clone이 `branch.main.merge`를 설정해도 원격에 브랜치가 없어 pull이 `no such ref was fetched`로 실패하므로, init 3장은 원격에 기준 브랜치가 없는 두 경로 모두 `git push -u origin {기준 브랜치}`로 첫 push함
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/skills/init/SKILL.md
+- `context` 에이전트는 기존 프롬프트나 코드 구문을 그대로 두고 최소로 수정하는 경향이 있음 꼭 이 줄이 필요한지 비효율적으로 작성되진 않았는지 검토해보고 재작성, 수정, 삭제 진행 — llm-wiki 변형 분리 브랜치가 손댄 파일은 바꾼 줄뿐 아니라 파일 전체를 필요성·효율 기준으로 다시 씀
+  - source: 사용자 확인 2026-09-29
+- `why` llm-wiki doc-contract.md 9장 remote 불릿에는 `/~` 개인 네임스페이스 금지를 적지 않음 — 9장은 `graph.py check`가 검사하는 형식을 되풀이하지 않고 스크립트에 없는 의미만 적는 규칙이라, `/~`는 check 에러와 register 1장 포크 의심 판정만 가짐
+  - evidence: llm-wiki/references/doc-contract.md, llm-wiki/scripts/graph.py check_repo
+- `correction` llm-wiki register는 정본 remote를 정하지 못해도 빈 값으로 노드를 기록할 수 없음 — `graph.py check`가 빈 remote를 에러로 내 5장 검사가 반드시 실패하므로, 3장에서 끝내 정하지 못하면 기록 없이 중단함
+  - evidence: llm-wiki/skills/register/SKILL.md, llm-wiki/scripts/graph.py check_repo
+- `context` 굳이 이걸 유지해야하나? publish.md 내용만 교체하면 되도록 구성한게 아닌가 그게 아니라면 설계가 잘못된거같은데 애초에 특정 문서 내용만 변경해서 유지하면 되도록 설계를 했던건데 — 변형 플러그인은 llm-wiki 폴더 복사 뒤 references/publish.md·.claude-plugin/plugin.json·README.md 세 파일 교체만으로 만들고 병합 스크립트를 두지 않음
+  - source: 사용자 확인 2026-09-29
+- `correction` llm-wiki 변형 배포에 tools/overlay.py(문자열 치환·plugin.json 병합·절 제목 대조)는 없음 — 앞선 overlay.py 관련 why(치환 범위·이중 치환)와 constraint(절 제목 대조) 항목은 더 이상 참이 아니며, publish.md 절 제목·머리 불릿 구성은 자동 검사 없이 변형 쪽에서 맞춤
+  - source: 사용자 확인 2026-09-29
+- `constraint` llm-wiki의 스킬·템플릿·규약·스크립트 문구에는 `/llm-wiki:` 접두와 위키 경로를 직접 쓰지 않음 — 변형은 plugin.json 이름과 publish.md만 바꾸므로 박힌 값은 틀린 명령·경로를 안내함, 훅과 스크립트 출력은 graph.SKILL_PREFIX, 규약은 `{SKILL_PREFIX}` 자리표시, 스킬 본문은 스킬 이름만 씀, README는 변형이 통째로 바꾸므로 예외
+  - evidence: llm-wiki/scripts/graph.py SKILL_PREFIX·DEFAULT_WIKI, llm-wiki/hooks/session_start.py
+- `constraint` llm-wiki의 위키 경로 출처는 references/publish.md의 `사본` 불릿 한 줄(`- **사본**: ` 뒤 백틱으로 감싼 경로)이며 graph.py가 import 시점에 정규식으로 읽음 — 불릿 형식이 깨지면 스크립트는 import 에러로 멈추고 훅은 주입 없이 종료 코드 0으로 끝남, 환경변수 LLM_WIKI_ROOT는 지원하지 않음
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/scripts/graph.py DEFAULT_WIKI
+- `correction` llm-wiki의 위키 경로 출처는 references/publish.md `사본` 불릿이 아니라 플러그인 루트 config.json의 `wikiRoot`이며 graph.py가 import 시점에 읽음 — 키가 없으면 스크립트는 import 에러로 멈추고 훅은 주입 없이 종료 코드 0으로 끝나며, 변형 교체 파일은 publish.md·config.json·plugin.json·README.md 4종임
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/config.json, llm-wiki/scripts/graph.py DEFAULT_WIKI
+- `why` llm-wiki 변형 값은 소비 주체별로 파일을 나눔 — 코드가 읽는 값은 config.json, 에이전트가 읽는 절차(git·PR 명령, 기준 브랜치, 커밋 링크)는 publish.md에 두어 markdown 파싱을 없애고, 스킬 접두는 별도 값으로 두면 plugin.json name과 어긋날 수 있어 name에서 파생함
+  - source: 사용자 확인 2026-09-29
+- `why` llm-wiki 변형의 위키 저장소 고정은 references/publish.md `저장소` 불릿에 clone URL을 적는 것으로 표현하고 config.json에 두지 않음 — clone URL을 읽는 쪽은 init 에이전트뿐이라 소비 주체 기준으로 publish.md에 속하며, 훅 자동 복제처럼 코드가 URL을 읽게 되면 그때 config.json으로 옮김, 이를 위해 훅의 위키 없음 안내와 init description은 clone·새로 만들기를 단정하지 않는 문구로 둠
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/skills/init/SKILL.md, llm-wiki/hooks/session_start.py
+- `context` 스킬 add 를 제외한 전부는 명시적으로 실행하는 용이라 설명을 길게 유지할 필요가 없다 — llm-wiki init·register·update·audit은 `disable-model-invocation: true`와 한 문장 description만 두고 트리거 문구를 싣지 않으며, 자동 판단 대상은 add뿐임
+  - source: 사용자 확인 2026-09-29
+- `context` 위키 플러그인 내 사내 식별자도 정리 진행 — llm-wiki 폴더와 이 작업 기록(llm-wiki-overlay)의 사내 레포·플러그인 이름·호스트는 중립 표기로 고쳤고, main에 이미 올라간 다른 기록 폴더와 git 이력의 식별자는 범위 밖으로 둠, 이 정리를 위해 기록의 덧붙이기 규칙 예외로 앞선 항목을 수정함
+  - source: 사용자 확인 2026-09-29
+- `context` llm-wiki 위키 기본 경로는 `~/.llm-wiki`(config.json `wikiRoot`)이며 기존 `~/.ai-docs/wiki` 사본은 옮기지 않음 — 설치된 5.6.0 이하 플러그인이 아직 옛 경로를 읽으므로 5.7.0으로 올린 뒤 `mv ~/.ai-docs/wiki ~/.llm-wiki`로 옮기거나 init으로 다시 clone함
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/config.json
