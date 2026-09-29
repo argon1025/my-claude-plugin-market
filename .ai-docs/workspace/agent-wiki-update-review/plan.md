@@ -119,3 +119,68 @@ frontmatter `name: update`, `disable-model-invocation: true`, 영문 description
 - **의도적 단순화**: 형식 검사 스크립트가 없어 파일명·절 순서 같은 형식 위반도 검토 에이전트 판정에 기댐 — PR 리뷰에서 형식 위반이 반복되면 그 항목만 검사하는 스크립트를 도입함
 - **실행 전제**: 커밋 3의 스킬 검증은 설치된 플러그인 캐시가 아니라 작업 트리 파일을 따라 수동 실행함 — 실제 위키 원격 대상 실행은 머지 후 사용자가 `/agent-wiki:update --domain {domain} --dry-run`으로 확인
 - **후속 작업**: 회사 위키(Bitbucket) 전환 시 `references/publish.md`만 Bitbucket 절차로 교체
+
+## 추가 계획 2026-09-29 — 실제 작업 레포 diff 기반 추출 검증
+
+### 의도
+
+- **왜**: 커밋 3의 fixture 검증은 합성 enum 한 건만 확인하므로, 실제 레포의 다중 파일 diff·회사 커밋 메시지·코드 밖 원본 집합에서 추출·배정·집합 완결이 규약과 계획대로 동작하는지 드러나지 않음
+- **누가**: 구현을 마친 실행 에이전트가 PR 전에 수행하고, 사용자가 시나리오별 판정표로 결과를 확인함
+- **완료**: 아래 7개 시나리오의 `--dry-run` 산출 문서가 규약 1~7장에 부합하고 시나리오별 예상과 일치하거나, 불일치마다 원인 수정과 재실행 또는 사용자 확인을 거친 한계 기록이 있는 상태
+
+### 확정 결정 (사용자 확인 2026-09-29)
+
+- **검증 추가**: 작업 완료 후 `onestore-cmsapp-api` 같은 실제 작업 레포에서 diff 기반 추출 검증을 진행하여 `doc-contract.md` 부합과 계획의 예상대로 나왔는지 체크하는 단계를 둠
+
+### 배경
+
+- **로컬 레포**: `~/Desktop/Projects/onestorecorp/onestore-cmsapp-{api,agent,integration-admin,client}`가 있고 원격은 사내 Bitbucket, 기본 브랜치는 `develop`
+- **선행 검증 기록**: `.ai-docs/workspace/agent-wiki-doc-contract/feedback.md`에 같은 레포의 b3a65b9·d765b08·dffa94a 반영 결과(경계 판정으로 도메인 루트 승격, AntD 함정 4건 재현, 공유 enum 한 줄 diff는 문서 없음)가 있음
+- **공개 저장소**: my-claude-plugin-market은 PUBLIC이므로 산출 문서·판정표 원문은 스크래치에만 두고 커밋하지 않음
+
+### 시나리오
+
+| # | 레포@머지 | 성격 | 예상 |
+|---|---|---|---|
+| S1 | api@87c08cf44 | enum 원소 삭제(`IarcVer` V9 제거, 미정의 값은 null) | 코드값 표가 생기면 머지 시점 원소 V10 1행과 `` 원본: `IarcVer` 전 1종 ``, 저장된 V9를 읽으면 null이 되는 동작은 `## 함정`에 정상 동작으로 표시 |
+| S2 | api@a50dbaffd | 국가 판매상태 변경 사유 코드 저장·이력 | 도메인 루트 문서, 사유 코드 표 위에 원본 줄(코드 enum이면 `전 N종`, 공통코드면 `— 일부`), 요청 필드 목록 같은 코드 전사 없음 |
+| S3 | api@e81fbcdd4~f9275fd40 | first-parent 머지 6건 연속, 뒤 머지가 판매불가 자동 기록 사유 문구를 고침 | 문서에는 f9275fd40 시점 값만 남고 변경 서사 없음, 사실 번호가 시각 순 |
+| S4 | api@5c49c784a | 레포 내부 enum(`SellerAppsCacheSpec`)에 원소 1개 추가 | 캐시 스펙 코드값 표 없음(규약 1장 레포 안 사실) |
+| S5 | agent@b3a65b9 | 이전 배포 대기·이력 처리중 잔류 수정 | 공유 테이블 적재 방식·배포 대기 동작은 도메인 루트, 레포 내부 함정은 레포 폴더 |
+| S6 | integration-admin@d765b08 | 배포 정보 필터·배포 설정 변경 이력 화면 | AntD 함정 4건이 레포 폴더 `## 함정`에 재현, 화면 배치·문구 전사 없음 |
+| S7 | client@dffa94a | 공유 라이브러리 enum에 코드 한 줄 추가 | 원본 줄 없는 부분 표 없음 — 표가 생기면 전 원소와 `전 N종` |
+
+### 작업
+
+| 파일 | 변경 | 사다리 |
+|---|---|---|
+| 스크래치 `wiki.git`·`ws/`·`results/` | 검증 하네스 — 저장소 파일 아님 | ① 스킬과 수집 스크립트를 그대로 실행하므로 새 코드 없음 |
+| 불일치 원인 파일(`skills/update/SKILL.md`, `references/doc-contract.md`, `scripts/collect_update_merges.py` 중 원인) | 원인별 수정 | 기존 파일 수정 |
+| `.ai-docs/workspace/agent-wiki-update-review/feedback.md` | 검증에서 드러난 `correction`·`constraint` 추가 — 회사 코드값·문구 원문은 적지 않고 레포@sha와 일반화한 사실만 | 기존 파일 수정 |
+
+#### 하네스
+
+- **위키 fixture**: 스크래치에 bare 저장소 `wiki.git`을 만들고 `registry.json`에 도메인 `onestore-cmsapp` 하나와 4개 레포(`remote`는 위 원격 URL, `defaultBranch: develop`, register 7키), `deps.json`은 `{"deps": {}}`, `knowledge/.gitkeep`을 커밋함 — 시나리오마다 이 초기 상태에서 새로 clone해 서로 격리함
+- **워크스페이스**: `--workspace`는 스크래치 `ws/` — 사용자의 `~/.agent-wiki-workspace`를 건드리지 않음, clone이 인증으로 실패하면 중단하고 사용자에게 `! git ls-remote {원격}` 인증을 요청함
+- **범위 지정**: 대상 레포는 `--start {slug}={첫 대상 머지}^1`, 나머지 3개 레포는 `--start {slug}=HEAD`, `--max-merges`는 대상 머지 수(S3는 6, 나머지 1)
+- **실행**: SKILL.md 1~7장을 `--domain onestore-cmsapp --dry-run`으로 따라 실행하되 위키 clone 원격만 fixture로 대체하고, `{work}`의 `work.json`·`facts/`·`assign.json`·`applied/`·`review/`와 `{tmp}/knowledge` 산출 문서를 `results/S{n}/`에 복사함
+
+#### 판정
+
+- **규약 부합**: 산출 문서를 끝까지 직접 읽고 불릿마다 규약 1장 판정(코드 전사·변경 서사·일반 지식 여부), 2장 위치·파일명, 3장 description, 4장 절 이름·순서·원본 줄과 행 수, 5장 문장 형식을 판정함 — 스크립트 판정 없음
+- **계획 예상**: 시나리오 표의 예상과 대조하고, 파이프라인 산출물(`facts`의 `set` 표시, `applied`의 `completed`, `review`의 `removed`·`fixed_sets`)이 해당 단계 계약대로 채워졌는지 확인함
+- **판정표**: `results/report.md`에 `| # | 규약 부합 | 예상 일치 | 불일치 내용 | 원인 분류(추출·배정·반영·검토·규약·스크립트) | 조치 |`를 쓰고 대화로 사용자에게 요약 보고함
+- **불일치 처리**: 원인이 스킬 프롬프트·규약·스크립트 문구면 그 파일을 고쳐 해당 시나리오만 재실행하고, 고칠 수 없는 한계면 사용자 확인 후 `feedback.md` `constraint`로 남김
+
+### 커밋 분해
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 5 | 불일치 원인 수정(원인 파일별 1커밋, 불일치가 없으면 커밋 없음) | 수정한 시나리오를 재실행해 판정표의 해당 행이 규약 부합·예상 일치로 바뀜 |
+| 6 | `feedback.md` 검증 결과 기록 | `results/report.md` 7행 모두 규약 부합·예상 일치, 또는 불일치 행마다 수정 커밋이나 사용자 확인된 `constraint` 항목이 있음, `git diff --cached`에 회사 코드값·문구 원문 없음 |
+
+### 특이 사항
+
+- **순서**: 이 검증은 앞 계획의 커밋 1~4 뒤, PR 생성 전에 수행함
+- **비용**: 시나리오 7개 각각 추출·반영·검토 서브에이전트가 돌아 실행 시간이 앞 커밋 검증보다 김
+- **범위 밖**: 실제 위키 원격(`config.json` `wiki.remote`) 대상 실행과 PR 게시(`publish.md`) 검증 — 머지 후 사용자가 수행
