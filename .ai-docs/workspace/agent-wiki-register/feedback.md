@@ -27,3 +27,7 @@
 - `context` agent-wiki register E2E는 `claude -p --plugin-dir ./agent-wiki`로 헤드리스 실행하고 `--append-system-prompt`로 "AskUserQuestion을 쓸 수 없으면 `알아서`(초안 채택)로 간주" 지시를 넣어 재현하며, `config.json`을 스크래치 경로로 임시 교체했다가 `git checkout`으로 원복함 — 헤드리스에서는 AskUserQuestion 승인 라운드 자체는 검증되지 않음
 - `correction` agent-wiki `scripts/`의 검증 스크립트 이름은 `check_register.py`가 아니라 `verify_register_file.py`이고 등록 레포 일괄 동기화 스크립트 이름은 `sync_repos.py`가 아니라 `sync_register_repositories.py`이며, 앞선 항목과 plan.md 본문의 옛 이름은 이 두 파일을 가리킴
   - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki register 노드 에이전트(`model: sonnet`)가 전수 읽기 대신 추정하는 원인은 여러 소스를 bash `cat`·for 루프로 한 출력에 이어 읽다가 출력 한도를 넘기면 grep으로 대체하는 동작이며, `git ls-files` 목록과 Read 도구로 파일마다 끝까지 열라는 지시와 `읽음 N/M` 자기보고를 넣으면 55파일 픽스처에서 해소되지만 토큰 비용이 약 3.4배(42k에서 145k)로 늘어남
+  - source: 가상 테스트 2026-09-29
+- `constraint` agent-wiki register 간선 프롬프트는 "보고 있다"의 방향 정의가 없으면 대상이 현재 레포를 호출하는 역방향 흔적(CORS 허용 origin, 주석 언급)을 간선으로 오탐하고, 노드 프롬프트는 "서빙 호스트"만으로는 워커 레포의 hosts에 브로커·DB 주소를 넣음
+  - source: 가상 테스트 2026-09-29
