@@ -41,11 +41,12 @@ git ls-remote --symref {origin} HEAD
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {baseRoot}/registry.json {workspace.root} [slug ...]
 git clone {origin} {workspace.root}/{slug}
-git -C {workspace.root}/{slug} checkout {defaultBranch}
-git -C {workspace.root}/{slug} pull --ff-only origin {defaultBranch}
+git -C {workspace.root}/{slug} fetch origin {defaultBranch}
+git -C {workspace.root}/{slug} checkout -f -B {defaultBranch} origin/{defaultBranch}
+git -C {workspace.root}/{slug} clean -fd
 ```
 
-아래 세 줄은 현재 레포용이며 clone은 `{workspace.root}/{slug}`가 없을 때만 실행합니다. 폴더가 이미 있고 `git -C {workspace.root}/{slug} status --porcelain` 출력이 있으면 세 줄 전에 그 출력을 보고하고 중단합니다. sync의 종료 코드 1은 `fail` 줄이 있다는 뜻일 뿐 중단 사유가 아닙니다. `fail` 줄의 등록 레포는 간선 탐색에서 빼고 보고합니다. 현재 레포는 세 줄이 성공하면 `fail`을 무시하고, 하나라도 실패하면 `git -C {workspace.root}/{slug} status --short --branch`를 보고하고 중단합니다.
+워크스페이스는 위키 전용이므로 로컬 변경은 버리고 원격 기본 브랜치 최신으로 맞춥니다. 아래 네 줄은 현재 레포용이며 clone은 `{workspace.root}/{slug}`가 없을 때만 실행합니다. sync의 종료 코드 1은 `fail` 줄이 있다는 뜻일 뿐 중단 사유가 아닙니다. `fail` 줄의 등록 레포는 간선 탐색에서 빼고 보고합니다. 현재 레포는 네 줄이 성공하면 `fail`을 무시하고, 하나라도 실패하면 보고 후 중단합니다.
 
 ## 4. 분석
 

@@ -266,3 +266,10 @@
 |---|---|---|
 | 6 | `agent-wiki/scripts/verify_register_file.py`·`agent-wiki/scripts/sync_register_repositories.py` — `fix(agent-wiki): register 스크립트 예외 출력 보강` | 기존 픽스처 재통과, `deps.{key}: []` 픽스처 종료 코드 1, 로컬 변경 checkout 실패 픽스처에서 `fail` 사유가 `error:` 줄, 두 파일 60·50줄 이내 |
 | 7 | `agent-wiki/skills/register/SKILL.md` — `feat(agent-wiki): register 메타 질문·예외 처리·분석 프롬프트 보강` | `wc -l` 120 이하, `claude plugin validate ./agent-wiki` 통과, `grep -rnE 'references/\|llm-wiki:\|컨텍스트' agent-wiki` 출력 없음, 가상 테스트 에이전트 1개로 신규 등록·재등록·B2·B5b·B6 재실행 시 막힘 0건 |
+
+## Re-plan 2026-09-29 — 워크스페이스 강제 동기화
+
+- **계기**: 사용자 지시 "위키전용 별도 워크스페이스 만들어서 유지하기로 하지 않았나? 굳이 이런케이스까지 고려 안해도 될거같은데 지침만늘고.. 그냥 다 기본 브랜치로 체크아웃 처리 하도록 변경사항 취소하고"
+- **폐기**: 직전 Re-plan의 "현재 레포 폴더에 로컬 변경이 있으면 상태 보고 후 중단" 규칙과 `checkout`·`pull --ff-only` 방식
+- **동작**: `sync_register_repositories.py`와 SKILL.md 3절의 현재 레포 명령은 `fetch origin {defaultBranch}`, `checkout -f -B {defaultBranch} origin/{defaultBranch}`, `clean -fd`로 로컬 변경·로컬 커밋·미추적 파일을 버리고 원격 기본 브랜치 최신으로 맞춤
+- **검증**: 다른 브랜치·미커밋 변경·로컬 전용 커밋·미추적 파일이 있는 clone에서 재실행 시 `ok`와 `## main...origin/main`, 원격 신규 커밋 반영

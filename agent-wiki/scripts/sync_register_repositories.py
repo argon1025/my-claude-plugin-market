@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# registry.json의 등록 레포를 워크스페이스에 clone하고 defaultBranch로 checkout·pull --ff-only한다.
-# 위키 트리와 registry.json은 읽기만 하며, 워크스페이스 clone 밖의 브랜치는 건드리지 않는다.
+# registry.json의 등록 레포를 워크스페이스에 clone하고 로컬 변경을 버린 채 원격 defaultBranch 최신으로 맞춘다.
+# 워크스페이스는 위키 전용이라 보존할 작업이 없으며, 위키 트리와 registry.json은 읽기만 한다.
 import json
 import os
 import subprocess
@@ -21,8 +21,10 @@ def sync(root, slug, node):
     path = root / slug
     if not path.exists():
         git("clone", node["remote"], str(path))
-    git("-C", str(path), "checkout", node["defaultBranch"])
-    git("-C", str(path), "pull", "--ff-only", "origin", node["defaultBranch"])
+    branch = node["defaultBranch"]
+    git("-C", str(path), "fetch", "origin", branch)
+    git("-C", str(path), "checkout", "-f", "-B", branch, f"origin/{branch}")
+    git("-C", str(path), "clean", "-fd")
 
 
 if __name__ == "__main__":

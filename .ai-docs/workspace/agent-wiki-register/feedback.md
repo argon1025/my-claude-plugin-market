@@ -35,3 +35,5 @@
   - evidence: agent-wiki/skills/register/SKILL.md
 - `context` agent-wiki register 재등록에서 `알아서`는 기존에만 있는 노드 값(hosts·responsibilities·defaultBranch)은 유지하지만, 간선 에이전트가 `없음`으로 판정한 기존 간선은 자기 블록 통째 교체 계약에 따라 제거함 — 사용자 선택 "질문 생략, 기존 값 유지"는 노드 값에 대한 결정임
   - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 워크스페이스(`workspace.root`) clone은 위키 전용이라 로컬 변경을 감지해 중단하지 않고, `sync_register_repositories.py`와 register 3절이 `fetch`·`checkout -f -B {defaultBranch} origin/{defaultBranch}`·`clean -fd`로 로컬 변경·로컬 커밋·미추적 파일을 버린 채 원격 기본 브랜치 최신으로 맞추므로, 앞선 `status --porcelain` 중단 항목은 더 이상 참이 아님
+  - source: 사용자 확인 2026-09-29
