@@ -14,13 +14,21 @@ disable-model-invocation: true
 git clone {remote} {baseRoot}
 ```
 
-이미 있으면 최신화합니다.
+이미 있으면 `origin`이 `remote`와 같은지 확인하고, 다르면 중단 후 보고합니다. 같으면 상태를 확인합니다.
 
 ```
-git -C {baseRoot} pull --ff-only origin {baseBranch}
+git -C {baseRoot} fetch origin {baseBranch}
+git -C {baseRoot} status --short --branch
 ```
 
-`origin`이 `remote`와 다르거나 현재 브랜치가 `baseBranch`가 아니면 브랜치 전환·stash 없이 중단 후 보고합니다.
+브랜치가 `baseBranch`가 아니거나 미커밋 변경·로컬 커밋(`ahead`)이 있으면 그 출력을 보고하고 AskUserQuestion(`변경 버리고 진행`·`중단`)으로 묻습니다. 깨끗하거나 진행을 고르면 최신화합니다.
+
+```
+git -C {baseRoot} checkout -f -B {baseBranch} origin/{baseBranch}
+git -C {baseRoot} clean -fd
+```
+
+원격에 `baseBranch`가 없어 fetch가 실패하면(빈 저장소) 최신화 없이 2절로 넘어갑니다.
 
 ## 2. 스켈레톤 생성
 
@@ -38,7 +46,7 @@ git -C {baseRoot} push -u origin {baseBranch}
 
 ## 3. 실패 처리
 
-인증·네트워크 오류면 사용자가 `! git clone {remote} {baseRoot}`를 직접 실행하도록 안내합니다. pull·push 실패는 해소하지 않고 원인만 보고합니다.
+인증·네트워크 오류면 사용자가 `! git clone {remote} {baseRoot}`를 직접 실행하도록 안내합니다. fetch·push 실패는 해소하지 않고 원인만 보고합니다.
 
 ## 4. 보고
 

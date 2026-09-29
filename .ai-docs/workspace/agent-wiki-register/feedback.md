@@ -39,3 +39,7 @@
   - source: 사용자 확인 2026-09-29
 - `correction` agent-wiki register는 위키 트리(`baseRoot`)가 다른 브랜치이거나 미커밋 변경·로컬 커밋이 있으면 중단하지 않고 보고 후 `변경 버리고 진행`을 확인받아 `checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd`로 정리하며, 워크스페이스 clone도 `dirty` 보고 후 확인받아 `--force`로 정리함 — 사용자 문장 "register 하려면 변경사항을 반영하고 왔어야함", 앞선 "위키 트리 브랜치를 전환·stash하지 않음"과 "워크스페이스는 묻지 않고 강제 동기화" 항목은 더 이상 참이 아니며, 정리 후에도 llm-wiki `wiki-update/` 같은 다른 로컬 브랜치와 `.local/`은 남음
   - source: 사용자 확인 2026-09-29
+- `context` agent-wiki는 init·register 모두 "모든 작업은 다 끝나고 와야함 아니면 변경사항 폐기" 정책을 따르므로, 위키 트리(`baseRoot`)와 워크스페이스 clone의 다른 브랜치·미커밋 변경·로컬 커밋은 보존 대상이 아니라 보고 후 확인받아 버리는 대상임 — 새 스킬을 추가할 때도 같은 확인·정리 절차를 씀
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki init이 빈 원격 저장소를 clone한 경우 `git fetch origin {baseBranch}`가 `fatal: couldn't find remote ref`로 종료 코드 128을 내므로, 이 실패는 에러가 아니라 스켈레톤 생성으로 넘어가는 신호로 다룸
+  - evidence: agent-wiki/skills/init/SKILL.md

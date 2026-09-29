@@ -281,3 +281,9 @@
 - **위키 트리**: 1절은 `fetch`·`status --short --branch`로 다른 브랜치·미커밋 변경·`ahead`를 보고하고 AskUserQuestion(`변경 버리고 진행`·`중단`)으로 물은 뒤 `checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd`로 정리함 — 다른 로컬 브랜치와 `.gitignore` 대상 `.local/`은 남음
 - **워크스페이스**: `sync_register_repositories.py`가 `--current {slug} {origin} {defaultBranch}`로 현재 레포까지 처리하고, 기존 clone의 다른 브랜치·미커밋 변경·로컬 커밋은 `dirty` 줄로 보고만 하며 `--force`일 때 버리고 맞춤 — `--current`가 있으면 나열한 slug만, 없으면 slug 생략 시 전체, registry에 없는 slug는 `fail`
 - **분량**: 스크립트는 70줄 이내로 완화
+
+## Re-plan 2026-09-29 — init 변경사항 정책 통일
+
+- **계기**: 사용자 지시 "init도 일관된 정책으로 통일 이번에 함께 진행 모든 작업은 다 끝나고 와야함 아니면 변경사항 폐기하도록"
+- **범위 추가**: `agent-wiki/skills/init/SKILL.md` 1절을 register 1절과 같은 `fetch`·`status --short --branch` 확인, AskUserQuestion(`변경 버리고 진행`·`중단`), `checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd` 정리로 바꿈
+- **유지**: `origin`이 `remote`와 다르면 중단, 원격에 `baseBranch`가 없으면(빈 저장소) 최신화 없이 스켈레톤 생성으로 넘어감
