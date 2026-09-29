@@ -1,0 +1,28 @@
+# agent-wiki-add 작업 기록
+
+- `context` agent-wiki add 스킬은 사용자가 넘긴 자유 양식 자료에서 사실을 추출해 목록으로 보이고 위키에 반영하며, 사용자 문장은 "내가 넘긴 사실(문서 등 자유양식) 에 대해서 사실을 추출하여 리스트업 하고 그것을 위키에 반영했으면 함 사실 추출 까지가 update와 다른점이고 이후 문서반영은 구조 동일해도 무방할 것 같음"임 — 배정·반영·검토·지도 갱신·커밋은 `agent-wiki/references/apply.md`로 update와 공유함
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki update는 `registry.json`·`deps.json`을 고치지 않는다는 이전 결정(`.ai-docs/workspace/agent-wiki-update-review/plan.md` 확정 결정의 그래프 불변)은 폐기되었고, update·add 모두 diff·자료로 바뀐 책임·간선·호스트를 갱신할 의무를 가짐 — 사용자 문장 "update, add 전부 registry.json·deps.json 도 최신화를 해야하는 의무를 가져야함 항상 register 를 할 수 없기 때문 물론 책임, 의존성 등 diff 으로 인해 변경되는 사항만 대상임"
+  - source: 사용자 확인 2026-09-29
+- `context` 레포 지도 값 규칙(stack·summary·responsibilities·hosts·간선 정의)은 `agent-wiki/references/doc-contract.md` 9장 한 곳에 두고 register·update·add가 모두 인용함 — 사용자 문장 "update, add 전부 그래프 갱신, register 갱신 포함임 서로 다를 이유는 없어보임"이며, update·add의 편집 범위는 `responsibilities`·`hosts`·자기 간선이고 `stack`·`summary`·`remote`·`defaultBranch`·`status`는 register 소관임
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki add는 사실 목록 제시·질문 1회 뒤 `wiki-add/{YYYYMMDD-HHMM}` 브랜치 PR로 게시하고 PR 머지가 초안 승인을 대신하며, 모델 호출을 허용하고 세션 규칙 문구에 `/agent-wiki:add` 안내를 덧붙임
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki add의 커밋 근거는 형식을 강제하지 않고 원문을 역추적할 수 있는 값(파일 경로·sha, 페이지 URL, PR 링크·F번호, 자료 제목, `사용자 확인 YYYY-MM-DD`)을 예시로만 둠 — 사용자 문장 "그냥 너무 빡쎄게 제한하지말고 역추적할 수 있는 값 정도로만 가이드 하면될듯"
+  - source: 사용자 확인 2026-09-29
+- `context` 이번 작업은 update 지도 갱신을 실제 onestore-cmsapp 머지와 기존 S1·S3로 재검증하고 register·add도 실제 레포·실제 작업 기록으로 검증하며, 산출물은 공개 저장소에 커밋하지 않고 스크래치에만 둠
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki 지도 값 규칙은 현재 `agent-wiki/skills/register/SKILL.md` 4절 에이전트 프롬프트 안에만 있고, 세션 레포 지도는 `responsibilities`(없으면 `summary`)와 `deps`의 그룹 키·`to`만 읽음
+  - evidence: agent-wiki/skills/register/SKILL.md, agent-wiki/scripts/generate_repository_map.py
+- `context` agent-wiki 쓰기 스킬은 자료의 값이 현재 코드와 달라도 그 코드를 바꾼 커밋·작업 기록이 변경 의도를 밝히면 충돌로 남기지 않고 코드 값으로 갱신하며, 의도를 찾지 못하거나 코드가 잘못 작성된 경우만 미해결 충돌로 기록 없이 넘김 — 사용자 문장 "시간이 지날수록 사실은 변할 수 있음 … 이때는 충돌로 기록할것이 아니고 충돌이면 업데이트 해야하는것임 plan이나 커밋 메시지로는 해당 내용이나 뭔가 코드가 잘못 작성된 경우 (의도 파악이 안되는 케이스)만 충돌 미해결로 패스해야할 듯함"이며, update는 머지를 시간 순으로 반영하므로 순서가 뒤집히는 경우가 없음
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki update·add의 추출 에이전트는 현재 지도(책임·호스트·간선)와 등록 레포 목록 없이 diff·자료만 보면 간선 대상을 도메인 없이 오기하고, 기존 책임과 비교하지 못해 새 기능 단위 diff에서 책임 후보를 내지 않음 — 추출 프롬프트에 `{지도}`를 넘겨 해소함 (onestore-cmsapp-api@150727c·9d038d5 검증)
+  - evidence: agent-wiki/skills/update/SKILL.md, agent-wiki/skills/add/SKILL.md
+- `constraint` agent-wiki 검토의 위치 삭제는 복합 사실의 불릿 일부에서도 일어나며 실제 레포 update 시나리오 4개 중 3개에서 발생함 — 재배정은 사실 행 전체가 아니라 삭제된 불릿 문장 단위로 해야 앞 문서에 남은 주장과 중복되지 않음 (onestore-cmsapp-api@9d038d5·87c08cf·0fce4ef)
+  - evidence: agent-wiki/references/apply.md
+- `why` agent-wiki add 4절에서 사용자가 고른 답은 `{work}/input/answers.md` 원문과 `사용자 확인` 근거로 남김 — 검토의 자료 대조는 input 원문만 보므로, 답이 원문에 없으면 자료 속 다른 값을 근거로 답을 되돌림(A2 1회차)
+- `constraint` 등록 레포 작업 기록(`.devcenter/workspace/progress/*/feedback.md`)은 같은 기록의 뒤 라운드나 후속 머지로 옛 값이 된 사실을 담는 경우가 흔함 — 실제 기록 2건에서 추출한 18건 중 3건이 check 시점 코드와 달랐고, 규약 7장 시간 순 판정으로 두 건은 코드 값으로 갱신되고 한 건은 뒤 라운드 기록을 근거로 지워짐 (onestore-cmsapp-api@d85a7cf)
+  - evidence: agent-wiki/references/doc-contract.md
+- `constraint` agent-wiki register 노드 에이전트는 소스 2천 개 이상 레포에서 진입점·설정·대표 컨트롤러 16개만 열고 책임을 쓰며 나머지는 미열람 목록으로 남김 — 책임 문장의 누락은 이후 update·add의 책임 추가 후보로 보완됨 (onestore-cmsapp-api R1)
+- `constraint` agent-wiki 검토 에이전트의 판정 편차는 이번에도 있음 — U2 재배정 문서의 두 번째 검토는 도메인 루트와 겹치는 불릿을 6장 겹침이 아니라 `위치` 사유로 지워 `위치 재배정` 행을 만들었고, 한 추출 에이전트는 `sed '/^## 9\./,$p'` 인용을 셸 따옴표 문제로 읽지 못함
+- `context` agent-wiki add 이관 실제 레포 검증(onestore-cmsapp-api·agent·client·integration-admin fixture 위키, 시나리오 U1·U2·U3(S1·S3)·R1·A1~A7)은 1회차 불일치 6건을 스킬·규약 수정 4건과 하네스 행 교체로 해소한 뒤 전 시나리오 규약 부합·예상 일치로 판정함 — update의 머지 3건 이하 메인 직접 추출 경로는 이번에도 서브에이전트로 대체해 검증하지 않았고, 실제 위키 원격 대상 실행·PR 게시는 범위 밖임

@@ -1,8 +1,10 @@
 # 위키 PR 절차
 
-update 스킬이 위키 원격 호스트와 주고받는 절차만 담습니다. 위키 원격 호스트를 바꾸면 이 파일만 고칩니다. 현재 절차는 GitHub `gh` CLI 기준이며, 명령은 모두 위키 clone `{tmp}`에서 실행합니다.
+update·add 스킬이 위키 원격 호스트와 주고받는 절차만 담습니다. 위키 원격 호스트를 바꾸면 이 파일만 고칩니다. 현재 절차는 GitHub `gh` CLI 기준이며, 명령은 모두 위키 clone `{tmp}`에서 실행합니다.
 
 ## 1. 열린 update PR
+
+update만 확인합니다.
 
 ```
 gh pr list --state open --json url,headRefName
@@ -12,9 +14,11 @@ gh pr list --state open --json url,headRefName
 
 ## 2. 게시
 
+`{branch}`는 스킬이 만든 `wiki-update/{YYYYMMDD-HHMM}` 또는 `wiki-add/{YYYYMMDD-HHMM}`이고, 제목은 update `update({domain}): {YYYY-MM-DD} 머지 {N}건 · 문서 {M}장`, add `add({domain}): {자료 대표 이름} · 문서 {M}장`입니다.
+
 ```
 git -C {tmp} push -u origin {branch}
-gh pr create --base {baseBranch} --head {branch} --title "update({domain}): {YYYY-MM-DD} 머지 {N}건 · 문서 {M}장" --body-file {work}/pr.md
+gh pr create --base {baseBranch} --head {branch} --title "{제목}" --body-file {work}/pr.md
 ```
 
 본문이 60,000바이트를 넘으면 `추출 사실` 절을 떼어 `{work}/facts.md`에 쓰고 본문에 "사실 원장은 첫 코멘트" 한 줄을 둔 뒤, PR 생성 후 뗀 절을 코멘트로 올립니다.
@@ -25,6 +29,16 @@ gh pr comment {url} --body-file {work}/facts.md
 
 실패하면 단계·브랜치 이름·오류 한 줄을 보고합니다.
 
-## 3. 인증 실패
+## 3. update PR 읽기
+
+add가 update PR의 `건너뜀`·`위치 재배정` 행을 읽을 때 씁니다.
+
+```
+gh pr view {url} --json body,comments
+```
+
+본문에 "사실 원장은 첫 코멘트"가 있으면 첫 코멘트의 `추출 사실` 표를 읽고, 없으면 본문의 표를 읽습니다.
+
+## 4. 인증 실패
 
 `gh` 인증 오류면 사용자가 `! gh auth login`을 마친 뒤 스킬을 다시 실행하도록 안내합니다.
