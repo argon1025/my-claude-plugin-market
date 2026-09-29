@@ -6,7 +6,8 @@
 | --- | --- | --- |
 | `/agent-wiki:init` | 명시 호출만 | 빈 위키 저장소면 골격 생성, 로컬 위키를 clone 또는 최신화 |
 | `/agent-wiki:register` | 명시 호출만 | 현재 레포를 서브에이전트로 분석해 노드·의존 간선·레포 폴더를 위키에 기록 |
-| `/agent-wiki:update` | 명시 호출만 | 지정 도메인 레포의 미처리 머지를 시간 순 묶음으로 문서에 반영해 위키 PR로 올림, 커서 없는 레포는 시작 지점을 물음 |
+| `/agent-wiki:update` | 명시 호출만 | 지정 도메인 레포의 미처리 머지를 시간 순 묶음으로 문서와 레포 지도(책임·간선·호스트)에 반영해 위키 PR로 올림, 커서 없는 레포는 시작 지점을 물음 |
+| `/agent-wiki:add` | 명시·모델 호출 | 건넨 자료·대화 결정·update PR의 건너뜀·위치 재배정 행에서 사실을 추출해 목록으로 보이고, 기존 값과 다른 사실만 물은 뒤 문서와 레포 지도에 반영해 위키 PR로 올림 |
 
 ## 설치
 
@@ -15,7 +16,7 @@
 /plugin install agent-wiki@my-claude-plugin-market
 ```
 
-설치 후 `/agent-wiki:init`을 한 번 실행합니다. 요구 사항은 `git`, `python3`, `gh`(update의 PR 확인·생성, `gh auth login` 인증)이며, `wiki.remote`에 clone·push 권한이 필요합니다.
+설치 후 `/agent-wiki:init`을 한 번 실행합니다. 요구 사항은 `git`, `python3`, `gh`(update·add의 PR 확인·생성, `gh auth login` 인증)이며, `wiki.remote`에 clone·push 권한이 필요합니다.
 
 ## 설정
 
@@ -33,7 +34,7 @@
 | 대상 | 정책 |
 | --- | --- |
 | 위키 사본(`wiki.baseRoot`) | 읽기 전용이며 세션 시작(`startup`·`resume`·`clear`)과 `/agent-wiki:init` 때 원격 `baseBranch`로 초기화, 위키 기록은 스킬이 임시 clone에서 커밋·push |
-| 워크스페이스(`workspace.root`) | 사용 자유, register가 분석 대상 레포를 원격 기본 브랜치로 강제 정리하므로 변경 사항은 사라질 수 있음, update는 clone·fetch만 하고 작업 트리는 건드리지 않음 |
+| 워크스페이스(`workspace.root`) | 사용 자유, register가 분석 대상 레포를 원격 기본 브랜치로 강제 정리하므로 변경 사항은 사라질 수 있음, update·add는 clone·fetch만 하고 작업 트리는 건드리지 않음 |
 
 ## 세션 주입
 
