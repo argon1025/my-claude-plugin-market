@@ -1,0 +1,20 @@
+# agent-wiki-register 작업 기록
+
+- `context` agent-wiki register는 "프로젝트 분석해서 deps, register, 위키 내 폴더 생성 까지만 담당 하위호완은 고려하지 않음"이며, 도메인 이동과 llm-wiki `graph.py check`·SessionStart 훅 호환은 범위 밖임
+  - source: 사용자 확인 2026-09-29
+- `context` 추가 지시 "스크립트를 활용한 레포 코드 추출등은 금지 다양한 기술스택에 대응 못할수도 있음 이때 못찾아내면 전체 다 못찾아버리는 상태가 발생함으로 서브에이전트를 통한 탐색으로 탐색 진행할것" — register의 레포 분석은 노드 에이전트 1개와 등록 레포마다 간선 에이전트 1개를 `model: sonnet`으로 병렬 실행함
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki `deps.json` 간선은 `kind`·`contracts`를 없애고 `to`·`desc` 2키만 둠 — 사용자 문장 "애가 너를 보고있어 정도만 판단", "어떤 작업을 할 때 이 레포를 참고해야겠네 or 먼저 이 레포에 개발이 필요하다 판단이 가능하기만 하면 됨"이며, 대가는 계약 식별자 단위의 파급 조회가 사라진다는 점임
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki register의 간선 탐색은 registry 대조가 아니라 등록 레포를 `workspace.root`(기본 `~/.llm-wiki/.local/repos/{slug}`)에 clone해 간선 에이전트가 두 레포 코드를 함께 읽는 방식임 — registry 노드에는 큐·테이블 이름이 없어 메시지·데이터 의존을 대조로 특정할 수 없기 때문임
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki register는 포크 판별 없이 현재 레포의 `origin` URL을 그대로 `remote`로 기록하고 모든 레포를 워크스페이스에 clone해 기본 브랜치에서 pull만 함 — 사용자 문장 "예외 케이스 만들지말고", 포크·ssh 체크아웃에서 실행하면 그 URL이 기록되는 한계는 초안 승인 표에서 사용자가 고침
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki `scripts/`에는 `check_register.py`(현재 노드·자기 간선 블록 검증)와 `sync_repos.py`(등록 레포 일괄 clone·`defaultBranch` checkout·`pull --ff-only`) 두 파일을 두며, registry.json·deps.json 수정은 에이전트가 직접 하고 검증만 스크립트가 맡음
+  - source: 사용자 확인 2026-09-29
+- `constraint` 현재 `~/.llm-wiki`의 기존 노드 remote는 `github.com/argon1025/...`처럼 scheme이 없어 clone URL로 쓸 수 없고 간선 1건은 구형 `kind`·`contracts` 형식이며, 이 데이터 전환은 사용자 결정("나중에 별도 전환 예정")으로 별도 작업이므로 `check_register.py`는 현재 레포 노드·블록만 검사함
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki는 llm-wiki와 같은 `~/.llm-wiki` 위키 트리를 공유하므로 register는 위키 트리의 브랜치를 전환하거나 stash하지 않고, 브랜치 전환(`checkout {defaultBranch}`)은 워크스페이스 clone에서만 함
+  - evidence: .ai-docs/workspace/share-context-init/feedback.md
+- `context` agent-wiki register 간선은 현재 레포가 `from`인 자기 블록만 기록하고 재실행 시 그 블록을 통째로 교체하므로, 다른 레포가 현재 레포를 보는 간선은 그 레포를 등록할 때만 생김 — 간선 에이전트 수가 등록 레포 수에 비례해 늘어나는 비용은 인자로 범위를 지정해 줄이고, 부담이 확인되면 도메인 단위로 묶는 방식을 도입함
+  - source: 사용자 확인 2026-09-29
