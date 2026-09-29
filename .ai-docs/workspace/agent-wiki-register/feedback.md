@@ -20,3 +20,8 @@
   - source: 사용자 확인 2026-09-29
 - `correction` agent-wiki 워크스페이스 기본 경로는 위키 트리 안의 `~/.llm-wiki/.local/repos`가 아니라 위키와 독립된 `~/.llm-wiki-workspace`(`config.json` `workspace.root`)이며, 위키 트리 `~/.llm-wiki`에는 등록 레포 clone을 두지 않음 — 사용자 문장 "그냥 위키에 한번에 등록하지 말고 위키 경로도 바꾸자 ~/.llm-wiki ~/.llm-wiki-workspac 로 독립"
   - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki register의 노드 에이전트(`model: sonnet`)는 SKILL.md 프롬프트가 "소스를 전수로 읽어라"라고 지시해도 E2E 두 레포 모두 빌드·설정 파일과 일부 계층만 직접 읽고 나머지는 파일명·grep 결과로 추정했으므로, `responsibilities`에는 누락 항목이 있을 수 있고 이를 거르는 곳은 초안 승인 표뿐임
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `constraint` agent-wiki register는 코드 변화가 없어도 재실행할 때마다 에이전트가 `desc`·`responsibilities` 문장을 새로 쓰므로 위키에 `chore(register)` 커밋이 매번 새로 생기며, E2E 재실행에서 간선 항목 수는 1건으로 유지되고 문장만 바뀜
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `context` agent-wiki register E2E는 `claude -p --plugin-dir ./agent-wiki`로 헤드리스 실행하고 `--append-system-prompt`로 "AskUserQuestion을 쓸 수 없으면 `알아서`(초안 채택)로 간주" 지시를 넣어 재현하며, `config.json`을 스크래치 경로로 임시 교체했다가 `git checkout`으로 원복함 — 헤드리스에서는 AskUserQuestion 승인 라운드 자체는 검증되지 않음
