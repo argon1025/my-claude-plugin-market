@@ -1,0 +1,45 @@
+# agent-wiki-register 작업 기록
+
+- `context` agent-wiki register는 "프로젝트 분석해서 deps, register, 위키 내 폴더 생성 까지만 담당 하위호완은 고려하지 않음"이며, 도메인 이동과 llm-wiki `graph.py check`·SessionStart 훅 호환은 범위 밖임
+  - source: 사용자 확인 2026-09-29
+- `context` 추가 지시 "스크립트를 활용한 레포 코드 추출등은 금지 다양한 기술스택에 대응 못할수도 있음 이때 못찾아내면 전체 다 못찾아버리는 상태가 발생함으로 서브에이전트를 통한 탐색으로 탐색 진행할것" — register의 레포 분석은 노드 에이전트 1개와 등록 레포마다 간선 에이전트 1개를 `model: sonnet`으로 병렬 실행함
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki `deps.json` 간선은 `kind`·`contracts`를 없애고 `to`·`desc` 2키만 둠 — 사용자 문장 "애가 너를 보고있어 정도만 판단", "어떤 작업을 할 때 이 레포를 참고해야겠네 or 먼저 이 레포에 개발이 필요하다 판단이 가능하기만 하면 됨"이며, 대가는 계약 식별자 단위의 파급 조회가 사라진다는 점임
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki register의 간선 탐색은 registry 대조가 아니라 등록 레포를 `workspace.root`(기본 `~/.llm-wiki/.local/repos/{slug}`)에 clone해 간선 에이전트가 두 레포 코드를 함께 읽는 방식임 — registry 노드에는 큐·테이블 이름이 없어 메시지·데이터 의존을 대조로 특정할 수 없기 때문임
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki register는 포크 판별 없이 현재 레포의 `origin` URL을 그대로 `remote`로 기록하고 모든 레포를 워크스페이스에 clone해 기본 브랜치에서 pull만 함 — 사용자 문장 "예외 케이스 만들지말고", 포크·ssh 체크아웃에서 실행하면 그 URL이 기록되는 한계는 초안 승인 표에서 사용자가 고침
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki `scripts/`에는 `check_register.py`(현재 노드·자기 간선 블록 검증)와 `sync_repos.py`(등록 레포 일괄 clone·`defaultBranch` checkout·`pull --ff-only`) 두 파일을 두며, registry.json·deps.json 수정은 에이전트가 직접 하고 검증만 스크립트가 맡음
+  - source: 사용자 확인 2026-09-29
+- `constraint` 현재 `~/.llm-wiki`의 기존 노드 remote는 `github.com/argon1025/...`처럼 scheme이 없어 clone URL로 쓸 수 없고 간선 1건은 구형 `kind`·`contracts` 형식이며, 이 데이터 전환은 사용자 결정("나중에 별도 전환 예정")으로 별도 작업이므로 `check_register.py`는 현재 레포 노드·블록만 검사함
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki는 llm-wiki와 같은 `~/.llm-wiki` 위키 트리를 공유하므로 register는 위키 트리의 브랜치를 전환하거나 stash하지 않고, 브랜치 전환(`checkout {defaultBranch}`)은 워크스페이스 clone에서만 함
+  - evidence: .ai-docs/workspace/share-context-init/feedback.md
+- `context` agent-wiki register 간선은 현재 레포가 `from`인 자기 블록만 기록하고 재실행 시 그 블록을 통째로 교체하므로, 다른 레포가 현재 레포를 보는 간선은 그 레포를 등록할 때만 생김 — 간선 에이전트 수가 등록 레포 수에 비례해 늘어나는 비용은 인자로 범위를 지정해 줄이고, 부담이 확인되면 도메인 단위로 묶는 방식을 도입함
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 워크스페이스 기본 경로는 위키 트리 안의 `~/.llm-wiki/.local/repos`가 아니라 위키와 독립된 `~/.llm-wiki-workspace`(`config.json` `workspace.root`)이며, 위키 트리 `~/.llm-wiki`에는 등록 레포 clone을 두지 않음 — 사용자 문장 "그냥 위키에 한번에 등록하지 말고 위키 경로도 바꾸자 ~/.llm-wiki ~/.llm-wiki-workspac 로 독립"
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki register의 노드 에이전트(`model: sonnet`)는 SKILL.md 프롬프트가 "소스를 전수로 읽어라"라고 지시해도 E2E 두 레포 모두 빌드·설정 파일과 일부 계층만 직접 읽고 나머지는 파일명·grep 결과로 추정했으므로, `responsibilities`에는 누락 항목이 있을 수 있고 이를 거르는 곳은 초안 승인 표뿐임
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `constraint` agent-wiki register는 코드 변화가 없어도 재실행할 때마다 에이전트가 `desc`·`responsibilities` 문장을 새로 쓰므로 위키에 `chore(register)` 커밋이 매번 새로 생기며, E2E 재실행에서 간선 항목 수는 1건으로 유지되고 문장만 바뀜
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `context` agent-wiki register E2E는 `claude -p --plugin-dir ./agent-wiki`로 헤드리스 실행하고 `--append-system-prompt`로 "AskUserQuestion을 쓸 수 없으면 `알아서`(초안 채택)로 간주" 지시를 넣어 재현하며, `config.json`을 스크래치 경로로 임시 교체했다가 `git checkout`으로 원복함 — 헤드리스에서는 AskUserQuestion 승인 라운드 자체는 검증되지 않음
+- `correction` agent-wiki `scripts/`의 검증 스크립트 이름은 `check_register.py`가 아니라 `verify_register_file.py`이고 등록 레포 일괄 동기화 스크립트 이름은 `sync_repos.py`가 아니라 `sync_register_repositories.py`이며, 앞선 항목과 plan.md 본문의 옛 이름은 이 두 파일을 가리킴
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki register 노드 에이전트(`model: sonnet`)가 전수 읽기 대신 추정하는 원인은 여러 소스를 bash `cat`·for 루프로 한 출력에 이어 읽다가 출력 한도를 넘기면 grep으로 대체하는 동작이며, `git ls-files` 목록과 Read 도구로 파일마다 끝까지 열라는 지시와 `읽음 N/M` 자기보고를 넣으면 55파일 픽스처에서 해소되지만 토큰 비용이 약 3.4배(42k에서 145k)로 늘어남
+  - source: 가상 테스트 2026-09-29
+- `constraint` agent-wiki register 간선 프롬프트는 "보고 있다"의 방향 정의가 없으면 대상이 현재 레포를 호출하는 역방향 흔적(CORS 허용 origin, 주석 언급)을 간선으로 오탐하고, 노드 프롬프트는 "서빙 호스트"만으로는 워커 레포의 hosts에 브로커·DB 주소를 넣음
+  - source: 가상 테스트 2026-09-29
+- `constraint` agent-wiki register의 워크스페이스 clone에 로컬 변경이 있어도 원격과 겹치지 않으면 `checkout`·`pull --ff-only`가 모두 성공하므로, 수정본 분석을 막으려면 git 실패가 아니라 `status --porcelain` 출력 유무로 중단을 판정해야 함
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `context` agent-wiki register 재등록에서 `알아서`는 기존에만 있는 노드 값(hosts·responsibilities·defaultBranch)은 유지하지만, 간선 에이전트가 `없음`으로 판정한 기존 간선은 자기 블록 통째 교체 계약에 따라 제거함 — 사용자 선택 "질문 생략, 기존 값 유지"는 노드 값에 대한 결정임
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 워크스페이스(`workspace.root`) clone은 위키 전용이라 로컬 변경을 감지해 중단하지 않고, `sync_register_repositories.py`와 register 3절이 `fetch`·`checkout -f -B {defaultBranch} origin/{defaultBranch}`·`clean -fd`로 로컬 변경·로컬 커밋·미추적 파일을 버린 채 원격 기본 브랜치 최신으로 맞추므로, 앞선 `status --porcelain` 중단 항목은 더 이상 참이 아님
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki register는 위키 트리(`baseRoot`)가 다른 브랜치이거나 미커밋 변경·로컬 커밋이 있으면 중단하지 않고 보고 후 `변경 버리고 진행`을 확인받아 `checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd`로 정리하며, 워크스페이스 clone도 `dirty` 보고 후 확인받아 `--force`로 정리함 — 사용자 문장 "register 하려면 변경사항을 반영하고 왔어야함", 앞선 "위키 트리 브랜치를 전환·stash하지 않음"과 "워크스페이스는 묻지 않고 강제 동기화" 항목은 더 이상 참이 아니며, 정리 후에도 llm-wiki `wiki-update/` 같은 다른 로컬 브랜치와 `.local/`은 남음
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki는 init·register 모두 "모든 작업은 다 끝나고 와야함 아니면 변경사항 폐기" 정책을 따르므로, 위키 트리(`baseRoot`)와 워크스페이스 clone의 다른 브랜치·미커밋 변경·로컬 커밋은 보존 대상이 아니라 보고 후 확인받아 버리는 대상임 — 새 스킬을 추가할 때도 같은 확인·정리 절차를 씀
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki init이 빈 원격 저장소를 clone한 경우 `git fetch origin {baseBranch}`가 `fatal: couldn't find remote ref`로 종료 코드 128을 내므로, 이 실패는 에러가 아니라 스켈레톤 생성으로 넘어가는 신호로 다룸
+  - evidence: agent-wiki/skills/init/SKILL.md
