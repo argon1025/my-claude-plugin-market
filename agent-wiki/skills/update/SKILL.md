@@ -39,14 +39,14 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --wo
 
 ## 3. 추출
 
-레포별 `batches`마다 Agent 1회를 `model: sonnet`으로 한 메시지에 병렬 실행합니다. 묶음이 1개이고 머지 3건 이하면 메인이 같은 기준으로 직접 처리하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `shas`의 `commits[].diff_path`입니다.
+레포별 `batches`마다 Agent 1회를 `model: sonnet`으로 한 메시지에 병렬 실행합니다. 묶음이 1개이고 머지 3건 이하면 메인이 같은 기준으로 직접 처리하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `shas`의 `commits[].diff_path`이고, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포의 `{domain}/{slug}` 목록을 JSON 그대로 넣은 것입니다.
 
 ```
 머지 묶음 1개에서 위키에 남길 사실을 추출하라.
 입력: 아래 diff 파일을 순서대로 Read — {diff 목록}. 머리말에 커밋 메시지·변경 파일 목록·절단 여부가 있다.
 작업 기록: 커밋 메시지와 diff에 포함된 작업 기록(plan·feedback 같은 문서)은 코드가 드러내지 못하는 이유·버린 대안·도메인 규칙의 원천이다. 그 추가 줄을 코드 diff와 함께 후보로 보되, 미확정 계획·작업 현황은 1장대로 담지 않는다.
 기준: `sed -n '/^## 1\./,/^## 2\./p' {doc_contract_path}` — 후보 문장마다 적용한다.
-graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실이 아니라 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`.
+graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실이 아니라 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)를 여는 diff는 현재 responsibilities가 덮지 않으면 responsibilities add 후보다. 간선 to는 등록 레포의 `{domain}/{slug}`로 쓰고, 등록되지 않은 레포는 이름 그대로 둔다.
 금지: diff 밖 파일 열기, 사전 지식으로 채우기.
 병합: 묶음 안 같은 주장은 하나로 합치고 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남긴다.
 set: 사실이 닫힌 집합(enum·공통코드·상태·허용 채널처럼 원소가 정의된 값) 원소의 뜻을 말하면 정의 식별자(심볼 또는 공통코드 그룹 이름), 아니면 빈 문자열로 둔다. 규칙 문장이 조건·결과로 코드를 인용할 뿐이면 빈 문자열이다.
