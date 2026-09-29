@@ -45,3 +45,7 @@
   - evidence: agent-wiki/skills/register/SKILL.md
 - `context` agent-wiki 세션 주입과 읽기 전용 전환은 브랜치 `feat/agent-wiki-session-start`에서 진행하며, 계획은 `.ai-docs/workspace/agent-wiki-session-start/plan.md`, 구현은 새 세션에서 `/plan-workflow:execute`로 시작함
   - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 동기화 스크립트 정리는 이번 계획 범위이며, `sync_register_repositories.py`는 "정책이 단순해졌음으로 무조건 베이스 브랜치로 맞추면 될듯함"에 따라 상태 조회·판정 분기 없이 clone·origin 맞춤·강제 정리만 수행함
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki `sync_wiki.py`·`sync_register_repositories.py`는 origin이 기록된 remote와 달라도 멈추지 않고 `git remote set-url origin {remote}`로 맞춤 — 두 폴더는 읽기 전용 사본이라 보호할 로컬 상태가 없고, config·registry의 remote가 바뀐 경우(구형 remote 전환 포함)도 같은 경로로 흡수되며, 대가는 `baseRoot`를 다른 용도의 기존 폴더로 지정하면 그 폴더가 덮어써진다는 점임
+- `why` agent-wiki 두 동기화 스크립트의 공통 git 경로 5줄은 파일마다 따로 두고 서로 import하지 않음 — 스크립트 하나 책임 하나·파일 간 의존 없음 원칙을 중복 제거보다 우선함

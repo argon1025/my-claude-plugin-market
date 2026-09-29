@@ -244,3 +244,47 @@
 - **분량**: 현재 공개 위키 기준 주입은 약 4,000자이며 10,000자 상한 처리는 두지 않음 — 도메인 문서가 늘어 잘림이 확인되면 생성기 단위로 줄이는 방안을 검토함
 - **구형 remote**: scheme 없는 노드는 워크스페이스 clone이 실패하므로 register 간선 탐색에서 빠지는 기존 한계가 그대로 남음
 - **승인 후 기록**: `.ai-docs/workspace/agent-wiki-session-start/plan.md`에 이 계획을 쓰고, 이미 기록된 `feedback.md`에 `constraint` "Bash 도구 호출 사이에 셸 변수가 유지되지 않으므로 SKILL.md는 `mktemp -d` 결과를 `{tmp}` 자리표시자로 옮겨 쓰게 함"을 덧붙여 한 커밋으로 남김
+
+## 추가 계획 2026-09-29 — 동기화 스크립트 정리
+
+### 의도
+
+- **계기**: 사용자 지시 "sync_register_repositories.py 도 정책이 단순해졌음으로 무조건 베이스 브랜치로 맞추면 될듯함 스크립트 정리도 계획에 포함"
+- **완료**: 두 동기화 스크립트가 분기 없이 "없으면 clone, origin을 기록된 remote로 맞춤, 기준 브랜치로 강제 정리" 한 경로만 가짐
+
+### 확정 결정
+
+- 폐기: `### scripts/sync_register_repositories.py` 절 — 부분 수정 대신 아래 `### scripts/sync_register_repositories.py 재작성`으로 대체함
+- 폐기: `### scripts/sync_wiki.py`의 "origin이 `remote`와 다를 때 `fail origin`" 동작, `### skills/init/SKILL.md` 3절의 "`fail origin`이면 중단" 예외, `## 커밋 분해` 1행 검증 ③ — 읽기 전용 사본이므로 origin이 다르면 `git remote set-url origin {remote}`로 맞추고 진행함
+- **공통 경로**: 두 스크립트 모두 레포마다 `clone`(폴더가 없을 때) → `remote set-url origin {remote}` → `fetch origin {branch}` → `checkout -f -B {branch} origin/{branch}` → `clean -fd`만 수행하며, 상태 조회(`branch --show-current`·`status --porcelain`·`rev-list`)와 판정 분기를 두지 않음
+- **중복 허용**: 공통 경로 5줄은 두 파일에 각각 두고 서로 import하지 않음 — 스크립트 하나 책임 하나, 파일 간 의존 없음 원칙을 우선함
+
+### 작업
+
+| 파일 | 변경 | 사다리 |
+|---|---|---|
+| `agent-wiki/scripts/sync_register_repositories.py` | 재작성 — 공통 경로만 남김 | ② 기존 파일의 책임·인자·출력 유지, 판정 코드 삭제 |
+| `agent-wiki/scripts/sync_wiki.py` | origin 불일치 `fail` 대신 `remote set-url` | ② 같은 계획의 신규 파일 사양 조정 |
+| `agent-wiki/skills/init/SKILL.md` | 3절 예외를 "`fail`이면 원인 보고 후 중단" 한 줄로 | ② |
+
+### scripts/sync_register_repositories.py 재작성
+
+- **머리 주석**: "등록 레포(와 --current로 받은 현재 레포)를 워크스페이스에 clone하고 원격 defaultBranch로 강제 정리한다. 워크스페이스는 읽기 전용 사본이므로 로컬 변경·커밋·다른 브랜치는 버린다." 2줄
+- **인자**: `registry root [slug ...] [--current SLUG REMOTE BRANCH]` 유지 — slug를 주면 그 레포만, 없고 `--current`도 없으면 전체, `--current`가 있으면 나열한 slug와 현재 레포
+- **동작**: 대상마다 공통 경로 수행, `workspace.root`가 없으면 만듦, remote·defaultBranch가 비었거나 문자열이 아니면 그 레포만 `fail {slug} missing remote or defaultBranch`
+- **출력**: 레포마다 `ok {slug}` 또는 `fail {slug} {git 출력의 error:·fatal: 줄 우선, 없으면 마지막 줄}`, registry에 없는 slug는 `fail {slug} not in registry`, 하나라도 `fail`이면 종료 코드 1
+- **삭제**: `--force`, `fresh`, `dirty` 판정, 결과 문자열을 쪼개 다시 조립하는 출력 코드
+- **분량**: 50줄 이내
+
+### scripts/sync_wiki.py 조정
+
+- **동작**: 폴더가 없으면 `git clone {remote} {baseRoot}`, 이어서 공통 경로(`remote set-url` 포함)
+- **출력**: 성공 `ok`, 실패 `fail {사유}`, 분량 35줄 이내
+
+### 커밋 분해
+
+`## 커밋 분해` 1행을 아래로 대체하며 나머지 행은 그대로 둠.
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 1 | `scripts/sync_wiki.py`, `scripts/sync_register_repositories.py` — `refactor(agent-wiki): 위키·워크스페이스 강제 동기화 스크립트` | `git init --bare {S}/wiki.git`·`{S}/r1.git`·`{S}/r2.git`에 `main` 커밋 1건씩 넣고 ① `sync_wiki.py {S}/wiki {S}/wiki.git main` 첫 실행: `ok`, 종료 코드 0 ② `{S}/wiki`에 파일 수정·미추적 파일·로컬 커밋·`git switch -c x`를 만든 뒤 재실행: `ok`, `git -C {S}/wiki status --short --branch`가 `## main...origin/main` 한 줄 ③ `git -C {S}/wiki remote set-url origin {S}/other.git` 후 재실행: `ok`, `git -C {S}/wiki remote get-url origin`이 `{S}/wiki.git` ④ r1·r2를 remote로 둔 registry 픽스처로 `sync_register_repositories.py`: `ok r1`·`ok r2`, 종료 코드 0, 없던 root 폴더 생성 ⑤ r1 clone에 ②와 같은 변경을 만들고 원격에 커밋 추가 후 재실행: `ok r1`, 원격 신규 커밋이 HEAD, 상태 깨끗 ⑥ slug 인자 `r2`만: 출력 한 줄 ⑦ registry에 없는 slug `zz`: `fail zz not in registry`, 종료 코드 1 ⑧ `--current cur {S}/r1.git main`만: `ok cur` 한 줄 ⑨ remote 키가 없는 노드: 그 레포만 `fail … missing remote or defaultBranch` ⑩ `grep -nE "force\|dirty\|porcelain\|rev-list\|show-current" agent-wiki/scripts/sync_*.py` 출력 없음, `python3 -m py_compile` 두 파일 종료 코드 0, 줄 수 35·50 이내 |
