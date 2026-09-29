@@ -1,0 +1,56 @@
+# agent-wiki-session-start 작업 기록
+
+- `context` agent-wiki SessionStart 주입은 llm-wiki `hooks/session_start.py`·`rules/agent-guide.md`를 요구사항의 결과로만 보고 코드·문구를 재활용하지 않으며, 구현 전에 최종 주입 예시를 사용자에게 제안해 승인받은 뒤 진행함
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 세션 주입은 블록마다 텍스트 생성기를 따로 두고 훅이 전부 실행해 합치는 구조임 — 사용자 문장 "각각 generate_repository_map.py 처럼 텍스트 생성기 만들어서 세션훅헤서 전부 실행하여 텍스트 합치는 구조로 갔으면 함 나중에 수정, 제외하기 용이하도록"
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 레포 지도는 같은 도메인 레포 전수와 각 행 responsibilities를 나열하는 llm-wiki 방식을 따름 — 사용자 문장 "해당 작업 시 어느 레포를 먼저 작업해야하는지 식별하고 그에따른 선행작업을 진행하기위해서 또는 코드 리뷰 시 어떤 레포를 봐야 영향도 파악이 가능할지 파악하는 용도임", 의존 표식이 붙는 다른 도메인 레포는 `{domain}/{slug}` 행으로 추가하고 나머지 도메인은 이름 한 줄로 둠
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki 세션 주입은 간선 블록과 `desc`를 두지 않고 레포 지도 이름 옆에 `현재 레포가 의존`·`현재 레포에 의존` 표식만 붙임 — 사용자 문장 "간선이 필요한지 의문 그냥 해당 도메인에 속한 레포 목록이랑 책임 나열하면서 이 레포에 의존, 이 레포가 의존중인 프로젝트만 이름옆에 표식처럼 남겨주면 될거같은데", 표식은 deps.json의 그룹 키와 `to`만 읽으므로 구형 `kind`·`contracts` 간선에서도 그대로 계산됨
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 세션 주입의 문서 목록은 `knowledge/{domain}/` 바로 아래 문서와 `knowledge/{domain}/{slug}/` 문서를 `이름 — description`으로 나열하고 type은 표기하지 않으며, 행동 규칙은 문서 우선 열람·모순 병기 보고·위키 직접 수정 금지·의존 표식 한계 안내와 워크스페이스 경로·동기화 명령 안내를 담음
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 훅의 위키 동기화는 startup·resume에서만 대기 없이 백그라운드로 수행하고 이번 세션은 로컬 사본을 주입하며, 위키 트리가 다른 브랜치이거나 미커밋 변경·로컬 커밋이 있으면 확인·알림 없이 동기화만 건너뜀 — 사용자 문장 "별도 확인 없이 있으면 주입 없을경우에만 알림", 변경사항 폐기는 init·register의 확인 절차가 맡음
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 훅은 미등록 레포와 위키 부재에만 한 줄을 주입하고 git 밖(origin 없음)은 주입하지 않으며, llm-wiki 훅 설치 감지·분기와 10,000자 분량 상한 처리는 두지 않음
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 세션 주입 문구는 매 세션 MSA 환경에서 개발·코드 리뷰하는 에이전트 입장에서 쓰며, 문서 규칙은 "사용자 요청에 맞는 문서를 먼저 찾아서 읽으세요, 목록에서 찾을 수 없으면 마지막으로 grep 하여 내부 내용 까지 찾습니다" 수준으로 둠
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 세션 주입은 워크스페이스 동기화 명령을 에이전트에게 안내하지 않고 훅이 세션 시작 시 워크스페이스 clone까지 자동으로 갱신함 — 사용자 문장 "sync 는 훅 시작할 때 pull 땡기지 않나 그때 그냥 자동화 하던지... 에이전트가 할건 아닌듯한데", 앞선 "워크스페이스 경로·동기화 명령 안내" 항목은 경로 안내만 참임
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 레포 지도 제목은 `{domain} 도메인의 전체 레포지토리`이고 작업 전 영향도·의존성·선행 작업 파악이 필요하면 워크스페이스 경로의 레포 코드를 직접 확인하라고 안내하며, 문서 목록은 `도메인 공유 문서`·`{slug} 전용 문서`로 나누고 다른 도메인은 `knowledge/{도메인}/` 경로와 `도메인 — description` 줄로 알림
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 훅은 워크스페이스 clone을 갱신하지 않고, 주입에서 `sync_register_repositories.py {registry} {workspace.root} {slug}` 사용법을 안내해 에이전트가 필요한 레포만 받게 함 — 사용자 문장 "훅에서 굳이 하라는건 아니였음 ... 스크립트 사용법을 알려주거나 아니면 하나의레포만 클론할꺼면 특정 워크스페이스에서 해라 정도로 가이드 하면될듯함", 앞선 "훅이 워크스페이스 clone까지 자동으로 갱신" 항목은 더 이상 참이 아님
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki 세션 주입의 워크스페이스 안내는 `git clone` 직접 안내 대신 스크립트 한 줄을 씀 — 레포 지도에는 remote·defaultBranch가 없어 에이전트가 registry를 열어 clone·checkout 명령을 조립해야 하고, 기존 clone의 최신화·변경 보고(`dirty`)까지 스크립트가 slug 하나로 처리하기 때문이며, 대가는 구형 scheme 없는 remote 노드에서 이 명령이 `fail`을 낸다는 점임
+- `context` agent-wiki 레포 지도의 의존 표식 안내는 "표식은 참고용이므로 책임만으로도 의존이 의심되면 코드로 확인"이며, 레포·문서 경로는 블록 제목 옆이 아니라 제목 아래 줄에 `{workspace.root}/{slug}`·`knowledge/{domain}/{name}.md` 꼴로 두고 행은 확장자 없는 이름을 씀
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 세션 주입은 워크스페이스 동기화 스크립트를 안내하지 않고, 다른 레포 코드는 에이전트가 로컬 체크아웃을 찾아 쓰거나 없으면 `registry.json`의 remote를 `{workspace.root}/{slug}`에 clone해 보도록 가볍게만 안내함 — 사용자 문장 "상시 주입에서 도메인 전체 레포에 sync 기능을 제공할필요는 없을거같긴함 에이전트가 필요하면 클론하는거고 아니면 로컬 레포 찾아서 쓰는거고 이걸너무 제한 안했으면함", 앞선 "`sync_register_repositories.py` 사용법 안내"와 "읽기 전용 사본" 항목은 더 이상 참이 아님
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 세션 주입의 위키 수정 규칙은 스킬 지정 없이 "위키는 직접 고치지 말고 고쳐야 할 내용이 있으면 사용자에게 알린다"임
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 훅은 startup·resume에서 위키 트리를 확인 없이 `fetch`·`checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd`로 강제 정리하고 최대 3초 기다린 뒤 주입하며, 늦으면 정리는 뒤에서 마저 돌고 이번 주입은 이전 사본으로 감 — 사용자 문장 "강제 정리, 3초 대기 후 주입.. 해당 레포 기반으로 변경작업 안할예정임 복사본 생성 예정", 앞선 "백그라운드·대기 없음"과 "변경이 있으면 동기화만 건너뜀" 항목은 더 이상 참이 아님
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki는 `wiki.baseRoot`(`~/.llm-wiki`) 작업 트리에서 위키를 고치지 않고, 이후 위키 수정 기능은 별도 복사본을 만들어 작업할 예정이므로 이 트리는 주입·조회 전용 사본으로 취급함
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki 훅의 강제 정리는 llm-wiki와 공유하는 `~/.llm-wiki`에서 실행되므로, 두 플러그인을 함께 쓰는 동안 llm-wiki update가 같은 트리의 `wiki-update/` 브랜치에서 작업 중이면 세션 시작만으로 그 작업 트리 변경이 사라짐 — 사용자가 감수함
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki는 `config.json`의 위키 트리(`wiki.baseRoot`)와 워크스페이스(`workspace.root`)를 읽기 전용으로만 쓰고 항상 원격 기준 브랜치로 강제 정리하며, 수정이 필요하면 에이전트가 로컬 체크아웃을 찾거나 다른 곳에 clone해 씀 — 사용자 문장 "config 에 정의된 워크스페이스, 위키는 수정을 금지하고 오직 읽기전용으로만 쓰고 수정해야하면 알아서 다른곳에 클론해서 쓰거나 로컬 내 폴더 찾아서 쓰라는 정책으로 일괄 통일", 앞선 "init·register는 다른 브랜치·미커밋 변경·로컬 커밋을 보고한 뒤 확인받아 정리" 정책과 동기화 스크립트의 `dirty`·`--force` 분기는 폐지 대상임
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki register·init의 위키 쓰기는 `mktemp -d` 임시 clone에서 수정·커밋·push한 뒤 `baseRoot`를 강제 정리하는 방식임 — 세션 훅이 세션 시작마다 `baseRoot`를 강제 정리하므로 `baseRoot`에서 직접 쓰면 작업 중 다른 세션이 열릴 때 수정 내용이 지워지기 때문임
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki `wiki.baseRoot` 기본값은 llm-wiki가 쓰기 작업을 하는 `~/.llm-wiki`와 분리한 별도 경로로 바꾸고(후보 `~/.agent-wiki`), 읽기 전용 전환(init·register·`sync_register_repositories.py`)은 세션 훅 작업과 한 계획에서 스킬 전환을 먼저 커밋한 뒤 훅을 추가함
+  - source: 사용자 확인 2026-09-29
+- `constraint` Claude Code Bash 도구 호출 사이에는 셸 변수가 유지되지 않으므로, agent-wiki init·register SKILL.md는 `mktemp -d` 결과를 셸 변수가 아니라 `{tmp}` 자리표시자로 옮겨 이후 명령에 쓰게 함
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `context` agent-wiki 세션 주입과 읽기 전용 전환은 브랜치 `feat/agent-wiki-session-start`에서 진행하며, 계획은 `.ai-docs/workspace/agent-wiki-session-start/plan.md`, 구현은 새 세션에서 `/plan-workflow:execute`로 시작함
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki 동기화 스크립트 정리는 이번 계획 범위이며, `sync_register_repositories.py`는 "정책이 단순해졌음으로 무조건 베이스 브랜치로 맞추면 될듯함"에 따라 상태 조회·판정 분기 없이 clone·origin 맞춤·강제 정리만 수행함
+  - source: 사용자 확인 2026-09-29
+- `why` agent-wiki `sync_wiki.py`·`sync_register_repositories.py`는 origin이 기록된 remote와 달라도 멈추지 않고 `git remote set-url origin {remote}`로 맞춤 — 두 폴더는 읽기 전용 사본이라 보호할 로컬 상태가 없고, config·registry의 remote가 바뀐 경우(구형 remote 전환 포함)도 같은 경로로 흡수되며, 대가는 `baseRoot`를 다른 용도의 기존 폴더로 지정하면 그 폴더가 덮어써진다는 점임
+- `why` agent-wiki 두 동기화 스크립트의 공통 git 경로 5줄은 파일마다 따로 두고 서로 import하지 않음 — 스크립트 하나 책임 하나·파일 간 의존 없음 원칙을 중복 제거보다 우선함
+- `why` agent-wiki `hooks/session_start.py`는 origin 판정을 위키 동기화보다 먼저 수행함 — git 밖이거나 origin이 없는 폴더에서 세션을 열 때 주입할 것이 없는데도 최대 3초를 기다리지 않게 하기 위함이며, 그런 세션에서는 위키 트리도 최신화되지 않음
+  - evidence: agent-wiki/hooks/session_start.py
+- `context` agent-wiki 훅은 stdin JSON을 읽지 못하면 주입을 포기하지 않고 `source`를 `startup`으로 간주함 — 계획의 `## 외부 계약` 예외 목록("stdin 파싱 실패는 주입 없음")과 `### hooks/session_start.py` 절("파싱 실패면 startup")이 달라 구현 사양 절을 따랐음
+  - evidence: agent-wiki/hooks/session_start.py
+- `constraint` 이 개발 환경의 Claude Code Bash 도구는 zsh로 실행되어 `$VAR`에 담은 명령이 단어 분리되지 않고 `PIPESTATUS`·`timeout` 명령이 없으므로, agent-wiki 훅·스크립트 검증은 bash 스크립트 파일로 만들어 `bash {파일}`로 실행해야 결과가 맞음

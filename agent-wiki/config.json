@@ -1,10 +1,10 @@
 {
   "wiki": {
-    "baseRoot": "~/.llm-wiki",
+    "baseRoot": "~/.agent-wiki",
     "remote": "https://github.com/argon1025/argon1025-llm-wiki.git",
     "baseBranch": "main"
   },
   "workspace": {
-    "root": "~/.llm-wiki-workspace"
+    "root": "~/.agent-wiki-workspace"
   }
 }
