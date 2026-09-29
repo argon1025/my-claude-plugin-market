@@ -19,3 +19,11 @@
   - source: 사용자 확인 2026-09-29
 - `context` agent-wiki update 구현 후 PR 전에 실제 작업 레포 diff로 추출 검증을 수행함 — 사용자 문장 "작업 완료 후 onestore-cmsapp-api 와 같은 실제 작업 레포에서 diff 기반으로 추출 검증 테스트 진행하여 docs-contract 에 부합하는지 현 계획의 예상대로 나왔는지 등 체크단계도 필요할듯"
   - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki update 검증 계획의 S3(onestore-cmsapp-api@f9275fd40)은 머지 제목과 달리 자동 판매불가 전환의 사유 문구가 아니라 변경자(`updId`) 처리를 바꾼 diff이며, 예상은 "변경자는 f9275fd40 시점 값만 남음"으로 판정함
+- `constraint` onestore-cmsapp 도메인의 공통 enum·오류 코드(`SalesStatType`·`AppCountryChangeReasonType`·`DeployResultCode`·`DeployTargetType`·`ResultCodes`)는 등록 레포 onestore-cmsapp-client에 정의되고 api·agent는 이를 SNAPSHOT 의존으로 가져오므로, 머지 레포의 `git show {sha}`로는 원본 정의가 보이지 않음 — `ResultCodes`는 349종이라 원본 전사는 규약 1장 코드 전사가 됨
+  - evidence: onestore-cmsapp-api pom.xml, onestore-cmsapp-client src/main/java/com/onestorecorp/devcenter/cmsapp/common/code/ResultCodes.java
+- `context` agent-wiki update는 diff 기반 사실 누적만 맡고 닫힌 집합의 전 원소 완결은 이후 audit 스킬로 넘김 — 사용자 문장 "update특성 상 한계가 있는듯 함 그냥 diff 기준으로 잘 쌓고 나중에 감사로 통합, 완전화 진행하는걸로 해보자 여기에서는 diff 기반으로 사실 잘 판단해서 쌓는것만 진행"
+  - source: 사용자 확인 2026-09-29
+- `context` agent-wiki update 추출은 커밋 메시지와 diff에 포함된 plan·feedback을 작업 사유·도메인 지식의 원천으로 봐야 함 — 사용자 문장 "commit message, plan, feedback 도 보고 문서화 하는거지? 여기엔 작업의 사유나 도메인 관련 지식이 있을 확률이 높음"이며, 등록 레포 onestore-cmsapp-*는 작업 기록을 `.devcenter/workspace/progress/{branch}/`에 두고 검증 머지 12건 중 4건이 그 feedback.md를 diff에 포함함
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki update 검증에서 추출 에이전트가 YAML 중첩 설정 키의 접두어를 diff 일부만 보고 틀리게 적은 사례(onestore-cmsapp-agent@b3a65b9)가 있었고 검토 에이전트가 머지 시점 `@ConfigurationProperties`로 교정함 — 추출 사실의 식별자는 검토의 코드 확인 전까지 신뢰하지 않음

@@ -184,3 +184,31 @@ frontmatter `name: update`, `disable-model-invocation: true`, 영문 description
 - **순서**: 이 검증은 앞 계획의 커밋 1~4 뒤, PR 생성 전에 수행함
 - **비용**: 시나리오 7개 각각 추출·반영·검토 서브에이전트가 돌아 실행 시간이 앞 커밋 검증보다 김
 - **범위 밖**: 실제 위키 원격(`config.json` `wiki.remote`) 대상 실행과 PR 게시(`publish.md`) 검증 — 머지 후 사용자가 수행
+
+## Re-plan 2026-09-29 — 실제 레포 검증에서 집합 완결이 공유 라이브러리 enum을 부분 표로 남김
+
+### 계기
+
+- **검증 결과**: 7개 시나리오 중 규약 부합·예상 일치는 S4·S7 2건 — 반영 단계가 같은 도메인 등록 레포(공유 라이브러리)에 정의된 enum을 코드 밖으로 보아 1~2행 `— 일부` 표를 만들고(S2·S3·S5), 규칙 문장이 인용한 코드 1~2개가 코드값 표가 되며(S2·S3·S5·S6), 원본 조회를 넓히면 오류 코드 카탈로그(349종) 전사로 번짐
+- **사용자 결정**: "update특성 상 한계가 있는듯 함 그냥 diff 기준으로 잘 쌓고 나중에 감사로 통합, 완전화 진행하는걸로 해보자 여기에서는 diff 기반으로 사실 잘 판단해서 쌓는것만 진행" (사용자 확인 2026-09-29)
+
+### 변경
+
+| 파일 | 변경 |
+|---|---|
+| `agent-wiki/references/doc-contract.md` | 4장 원본 줄을 기본 `— 일부`·정의 전체를 본 경우만 `전 N종`으로, 집합 표기를 "사실이 원소의 뜻을 말할 때"로 좁히고 규칙 문장 속 코드 인용은 5장 식별자 병기, 7장 집합 완결을 "diff가 보여 준 원소만 담고 전 원소 완결은 audit 몫"으로 교체 |
+| `agent-wiki/skills/update/SKILL.md` | 3절 `set` 정의를 뜻을 말하는 사실로 좁히고 diff 속 plan·feedback을 이유·도메인 지식 원천으로 명시(미확정 계획 제외), `quote` 원천에 plan·feedback 복원, 4절 같은 실행 값 충돌은 뒤 머지 사실이 앞 사실을 `대체 — F번호`로 대체하고 `set_sha` 삭제, 5절 레포 조회·집합 완결·`completed` 삭제와 `docs[].doc` 지칭, 6절 원소 수 대조를 `전 N종` 주장에 한정·위치 위반 사유 `위치 — {올바른 위치}`·`## 적용 대상`은 문서의 기존 사실로만 추가 허용 |
+| `agent-wiki/templates/update-pr.md` | `보충` 행 삭제, `대체`·`위치 재배정` 판정 행 추가 |
+
+### 커밋 분해
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 5a | `doc-contract.md` 4·7장 | `grep -n '집합 완결\|audit' agent-wiki/references/doc-contract.md`에 audit 몫 문장, 4장 예시 원본 줄 유지 |
+| 5b | `SKILL.md`·`update-pr.md` | `grep -c 'set_sha\|completed\|보충' agent-wiki/skills/update/SKILL.md agent-wiki/templates/update-pr.md`가 0 |
+| 6 | 재실행·`feedback.md` | S1~S7을 같은 하네스·같은 배정 원칙으로 재실행해 `results/report.md` 7행 재판정, 불일치 행마다 수정 커밋이나 사용자 확인된 `constraint` |
+
+### 특이 사항
+
+- **의도적 단순화**: update가 만든 코드값 표는 대부분 `— 일부`로 남음 — 원본 줄이 부분임을 밝혀 오판은 막고, 전 원소 완결은 이관 예정인 audit 스킬이 맡음
+- **범위 밖**: 그 머지에서 바뀌지 않은 plan·feedback 파일 조회 — diff 밖 파일 열기 금지 유지
