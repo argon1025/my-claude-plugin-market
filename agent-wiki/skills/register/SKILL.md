@@ -4,7 +4,7 @@ description: Survey the current repo with subagents and record it in the wiki as
 disable-model-invocation: true
 ---
 
-`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. registry·deps는 1절 임시 clone `{tmp}`의 파일입니다. 인자로 범위 지시가 오면 registry의 slug·도메인과 대조해 slug 목록으로 바꾸고, 대조되지 않는 이름은 보고 후 확인받습니다(`인자 없이 진행`·`중단`, 다른 이름은 기타 입력). 인자가 있으면 재등록이어도 인자가 간선 대상을 정하고, 대조된 slug가 0개면 간선 대상은 없습니다.
+`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. registry·deps는 1절 임시 clone `{tmp}`의 파일입니다. 지도 값 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약) 9장이며, 서브에이전트에게는 `{doc_contract_path}`로 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로를 넘깁니다. 인자로 범위 지시가 오면 registry의 slug·도메인과 대조해 slug 목록으로 바꾸고, 대조되지 않는 이름은 보고 후 확인받습니다(`인자 없이 진행`·`중단`, 다른 이름은 기타 입력). 인자가 있으면 재등록이어도 인자가 간선 대상을 정하고, 대조된 slug가 0개면 간선 대상은 없습니다.
 
 ## 1. 위키 clone
 
@@ -53,9 +53,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {tmp}/regist
 기술 스택을 가정하지 말고 빌드·설정 파일부터 확인한 뒤 소스를 전수로 읽어라.
 전수 읽기는 git ls-files로 소스 목록을 만들고 Read 도구로 파일마다 끝까지 여는 것이다. 여러 파일을 cat·for 루프로 한 출력에 이어 붙이지 말라(긴 출력은 잘린다). 파일명·grep 결과로 내용을 추정하지 말라. 제외는 lock·빌드 산출물·vendor·node_modules·바이너리뿐이다.
 소스가 많아 다 열 수 없으면 진입점·라우트·메시지 발행/구독·외부 클라이언트·스케줄러·설정 파일을 먼저 열고, 열지 못한 파일은 추정하지 말고 미열람 목록에 적어라.
-stack에는 언어·주 프레임워크만 쓰고 빌드 도구·DB·개별 라이브러리 좌표는 넣지 말라.
-hosts에는 이 레포 자신이 요청을 받는 호스트명만 쓴다. 호출하는 API·DB·브로커·캐시 주소는 넣지 말고, 서빙 호스트가 없으면 {}로 둔다.
-responsibilities는 기능 단위로 쓰고 헬스체크·공통 설정·빈 스텁은 넣지 않는다.
+기준: `sed -n '/^## 9\./,$p' {doc_contract_path}` — stack·summary·responsibilities·hosts 규칙
 아래 JSON을 응답하고, 이어서 `필드(배열이면 인덱스): 근거 경로`를 한 줄씩, 마지막 줄에 `읽음 {읽은 소스 수}/{전체 소스 수}`와 읽지 않은 파일 경로를 적어라.
 {"stack": ["주 언어·프레임워크, 버전은 주 항목만"],
  "summary": "이 레포가 맡는 일 한 줄",
@@ -67,7 +65,7 @@ responsibilities는 기능 단위로 쓰고 헬스체크·공통 설정·빈 스
 현재 레포 {workspace.root}/{slug}가 대상 레포 {workspace.root}/{target}({domain}/{target})을 보고 있는지 확인하라.
 대상 정보: summary {summary}, responsibilities {responsibilities}, hosts {hosts}
 스크립트로 코드를 추출하지 말라. 기술 스택을 가정하지 말라.
-'보고 있다'는 현재 레포의 코드·빌드·설정이 대상의 API·메시지 토픽·테이블·라이브러리를 호출·구독·조회·의존한다는 뜻이다. 대상이 현재 레포를 호출하는 역방향 흔적(CORS 허용 origin 등)과 README·주석·문서의 이름 언급은 해당하지 않는다.
+기준: `sed -n '/^## 9\./,$p' {doc_contract_path}` — 간선 규칙이 '보고 있다'의 정의다.
 현재 레포에서 import·의존 좌표·URL·호스트·큐·테이블 등 대상의 흔적을 찾고, 대상 레포 코드에서 그 실재를 확인하라.
 보고 있으면 첫 줄에 아래 JSON 한 줄을 코드 블록 없이 쓰고 다음 줄부터 근거 파일 경로를, 아니면 설명 없이 `없음` 한 단어만 응답하라.
 {"to": "{domain}/{target}", "desc": "대상의 무엇을 현재 레포 어디에서 쓰는지 한 줄"}
