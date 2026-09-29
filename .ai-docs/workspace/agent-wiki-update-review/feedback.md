@@ -27,3 +27,6 @@
 - `context` agent-wiki update 추출은 커밋 메시지와 diff에 포함된 plan·feedback을 작업 사유·도메인 지식의 원천으로 봐야 함 — 사용자 문장 "commit message, plan, feedback 도 보고 문서화 하는거지? 여기엔 작업의 사유나 도메인 관련 지식이 있을 확률이 높음"이며, 등록 레포 onestore-cmsapp-*는 작업 기록을 `.devcenter/workspace/progress/{branch}/`에 두고 검증 머지 12건 중 4건이 그 feedback.md를 diff에 포함함
   - source: 사용자 확인 2026-09-29
 - `constraint` agent-wiki update 검증에서 추출 에이전트가 YAML 중첩 설정 키의 접두어를 diff 일부만 보고 틀리게 적은 사례(onestore-cmsapp-agent@b3a65b9)가 있었고 검토 에이전트가 머지 시점 `@ConfigurationProperties`로 교정함 — 추출 사실의 식별자는 검토의 코드 확인 전까지 신뢰하지 않음
+- `why` agent-wiki update는 같은 실행 안에서 값이 바뀐 사실을 배정 단계의 `대체`로 정리하고 반영 단계의 규약 7장 다른 값 판정으로 넘기지 않음 — 1회차 검증에서 반영 에이전트가 뒤 머지 diff를 변경 의도 근거로 해석해 교체했으나 이는 해석 의존이었고, 앞 사실이 다른 주장을 함께 담는 복합 사실이면 충돌 주장만 떼어 대체로 넘겨야 나머지 사실이 남음(onestore-cmsapp-api@e81fbcdd4·f9275fd40)
+- `constraint` agent-wiki update의 검토 에이전트는 레포 안 사실 판정이 실행마다 달라질 수 있음 — 같은 머지(onestore-cmsapp-api@87c08cf44)의 locale 정규화 규칙을 1회차 검토는 코드 전사로 삭제하고 2회차 검토는 유지했으며, 형식 검사 스크립트 없이 의미 판정에 기대는 설계의 대가임
+- `context` agent-wiki update 실제 레포 검증(onestore-cmsapp-api·agent·integration-admin·client 머지 12건, 시나리오 7개)은 재계획 반영 후 2회차에서 7건 모두 검토 후 규약 부합·예상 일치로 판정했고, 머지 3건 이하 묶음의 메인 직접 추출 경로는 두 회차 모두 서브에이전트로 대체해 검증하지 않음
