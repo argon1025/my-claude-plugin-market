@@ -3,14 +3,14 @@ name: add
 description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, "we agreed X", or a row skipped in an update PR ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘", "건너뜀 처리"). New facts land directly; a fact that differs from an existing value shows both values and lets you choose. NOT for merged code (/llm-wiki:update) and NOT for sweeping existing docs (/llm-wiki:audit).
 ---
 
-사용자가 건넨 자료와 대화에서 확정된 사실을 위키에 반영합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 이 스킬은 순서와 정지점만 정합니다.
+사용자가 건넨 자료와 대화에서 확정된 사실을 위키에 반영합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`, 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)이며 이 스킬은 순서와 정지점만 정합니다.
 
 ## 1. 입력 확정
 
 - **입력 집합**: 붙여넣은 텍스트, 읽은 파일, 가져온 페이지, 대화에서 사용자가 정한 문장, update PR 사실 원장의 건너뜀 행 — 이 밖의 사실 기록 금지
 - **부재 시 질문**: 건넨 것이 없으면 무엇을 기록할지 묻고 추측하지 않음
 - **큰 자료**: 한 세션에 못 담으면 장 단위로 나눠 실행하고 요약으로 줄이지 않음
-- **저장소 상태**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init`, 현재 레포가 미등록이면 `/llm-wiki:register` 안내 후 중단, 있으면 `git -C {WIKI_ROOT} pull --ff-only` — 충돌·분기는 멈추고 보고
+- **저장소 상태**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init`, 현재 레포가 미등록이면 `/llm-wiki:register` 안내 후 중단, 있으면 `publish.md` 1장
 - **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — 목록의 `[?]` 문서는 같은 `type` 대조에서 빠져 중복 신규 문서가 생기고 편집 시 5장 검사가 실패함
 
 ## 2. 사실 추출
@@ -36,13 +36,14 @@ description: Use when material the user hands over or a decision settled in conv
 ## 5. 반영 — 승인 하나
 
 - **초안**: 문서별 경로·`type`·`description`·바뀌는 절과 불릿, 노드 변경 행과 간선 행(`{kind} {from} → {to} — {contracts}`)을 보이고 승인 — 삭제·분할·이동은 따로 표시
+- **브랜치**: 승인 뒤 `publish.md` 2장
 - **병합**: 규약 7장 병합 방식, 신규 문서는 규약 2~4장
 - **노드·간선**: 레포 소관·책임·호스트와 레포 간 의존이 확정되면 규약 9·10장 형식으로 `registry.json`·`deps.json` 편집 — 기존 값 교체·삭제는 4장 선택을 거침, 커밋은 `docs(graph): {요약}`
 - **검사·커밋**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge {바꾼 파일}`(노드·간선을 고쳤으면 `{WIKI_ROOT}/registry.json`·`{WIKI_ROOT}/deps.json`도) 에러 0 뒤 문서마다 커밋, 본문은 규약 8장
-- **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 실패는 로컬 커밋 상태와 함께 보고
+- **게시**: `publish.md` 3·4장
 
 ## 6. 보고
 
 - **파일 목록**: 생성·수정 문서와 동일·추가·교체 건수
 - **미기록**: 원본에 없어 기록하지 못한 항목, 기존 값을 유지한 교체 행은 규약 8장 건너뜀 표로
-- **반영 시점**: push 뒤 다음 세션 목록에 반영
+- **반영 시점**: `publish.md` 4장 보고

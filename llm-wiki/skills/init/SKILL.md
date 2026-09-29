@@ -4,29 +4,32 @@ description: Use when the wiki repo is not present on this machine or exists wit
 disable-model-invocation: true
 ---
 
-위키 저장소를 이 머신에 놓습니다. 위키 경로는 `LLM_WIKI_ROOT`이며 기본값은 `~/.ai-docs/wiki`입니다. 초기화 여부는 `{WIKI_ROOT}/registry.json` 유무로 판정하며, 이 스킬은 레포를 등록하지 않고 사실을 쓰지 않습니다.
+위키 저장소를 이 머신에 놓습니다. 위키 경로는 `LLM_WIKI_ROOT`이며 기본값은 `~/.ai-docs/wiki`입니다. 초기화 여부는 `{WIKI_ROOT}/registry.json` 유무로 판정하며, 이 스킬은 레포를 등록하지 않고 사실을 쓰지 않습니다. 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)를 따릅니다.
 
 ## 1. 판정
 
-- **registry.json 있음**: `git -C {WIKI_ROOT} pull --ff-only` 후 "이미 초기화됨 — 레포 등록은 `/llm-wiki:register`"로 끝 — 충돌·분기는 멈추고 보고
+- **registry.json 있음**: `publish.md` 1장 후 "이미 초기화됨 — 레포 등록은 `/llm-wiki:register`"로 끝
 - **디렉터리만 있음**: 빈 원격을 clone한 경우를 포함해 registry.json이 없으면 3장 골격 생성으로
 - **디렉터리 없음**: 2장으로
 
 ## 2. 저장소 — 정지점 하나
 
+- **고정 저장소**: `publish.md` 저장소 불릿에 clone URL이 있으면 묻지 않고 그 URL로 clone
 - **질문**: AskUserQuestion으로 원격 URL(기존 위키 clone) 또는 "새로 만들기" 중 하나를 물음 — 새로 만들기면 연결할 원격 URL도 같은 라운드에 받음(없으면 빈 값 허용)
 - **clone**: `git clone {URL} {WIKI_ROOT}` — 빈 저장소면 3장으로, registry.json이 있으면 1장 "있음"으로
-- **새로 만들기**: `git init -b main {WIKI_ROOT}`
+- **새로 만들기**: `git init -b {기준 브랜치} {WIKI_ROOT}`
 - **원격 없음 경고**: 원격을 끝내 못 받으면 "다른 머신·팀원과 공유되지 않음"을 보고에 남김
 
 ## 3. 골격
+
+`publish.md` 2장 뒤 아래 파일을 씁니다.
 
 - **registry.json**: `{"domains": {}}`
 - **deps.json**: `{"deps": {}}`
 - **state/.gitkeep**·**knowledge/.gitkeep**: 빈 파일
 - **.gitignore**: `.local/` 한 줄 — 스킬의 clean-tree 판정이 통과하는 조건
 - **커밋**: `chore(init): 위키 골격` 한 커밋
-- **원격**: URL을 받았으면 `git remote add origin {URL}`과 `git push -u origin main`, clone한 저장소면 `git push` — 실패는 로컬 커밋 상태와 함께 보고
+- **원격**: 원격에 기준 브랜치가 없으면 `git push -u origin {기준 브랜치}`로 첫 push — 새로 만든 저장소는 URL을 받았을 때만 먼저 `git remote add origin {URL}`(못 받았으면 push 생략), 빈 원격 clone은 바로 push, 그 밖의 clone은 `publish.md` 3·4장, 실패는 로컬 커밋 상태와 함께 보고
 
 ## 4. 보고
 

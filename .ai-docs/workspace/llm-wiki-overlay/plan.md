@@ -228,3 +228,9 @@ claude plugin validate .
 - **세션 도중 갱신 없음**: pull 시점은 startup·resume과 쓰기 스킬 시작뿐이라 긴 세션 중 팀원 머지는 다음 세션에 보임
 - **토큰 영향**: 세션 주입은 불변(커밋 2의 hook diff로 확인), 쓰기 스킬 실행마다 `publish.md` Read 1회(약 2KB)가 늘고 스킬 본문의 인라인 절차 문장은 줄어듦
 - **후속 작업(회사판 sync)**: 회사 레포에 `overlays/llm-wiki/`(`overlay.json`·`.claude-plugin/plugin.json`·`README.md`·`references/publish.md`)를 두고 `tools/overlay.py`로 `plugins/devcenter-llm-wiki`를 생성함. 회사 `publish.md`는 절 제목을 `## 1. 시작`·`## 2. 브랜치`·`## 3. 게시`·`## 4. 종료`로 재구성하고 `## 금지` 절 내용은 이 4개 절 안 불릿으로 옮겨야 함. 회사 위키 `registry.json`의 노드 `project` 키는 5.x `graph.py check`에서 허용되지 않는 키이므로 제거 마이그레이션이 필요함. 자동 복제 제거로 회사 사용자는 첫 세션에 init을 한 번 실행하며, init은 `publish.md` 저장소 불릿의 고정 URL을 묻지 않고 clone함
+
+## Re-plan 2026-09-29 — 빈 원격 clone에서 pull --rebase 실패
+
+- **계기**: 빈 원격을 clone한 위키에서 첫 커밋 뒤 `git pull --rebase`는 `no such ref was fetched`로 실패하고 `git push`는 성공함(git 2.39.5 재현) — init이 골격을 쓰는 주 경로라 계획의 "clone한 저장소는 `publish.md` 3·4장"으로는 게시가 실패함
+- **변경**: init 3장 `원격` 불릿을 "원격에 기준 브랜치가 없으면(새로 만든 저장소·빈 원격 clone) URL이 있을 때 `git remote add origin {URL}` 뒤 `git push -u origin {기준 브랜치}`, 그 밖의 clone은 `publish.md` 3·4장"으로 씀
+- **불변**: `publish.md` 계약과 커밋 1 검증(`git push`는 init 첫 push 1줄) 그대로

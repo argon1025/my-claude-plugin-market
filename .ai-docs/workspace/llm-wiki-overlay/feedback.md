@@ -19,3 +19,6 @@
 - `context` 의도적 단순화: llm-wiki 훅이 startup·resume마다 pull하므로 여러 세션이 동시에 시작하면 pull이 겹쳐 한쪽이 `위키 동기화 실패`를 알릴 수 있음 — 사본은 다른 쪽 pull로 최신이 되며, 알림이 잦으면 짧은 주기 조건을 되살림
 - `constraint` llm-wiki init이 새로 만든 위키 저장소의 첫 push는 원격 추적 브랜치가 없어 publish.md 3장의 `pull --rebase && push`가 실패하므로, 이 경로만 init 스킬 안에 `git push -u origin {기준 브랜치}`로 남음
   - evidence: llm-wiki/skills/init/SKILL.md
+- `correction` llm-wiki init에서 `publish.md` 3장의 `pull --rebase && push`가 실패하는 경로는 새로 만든 저장소만이 아니라 빈 원격을 clone한 저장소도 포함함 — clone이 `branch.main.merge`를 설정해도 원격에 브랜치가 없어 pull이 `no such ref was fetched`로 실패하므로, init 3장은 원격에 기준 브랜치가 없는 두 경로 모두 `git push -u origin {기준 브랜치}`로 첫 push함
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/skills/init/SKILL.md

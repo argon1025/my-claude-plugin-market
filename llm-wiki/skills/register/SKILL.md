@@ -4,21 +4,21 @@ description: Use when the current git repo must be registered in the wiki, moved
 disable-model-invocation: true
 ---
 
-현재 레포를 조사해 위키의 노드와 그 레포가 걸린 의존 간선으로 기록합니다. 규격은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md` 9·10장이 정본이며, 이 스킬은 사실 문서를 쓰지 않습니다.
+현재 레포를 조사해 위키의 노드와 그 레포가 걸린 의존 간선으로 기록합니다. 규격은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md` 9·10장, 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)가 정본이며, 이 스킬은 사실 문서를 쓰지 않습니다.
 
 인자: `--status`(6장만), `--resurvey`(기존 등록 레포를 다시 조사), `--dormant {slug} --remote {URL} --reason {사유} [--default-branch {b}]`(체크아웃 밖 휴면 레포 등록).
 
 ## 1. 전제
 
-- **위키**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init` 안내 후 중단, 있으면 `git -C {WIKI_ROOT} pull --ff-only` — 충돌·분기는 멈추고 보고
+- **위키**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init` 안내 후 중단, 있으면 `publish.md` 1장
 - **레포**: 현재 디렉터리가 git 레포가 아니면 중단, `--status`만 있으면 6장으로
 - **정본 remote**: 순서대로 시도하고 scheme·`.git` 없는 소문자 정규화 꼴 하나만 기록
   1. `git remote get-url upstream`이 있으면 그 URL
-  2. 없으면 `origin` — upstream 없이 owner가 개인 계정이라 포크인지 불명확하면 여기서 확정하지 않고 `포크 의심`으로 표시만 함
+  2. 없으면 `origin` — upstream 없이 owner가 개인 계정이거나 경로에 개인 네임스페이스(`/~`)가 있어 포크인지 불명확하면 여기서 확정하지 않고 `포크 의심`으로 표시만 함
   3. 위로 정해지지 않거나 `포크 의심`이면 3장에서 묻고, 답이 없으면 빈 값으로 두고 보고에 `정본 remote 미상`으로 남김
 - **도메인 예비 판정**: 조사 전에 한 번 정함 — 어느 도메인의 `repos.{slug}`가 있으면 그 도메인, 없고 등록 도메인이 하나뿐이면 그 도메인, 둘 이상이면 `미정`
 - **slug**: 정본 remote의 마지막 경로 요소에서 `.git` 제거·소문자·비허용 문자 하이픈 치환, remote가 없으면 `git rev-parse --path-format=absolute --git-common-dir`의 부모 디렉터리명 — owner가 달라도 레포 이름이 같으면 slug가 겹치므로 겹치면 `{domain}-{name}`을 제안
-- **기존 등록**: 어느 도메인에 `repos.{slug}`가 이미 있고 `--resurvey`가 없으면 3장에서 도메인 이동·정본 remote 교체만 묻고 2장 조사를 생략, 둘 다 아니면 커밋·push 없이 6장으로
+- **기존 등록**: 어느 도메인에 `repos.{slug}`가 이미 있고 `--resurvey`가 없으면 3장에서 도메인 이동·정본 remote 교체만 묻고 2장 조사를 생략, 둘 다 아니면 커밋·게시 없이 6장으로
 - **휴면 레포**: `--dormant`가 있으면 조사·질문 없이 `status: dormant` 노드를 기록하고 4장으로 — `defaultBranch` 기본값은 `main`, `stack`·`summary`·`responsibilities`는 아는 만큼 인자로 받거나 빈 배열·빈 문자열로 두고 나중에 add가 보강함
 
 ## 2. 조사 — 4레인 병렬
@@ -71,6 +71,8 @@ disable-model-invocation: true
 
 ## 4. registry.json·deps.json
 
+편집 전 `publish.md` 2장.
+
 - **노드**: `domains.{d}.repos.{slug}`에 규약 9장 7키(+`dormant`면 `reason`)를 기록
 - **도메인**: 신규 도메인이면 `domains.{d}`에 `description`과 빈 `repos` 기록
 - **간선 상대 판정**: 2.5②에서 정해진 target만 그 slug가 registry에 실재하는지 확인
@@ -78,11 +80,11 @@ disable-model-invocation: true
 - **도메인 이동 — 승인 하나**: `knowledge/{old}/{slug}/`가 있으면 `git mv knowledge/{old}/{slug} knowledge/{new}/{slug}` 대상·건수를 보이고 승인 후 실행, 노드를 `domains.{old}.repos`에서 `domains.{new}.repos`로 옮기고 `deps.json`의 그룹 키와 `to`에 있는 `{old}/{slug}` 끝점을 `{new}/{slug}`로 치환
 - **레포 폴더**: `knowledge/{d}/{slug}/`는 만들지 않음 — 첫 레포 종속 문서가 생길 때 add·update가 만듦
 
-## 5. 검사·커밋·push
+## 5. 검사·커밋·게시
 
 - **검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge {WIKI_ROOT}/registry.json {WIKI_ROOT}/deps.json` 에러 0
 - **커밋**: `chore(register): {slug} → {domain}` 한 커밋에 `registry.json`·`deps.json`을 함께 담고 본문에 `register 조사`(`--dormant`는 `사용자 확인`), 이동이면 `chore(register): {slug} {old} → {new}`
-- **push**: `git -C {WIKI_ROOT} pull --rebase && git push` — 실패는 로컬 커밋 상태와 함께 보고
+- **게시**: `publish.md` 3·4장
 
 ## 6. 상태 표·보고
 

@@ -4,18 +4,17 @@ description: Use when merged code in repos registered in the wiki must be reflec
 disable-model-invocation: true
 ---
 
-등록 레포의 머지된 코드를 위키에 무인으로 반영합니다. 사용자에게 묻지 않으며 반영은 `wiki-update/*` 브랜치 PR의 머지로 승인됩니다. 작업 브랜치를 만든 뒤에는 어느 단계에서 끝나든 미커밋 편집을 `git -C {WIKI_ROOT} stash -u`로 치우고 `main`으로 돌아옵니다 — 세션 주입과 다른 쓰기 스킬이 미승인 편집을 읽지 않게 함. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다.
+등록 레포의 머지된 코드를 위키에 무인으로 반영합니다. 사용자에게 묻지 않고 반영은 PR 머지로 승인되며, 동기화·브랜치·PR·복귀는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)를 따릅니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다.
 
 인자: `--repo {slug}`(대상 한정, 반복 가능), `--range {rev-range}`(지목 범위, 커서 불변), `--max-merges N`(전역 예산, 기본 40), `--dry-run`(3장까지).
 
 ## 1. 범위
 
-- **열린 PR**: `--dry-run`이 아니면 `WIKI_ROOT`에서 `gh pr list --state open --json url,headRefName` — `wiki-update/` 브랜치 PR이 있으면 그 링크를 보고하고 중단(머지 전 재실행은 같은 머지를 두 번 추출함), 명령이 실패하면(GitHub 원격 없음·미인증) 오류 한 줄을 보고하고 중단
-- **동기화**: `git -C {WIKI_ROOT} switch main && git -C {WIKI_ROOT} pull --ff-only` — 실패하면 보고 후 중단(팀원 커밋과 갈라진 상태에서 무인 편집 금지)
+- **저장소**: `publish.md` 1장 — 열린 update PR 확인 포함
 - **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러(없음·규약에 없는 값·adr 위치 불일치)가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — type 에러 문서에 반영하면 6장 되돌림에 걸려 사실이 보고 없이 사라짐
 - **실행**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" pending --wiki {WIKI_ROOT} --out {스크래치} {인자}` — 전 도메인 미처리 머지를 시각 순으로 골라 diff 파일·레포별 `commits`·`batches[{id, shas, bytes}]`·`remaining`과 전역 순서 `order[{slug, sha7, date}]`를 `work.json`에 씀, 묶음은 다시 나누지 않음
 - **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류(stderr 전달 후 중단)
-- **작업 브랜치**: 종료 코드 0이고 `--dry-run`이 아니면 `git -C {WIKI_ROOT} switch -c wiki-update/{YYYYMMDD-HHMM}`
+- **작업 브랜치**: 종료 코드 0이고 `--dry-run`이 아니면 `publish.md` 2장
 - **이월**: `skipped`(clone 준비 실패·force-push 의심·대상 ref 없음·휴면)와 `notes`는 PR 본문 `레포` 절 비고로
 - **부트스트랩**: 커서 없던 레포는 머지 0건이어도 6장에서 HEAD를 커서로 기록
 
@@ -99,9 +98,6 @@ disable-model-invocation: true
 
 ## 7. PR·보고
 
-- **빈 실행**: 브랜치에 커밋이 없으면 `git -C {WIKI_ROOT} switch main && git -C {WIKI_ROOT} branch -D {branch}` 후 한 줄 보고로 종료
 - **본문**: `${CLAUDE_PLUGIN_ROOT}/templates/update-pr.md`대로 `{스크래치}/pr.md` 작성
-- **push·PR**: `git -C {WIKI_ROOT} push -u origin {branch}` 후 `WIKI_ROOT`에서 `gh pr create --base main --head {branch} --title "update: {YYYY-MM-DD} 머지 {N}건 · 문서 {M}장" --body-file {스크래치}/pr.md` — 실패하면 단계·브랜치 이름·오류 한 줄 보고
-- **긴 본문**: `pr.md`가 60,000바이트를 넘으면 `추출 사실` 절을 떼어 본문에 "사실 원장은 첫 코멘트" 한 줄을 두고, PR 생성 뒤 뗀 절을 `gh pr comment {url} --body-file`로 게시
-- **복귀**: 성공·실패와 무관하게 `git -C {WIKI_ROOT} switch main`
+- **게시**: `{스크래치}/pr.md`를 본문으로 `publish.md` 3·4장
 - **터미널**: PR 링크와 `요약` 절 집계 한 줄
