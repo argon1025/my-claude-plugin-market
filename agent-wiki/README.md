@@ -25,11 +25,18 @@
 | `wiki.baseBranch` | `main` | 기준 브랜치 |
 | `workspace.root` | `~/.agent-wiki-workspace` | 등록 레포 clone 경로(`{slug}` 폴더) |
 
-다른 위키를 쓰려면 `config.json`만 교체합니다. `wiki.baseRoot`·`workspace.root`는 읽기 전용 사본이며 실행 때마다 원격 기준 브랜치로 덮어씁니다. 위키 기록은 스킬이 임시 clone에서 커밋·push합니다.
+다른 위키를 쓰려면 `config.json`만 교체합니다.
+
+## 로컬 사본
+
+| 대상 | 정책 |
+| --- | --- |
+| 위키 사본(`wiki.baseRoot`) | 읽기 전용이며 세션 시작(`startup`·`resume`·`clear`)과 `/agent-wiki:init` 때 원격 `baseBranch`로 초기화, 위키 기록은 스킬이 임시 clone에서 커밋·push |
+| 워크스페이스(`workspace.root`) | 사용 자유, register가 분석 대상 레포를 원격 기본 브랜치로 강제 정리하므로 변경 사항은 사라질 수 있음 |
 
 ## 세션 주입
 
-등록 레포에서 세션을 열면 위키 규칙, 같은 도메인 레포 지도(책임과 의존 표식), 도메인 공유·레포 전용 문서 목록, 다른 도메인 목록이 주입됩니다. 세션 시작·재개 때는 로컬 위키를 먼저 최신화하며 최대 3초 기다립니다. 위키가 없거나 미등록 레포면 안내 한 줄만 주입하고, git 원격이 없는 폴더에는 주입하지 않습니다.
+등록 레포에서 세션을 열면 위키 규칙, 같은 도메인 레포 지도(책임과 의존 표식), 도메인 공유·레포 전용 문서 목록, 다른 도메인 목록이 주입됩니다. 세션 시작·재개·`/clear` 때는 로컬 위키를 먼저 최신화하며 최대 3초 기다립니다. 위키가 없거나 미등록 레포면 안내 한 줄만 주입하고, git 원격이 없는 폴더에는 주입하지 않습니다.
 
 ## 위키 구조
 
@@ -39,12 +46,4 @@
 ├── deps.json        # 의존 간선(to·desc)
 ├── knowledge/       # 문서, 레포마다 {domain}/{slug}/
 └── .gitignore       # .local/
-```
-
-## 등록 레포 일괄 최신화
-
-등록 레포 전체를 `workspace.root`에 clone하고 각 원격 `defaultBranch`로 강제 정리합니다. 플러그인 폴더에서 실행하며, slug를 붙이면 그 레포만 처리합니다.
-
-```
-python3 scripts/sync_register_repositories.py ~/.agent-wiki/registry.json ~/.agent-wiki-workspace [slug ...]
 ```
