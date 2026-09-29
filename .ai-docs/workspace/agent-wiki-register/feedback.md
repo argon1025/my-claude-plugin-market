@@ -31,3 +31,7 @@
   - source: 가상 테스트 2026-09-29
 - `constraint` agent-wiki register 간선 프롬프트는 "보고 있다"의 방향 정의가 없으면 대상이 현재 레포를 호출하는 역방향 흔적(CORS 허용 origin, 주석 언급)을 간선으로 오탐하고, 노드 프롬프트는 "서빙 호스트"만으로는 워커 레포의 hosts에 브로커·DB 주소를 넣음
   - source: 가상 테스트 2026-09-29
+- `constraint` agent-wiki register의 워크스페이스 clone에 로컬 변경이 있어도 원격과 겹치지 않으면 `checkout`·`pull --ff-only`가 모두 성공하므로, 수정본 분석을 막으려면 git 실패가 아니라 `status --porcelain` 출력 유무로 중단을 판정해야 함
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `context` agent-wiki register 재등록에서 `알아서`는 기존에만 있는 노드 값(hosts·responsibilities·defaultBranch)은 유지하지만, 간선 에이전트가 `없음`으로 판정한 기존 간선은 자기 블록 통째 교체 계약에 따라 제거함 — 사용자 선택 "질문 생략, 기존 값 유지"는 노드 값에 대한 결정임
+  - source: 사용자 확인 2026-09-29
