@@ -14,3 +14,5 @@
   - source: 사용자 확인 2026-09-29
 - `constraint` agent-wiki 지도 값 규칙은 현재 `agent-wiki/skills/register/SKILL.md` 4절 에이전트 프롬프트 안에만 있고, 세션 레포 지도는 `responsibilities`(없으면 `summary`)와 `deps`의 그룹 키·`to`만 읽음
   - evidence: agent-wiki/skills/register/SKILL.md, agent-wiki/scripts/generate_repository_map.py
+- `context` agent-wiki 쓰기 스킬은 자료의 값이 현재 코드와 달라도 그 코드를 바꾼 커밋·작업 기록이 변경 의도를 밝히면 충돌로 남기지 않고 코드 값으로 갱신하며, 의도를 찾지 못하거나 코드가 잘못 작성된 경우만 미해결 충돌로 기록 없이 넘김 — 사용자 문장 "시간이 지날수록 사실은 변할 수 있음 … 이때는 충돌로 기록할것이 아니고 충돌이면 업데이트 해야하는것임 plan이나 커밋 메시지로는 해당 내용이나 뭔가 코드가 잘못 작성된 경우 (의도 파악이 안되는 케이스)만 충돌 미해결로 패스해야할 듯함"이며, update는 머지를 시간 순으로 반영하므로 순서가 뒤집히는 경우가 없음
+  - source: 사용자 확인 2026-09-29
