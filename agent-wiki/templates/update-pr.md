@@ -6,8 +6,7 @@
 
 - **레포**: `work.json`의 `repos`와 `skipped` 레포마다 1행 — 처리 머지는 sha7과 `subject`(여러 건이면 `N건` 뒤 마지막 1건), `skipped` 사유·`remaining`(예산 밖 이월 N건)은 비고에
 - **추출 사실**: `id` 순으로 `id` 있는 사실 전부 1행(동일 포함) — 판정·사유는 아래 표, 출처는 `{slug}@{sha7}`를 쉼표로
-- **문서**: 편집 문서마다 `### {doc} · 신규|수정` 아래 `**추가|교체**: {summary} (F번호)`, `**보충**`, `**원본 맞춤**`, `**삭제**: {bullet} — {reason} (F번호)` 순, 동일·건너뜀은 적지 않음
-- **보충**: 5절 `completed`마다 `` **보충**: `{set}` 원소 {added}종 추가, 뜻 미확인 {unresolved}종 (F번호) `` — `added`와 `unresolved`가 모두 0이면 생략
+- **문서**: 편집 문서마다 `### {doc} · 신규|수정` 아래 `**추가|교체**: {summary} (F번호)`, `**원본 맞춤**`, `**삭제**: {bullet} — {reason} (F번호)` 순, 동일·건너뜀은 적지 않음
 - **원본 맞춤**: 6절 `fixed_sets`마다 `` **원본 맞춤**: `{set}` {before} → {after} ``
 
 | 판정 | 원천 | 사유 칸 |
@@ -15,15 +14,17 @@
 | 추가·동일 | 5절 `verdicts` | — |
 | 교체 | 5절 `verdicts` | 기존 `{old}` · 인용 "{4절 사실 행 quote}" |
 | 건너뜀 | 5절 `verdicts` | 기존 `{old}` · 의도 인용 없음 |
-| 검토 삭제 | 6절 `removed[].ids` — 5절 판정보다 우선 | `{reason}` |
-| 기각 | 4절 `rejected` | `{reason}` |
+| 검토 삭제 | 6절 `removed[].ids` — 5절 판정보다 우선, reason이 `위치 — `로 시작하는 행 제외 | `{reason}` |
+| 위치 재배정 | 6절 `removed[].reason`이 `위치 — {올바른 위치}` — 머지 후 그 위치 문서에 반영(agent-wiki `add` 이관 전까지 수동) | `{올바른 위치}` |
+| 기각 | 4절 `rejected` 중 `대체 — `로 시작하지 않는 사유 | `{reason}` |
+| 대체 | 4절 `rejected` 중 `대체 — {id}` — 같은 실행의 뒤 머지 사실이 값을 바꿈 | `{id}`로 대체 |
 | 검토 기각 | 6절 `reject_reason` — 원복한 문서의 사실 전부 | `{reject_reason}` |
 
 ## 본문
 
 ````markdown
 ## 요약
-- **집계**: 사실 {n}건 — 추가 {a} · 교체 {r} · 동일 {s} · 건너뜀 {k} · 검토 삭제 {d} · 기각 {j} · 검토 기각 {x}, 문서 신규 {c} · 수정 {m}
+- **집계**: 사실 {n}건 — 추가 {a} · 교체 {r} · 동일 {s} · 건너뜀 {k} · 대체 {v} · 검토 삭제 {d} · 위치 재배정 {l} · 기각 {j} · 검토 기각 {x}, 문서 신규 {c} · 수정 {m}
 
 ## 레포
 | 레포 | 처리 머지 | 커서 | 비고 |
@@ -39,12 +40,13 @@
 | F2 | 주문 상태 DELETE는 운영자 삭제만 뜻하며 조회 API가 404를 반환함 | 교체 | 기존 `모든 삭제` · 인용 "…" | shop-api@c61a8ab |
 | F3 | 취소 요청 DTO는 orderId·cancelReasonCd·memo 필드를 가짐 | 검토 삭제 | 코드 전사 | shop-api@c61a8ab |
 | F4 | … | 기각 | 한 주제 아님 | shop-worker@3ab7c55 |
+| F5 | 취소 이력 적재는 최대 3회 재시도함 | 대체 | F6으로 대체 | shop-worker@1a2b3c4 |
+| F7 | shop-worker 이력 적재 리스너는 새 트랜잭션에서 실행함 | 위치 재배정 | shop-worker 레포 폴더 | shop-worker@3ab7c55 |
 
 ## 문서
 
 ### order-cancel-reason.md · 신규
 - **추가**: `규칙` 절에 사유 코드 문자열 수신과 미등록 코드 거부 (F1)
-- **보충**: `OrderCancelReason` 원소 3종 추가, 뜻 미확인 1종 (F1)
 - **삭제**: 취소 요청 DTO 필드 목록 — 코드 전사 (F3)
 
 ### order-status.md · 수정
