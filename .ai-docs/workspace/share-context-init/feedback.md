@@ -17,3 +17,7 @@
   - source: 사용자 확인 2026-09-29
 - `why` share-context `scripts/write_skeleton.sh`는 골격 파일 작성만 맡고 커밋·push는 init 스킬이 git으로 수행하며, 대상 파일이 하나라도 있으면 쓰지 않고 종료 코드 1을 내 기존 위키를 덮어쓰지 않음 — bash로 작성해 플러그인 전제 조건을 `git` 하나로 유지함
   - evidence: share-context/scripts/write_skeleton.sh
+- `context` 이 플러그인의 이름은 `agent-wiki`이고, 용어 혼동을 막기 위해 문서와 스킬에서는 "컨텍스트" 대신 "위키"로 통일함 — 사용자 문장 "위키라는 용어를 쓸거면 그냥 플러그인 이름도 agent-wiki 로 변경하자 컨텍스트랑 위키랑 용어 혼동될 듯함"
+  - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki 스킬 본문은 절마다 제목, 한 줄 조건, 실행할 명령 코드 블록, 예외 한 줄로 쓰고 굵은 라벨 불릿이나 근거 서술을 두지 않음 — 에이전트가 아는 git 명령은 설명 없이 명령만 보임
+  - source: 사용자 확인 2026-09-29

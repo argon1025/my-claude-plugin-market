@@ -107,3 +107,14 @@
 |---|---|---|
 | 4 | `share-context/scripts/write_skeleton.sh`·`skills/init/SKILL.md`·`README.md` — `refactor(share-context): 골격 작성 스크립트 분리` | `bash -n` 통과, 빈 폴더 실행 시 4파일 생성, 재실행 시 종료 코드 1·파일 불변, `grep -rE 'references/|llm-wiki:' share-context/skills` 출력 없음 |
 | 5 | 수동 E2E(커밋 없음) | 커밋 3의 ③ 빈 저장소 시나리오 재실행 결과 `chore(init): 위키 골격` 1건과 4파일, config.json 원복 확인 |
+
+## Re-plan 2026-09-29 — 플러그인 이름 agent-wiki로 변경과 스킬 문체 단순화
+
+- **계기**: 사용자 지시 "위키라는 용어를 쓸거면 그냥 플러그인 이름도 agent-wiki 로 변경하자 컨텍스트랑 위키랑 용어 혼동될 듯함", 스킬 설명은 "2. 스켈레톤 생성 / 컨텍스트 저장소가 비어있으면 초기 구성을 진행 후 커밋 / {명령어} / 종료코드 1 이면 기존 파일이 있다는 의미임으로 중단 후 보고" 형식으로 단순화
+- **이름**: 디렉터리 `share-context/`를 `agent-wiki/`로, plugin.json·marketplace.json name과 스킬 호출명을 `/agent-wiki:init`으로 바꾸고 문서의 "공유 컨텍스트"·"컨텍스트 저장소" 표현을 "위키"로 통일, 브랜치명 `feat/share-context-init`과 기록 폴더 `share-context-init`은 유지
+- **스킬 문체**: 절마다 제목, 한 줄 조건, 명령 코드 블록, 예외 한 줄로 쓰고 굵은 라벨 불릿과 근거 서술은 두지 않음
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 6 | `skills/init/SKILL.md` 문체 단순화 — `docs(share-context): init 스킬 문체 단순화` | 빈 저장소·재실행 E2E 통과, `claude plugin validate` 통과 |
+| 7 | `share-context/`를 `agent-wiki/`로 이름 변경, marketplace.json·README.md 반영 — `refactor: 플러그인 이름 agent-wiki로 변경` | `claude plugin validate ./agent-wiki`·`claude plugin validate .` 통과, `grep -rn 'share-context\|공유 컨텍스트\|컨텍스트 저장소'`가 `.ai-docs` 밖에서 출력 없음, `/agent-wiki:init` 빈 저장소 E2E 통과 |
