@@ -49,3 +49,8 @@
   - source: 사용자 확인 2026-09-29
 - `why` agent-wiki `sync_wiki.py`·`sync_register_repositories.py`는 origin이 기록된 remote와 달라도 멈추지 않고 `git remote set-url origin {remote}`로 맞춤 — 두 폴더는 읽기 전용 사본이라 보호할 로컬 상태가 없고, config·registry의 remote가 바뀐 경우(구형 remote 전환 포함)도 같은 경로로 흡수되며, 대가는 `baseRoot`를 다른 용도의 기존 폴더로 지정하면 그 폴더가 덮어써진다는 점임
 - `why` agent-wiki 두 동기화 스크립트의 공통 git 경로 5줄은 파일마다 따로 두고 서로 import하지 않음 — 스크립트 하나 책임 하나·파일 간 의존 없음 원칙을 중복 제거보다 우선함
+- `why` agent-wiki `hooks/session_start.py`는 origin 판정을 위키 동기화보다 먼저 수행함 — git 밖이거나 origin이 없는 폴더에서 세션을 열 때 주입할 것이 없는데도 최대 3초를 기다리지 않게 하기 위함이며, 그런 세션에서는 위키 트리도 최신화되지 않음
+  - evidence: agent-wiki/hooks/session_start.py
+- `context` agent-wiki 훅은 stdin JSON을 읽지 못하면 주입을 포기하지 않고 `source`를 `startup`으로 간주함 — 계획의 `## 외부 계약` 예외 목록("stdin 파싱 실패는 주입 없음")과 `### hooks/session_start.py` 절("파싱 실패면 startup")이 달라 구현 사양 절을 따랐음
+  - evidence: agent-wiki/hooks/session_start.py
+- `constraint` 이 개발 환경의 Claude Code Bash 도구는 zsh로 실행되어 `$VAR`에 담은 명령이 단어 분리되지 않고 `PIPESTATUS`·`timeout` 명령이 없으므로, agent-wiki 훅·스크립트 검증은 bash 스크립트 파일로 만들어 `bash {파일}`로 실행해야 결과가 맞음
