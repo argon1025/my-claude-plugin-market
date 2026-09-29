@@ -2,14 +2,14 @@
 
 ## 의도
 
-- **왜**: 회사판(devcenter-llm-wiki)이 개인판 4.0.0을 파일째 복사해 수정한 사본이라, 개인판 버전업 때마다 16개 파일에 흩어진 이격을 손으로 찾아 다시 적용해야 함
+- **왜**: 회사판이 개인판 4.0.0을 파일째 복사해 수정한 사본이라, 개인판 버전업 때마다 16개 파일에 흩어진 이격을 손으로 찾아 다시 적용해야 함
 - **누가**: 두 플러그인을 관리하는 사용자가 개인판 릴리스 뒤 회사판을 sync할 때마다 겪음
 - **완료**: 개인판 안의 이격 지점이 분리 파일과 치환 규칙으로만 모이고, 병합 스크립트가 '개인판 + 오버레이'로 변형 플러그인을 생성하며, 개인판 동작과 세션 주입 토큰은 현행과 같음. 회사 오버레이 작성과 회사판 sync는 다음 작업이고, 오버레이는 회사 레포에 둠(개인 레포가 공개이기 때문)
 
 ## 배경
 
-- **기준본**: 회사판 4.0.0은 개인 레포 커밋 `fd3664f`(llm-wiki v4.0.0)와 같은 시점이며, 회사 전용 이격은 `git archive fd3664f llm-wiki`와 `onestore-devcenter-claude-plugin-marketplace/plugins/devcenter-llm-wiki`의 diff로 추출됨
-- **공개 레포**: `argon1025/my-claude-plugin-market`은 PUBLIC이라 사내 URL(`bitbucket.onestorecorp.com` 등)·사내 호스트를 개인판과 이 레포의 어떤 파일에도 넣지 않음
+- **기준본**: 회사판 4.0.0은 개인 레포 커밋 `fd3664f`(llm-wiki v4.0.0)와 같은 시점이며, 회사 전용 이격은 `git archive fd3664f llm-wiki`와 회사 마켓플레이스 레포의 회사판 플러그인 폴더의 diff로 추출됨
+- **공개 레포**: `argon1025/my-claude-plugin-market`은 PUBLIC이라 사내 URL·사내 호스트를 개인판과 이 레포의 어떤 파일에도 넣지 않음
 - **현행 동기화**: `llm-wiki/hooks/session_start.py` `sync()`는 startup·resume에서 `FETCH_HEAD`가 10분(`LLM_WIKI_SYNC_MINUTES`)보다 오래됐을 때만 `pull --ff-only`를 걸고 3초 기다림, clear·compact·fork는 pull하지 않음, 세션 도중 자동 갱신 없음
 - **현행 게시**: init·register·add·audit은 끝에 `git -C {WIKI_ROOT} pull --rebase && git push`로 `main` 직접 push, update만 `wiki-update/*` 브랜치 + `gh pr create`
 - **단일 경로 소스**: 위키 루트는 `llm-wiki/scripts/graph.py:31` `DEFAULT_WIKI` 한 곳에서 정해지고 훅·update.py가 이를 가져다 씀
@@ -21,9 +21,9 @@
 | # | 이격 | 판정 | 분리 수단 |
 |---|---|---|---|
 | 1 | 플러그인 식별(name·description·author·keywords), README 설치 안내 | 유지 | 오버레이 파일 교체(`plugin.json`은 얕은 병합) |
-| 2 | 스킬 네임스페이스 `/llm-wiki:` → `/devcenter-llm-wiki:` | 유지 | `overlay.json` 치환 |
+| 2 | 스킬 네임스페이스 `/llm-wiki:` → `/{회사판}:` | 유지 | `overlay.json` 치환 |
 | 3 | 위키 루트 환경변수·기본 경로(`LLM_WIKI_ROOT`·`~/.ai-docs/wiki`) | 유지(병행 설치 조건) | `overlay.json` 치환 |
-| 4 | 쓰기 게시 절차(회사: 쓰기 전부 브랜치 + onestore MCP PR·`master`·직접 push 금지·MCP 부재 시 수동 URL) | 유지 | `references/publish.md` 파일 교체 |
+| 4 | 쓰기 게시 절차(회사: 쓰기 전부 브랜치 + 사내 MCP PR·`master`·직접 push 금지·MCP 부재 시 수동 URL) | 유지 | `references/publish.md` 파일 교체 |
 | 5 | 위키 저장소 고정(clone URL 고정, init 질문 생략) | 유지 | `publish.md` 머리 `저장소` 불릿 |
 | 6 | 훅 자동 복제(락·스테이징·실패 게이트) | 제거 | 회사 사용자는 init 1회 실행 |
 | 7 | 훅 잔여 브랜치 감지·머지 대기 PR 건수 헤더 | 제거 | `publish.md` 1장 점검으로 대체 |
@@ -43,7 +43,7 @@
 ## 선행 읽기
 
 - `llm-wiki/skills/update/SKILL.md` 1·7장: 옮길 `gh`·`main`·stash 문장의 원문
-- `onestore-devcenter-claude-plugin-marketplace/plugins/devcenter-llm-wiki/references/publish.md`: 같은 이름 파일의 회사판 구성(시작·브랜치·PR·종료) — 개인판 절 구성이 이것과 대응하도록 맞춤, 사내 URL은 옮기지 않음
+- 회사 마켓플레이스 레포의 회사판 `references/publish.md`: 같은 이름 파일의 회사판 구성(시작·브랜치·PR·종료) — 개인판 절 구성이 이것과 대응하도록 맞춤, 사내 URL은 옮기지 않음
 
 ## 작업
 
@@ -132,7 +132,7 @@
 - **교체 파일**: base에 같은 경로가 없으면 에러 — 개인판에서 파일 이름이 바뀐 드리프트를 잡음
 - **plugin.json**: `.claude-plugin/plugin.json`만 base JSON 위에 오버레이 JSON을 얕게 병합 — `version`은 오버레이가 지정하지 않으면 base를 따름
 - **절 제목 계약**: `README.md`를 뺀 `.md` 교체 파일은 `## `로 시작하는 줄 목록이 base와 같아야 하며 다르면 두 목록을 보이고 에러
-- **치환 대상**: base에서 온 파일 중 UTF-8로 읽히는 파일에만 적용하고 교체 파일·병합한 `plugin.json`에는 적용하지 않음 — 교체 파일은 이미 변형 표기라 `LLM_WIKI_`가 `DEVCENTER_LLM_WIKI_` 안에서 다시 치환되는 이중 치환을 막음
+- **치환 대상**: base에서 온 파일 중 UTF-8로 읽히는 파일에만 적용하고 교체 파일·병합한 `plugin.json`에는 적용하지 않음 — 교체 파일은 이미 변형 표기라 `LLM_WIKI_`가 `ACME_LLM_WIKI_` 안에서 다시 치환되는 이중 치환을 막음
 - **치환 방식**: 긴 키 우선 정렬한 `re.escape` 교대 패턴 한 번으로 치환해 연쇄 치환을 막고 키별 적중 수를 셈, 적중 0건 키가 있으면 에러 — 개인판 문구 변경 드리프트를 잡음
 - **바이너리**: UTF-8로 읽히지 않는 파일은 바이트 그대로 복사
 - **권한**: 모든 파일에 `shutil.copymode`로 base(교체 파일은 오버레이) 권한 유지 — 훅 실행 비트
@@ -223,11 +223,11 @@ claude plugin validate .
 
 ## 특이 사항
 
-- **범위 밖**: 회사 오버레이 작성, 회사판 5.7.0 sync, 회사 레포 marketplace.json 갱신, 다른 플러그인 쌍(pr-workflow↔devcenter-pr 등)의 분리, `hooks.json` 따옴표 경고
+- **범위 밖**: 회사 오버레이 작성, 회사판 5.7.0 sync, 회사 레포 marketplace.json 갱신, 다른 플러그인 쌍(pr-workflow와 회사판 PR 플러그인 등)의 분리, `hooks.json` 따옴표 경고
 - **동시 시작 한계**: 10분 조건을 없애 여러 세션이 동시에 시작하면 pull이 겹쳐 한쪽이 `위키 동기화 실패` 알림을 낼 수 있음 — 사본은 다른 쪽 pull로 최신이 되며, 알림이 잦으면 짧은 주기 조건을 되살리는 것이 업그레이드 조건
 - **세션 도중 갱신 없음**: pull 시점은 startup·resume과 쓰기 스킬 시작뿐이라 긴 세션 중 팀원 머지는 다음 세션에 보임
 - **토큰 영향**: 세션 주입은 불변(커밋 2의 hook diff로 확인), 쓰기 스킬 실행마다 `publish.md` Read 1회(약 2KB)가 늘고 스킬 본문의 인라인 절차 문장은 줄어듦
-- **후속 작업(회사판 sync)**: 회사 레포에 `overlays/llm-wiki/`(`overlay.json`·`.claude-plugin/plugin.json`·`README.md`·`references/publish.md`)를 두고 `tools/overlay.py`로 `plugins/devcenter-llm-wiki`를 생성함. 회사 `publish.md`는 절 제목을 `## 1. 시작`·`## 2. 브랜치`·`## 3. 게시`·`## 4. 종료`로 재구성하고 `## 금지` 절 내용은 이 4개 절 안 불릿으로 옮겨야 함. 회사 위키 `registry.json`의 노드 `project` 키는 5.x `graph.py check`에서 허용되지 않는 키이므로 제거 마이그레이션이 필요함. 자동 복제 제거로 회사 사용자는 첫 세션에 init을 한 번 실행하며, init은 `publish.md` 저장소 불릿의 고정 URL을 묻지 않고 clone함
+- **후속 작업(회사판 sync)**: 회사 레포에 `overlays/llm-wiki/`(`overlay.json`·`.claude-plugin/plugin.json`·`README.md`·`references/publish.md`)를 두고 `tools/overlay.py`로 회사판 플러그인 폴더를 생성함. 회사 `publish.md`는 절 제목을 `## 1. 시작`·`## 2. 브랜치`·`## 3. 게시`·`## 4. 종료`로 재구성하고 `## 금지` 절 내용은 이 4개 절 안 불릿으로 옮겨야 함. 회사 위키 `registry.json`의 노드 `project` 키는 5.x `graph.py check`에서 허용되지 않는 키이므로 제거 마이그레이션이 필요함. 자동 복제 제거로 회사 사용자는 첫 세션에 init을 한 번 실행하며, init은 `publish.md` 저장소 불릿의 고정 URL을 묻지 않고 clone함
 
 ## Re-plan 2026-09-29 — 빈 원격 clone에서 pull --rebase 실패
 

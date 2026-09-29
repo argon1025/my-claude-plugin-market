@@ -6,15 +6,15 @@
   - source: 사용자 확인 2026-09-29
 - `context` 회사판 훅의 위키 자동 복제는 제거에 동의하나 세션 시작할 때 마다 그냥 pull 땡겼으면 좋겠음 — llm-wiki 훅의 10분 동기화 조건을 없애고 startup·resume마다 pull하기로 함
   - source: 사용자 확인 2026-09-29
-- `constraint` 개인 마켓플레이스 레포 argon1025/my-claude-plugin-market은 PUBLIC이라 회사 오버레이(Bitbucket URL·사내 호스트·프로젝트 키)는 이 레포가 아니라 onestore-devcenter-claude-plugin-marketplace 레포에 두며, 개인판 파일과 예시에도 사내 식별자를 넣지 않음
-- `constraint` 회사판 devcenter-llm-wiki 4.0.0은 개인 레포 커밋 fd3664f(llm-wiki v4.0.0)와 같은 시점이라, 회사 전용 이격은 이 커밋의 llm-wiki와 회사 plugins/devcenter-llm-wiki의 diff로만 가려지고 개인판 HEAD와의 diff에는 버전 차이가 섞임
-  - evidence: onestore-devcenter-claude-plugin-marketplace/plugins/devcenter-llm-wiki/.claude-plugin/plugin.json
+- `constraint` 개인 마켓플레이스 레포 argon1025/my-claude-plugin-market은 PUBLIC이라 회사 오버레이(Bitbucket URL·사내 호스트·프로젝트 키)는 이 레포가 아니라 회사 마켓플레이스 레포에 두며, 개인판 파일과 예시에도 사내 식별자를 넣지 않음
+- `constraint` 회사판 4.0.0은 개인 레포 커밋 fd3664f(llm-wiki v4.0.0)와 같은 시점이라, 회사 전용 이격은 이 커밋의 llm-wiki와 회사판 플러그인 폴더의 diff로만 가려지고 개인판 HEAD와의 diff에는 버전 차이가 섞임
+  - evidence: 회사 마켓플레이스 레포의 회사판 .claude-plugin/plugin.json
 - `constraint` 회사 위키 registry.json의 노드는 `project` 키(Bitbucket 브라우즈 URL)를 가지나 개인판 5.x graph.py의 REPO_KEYS에는 `project`가 없어, 회사판을 5.x로 sync하면 `graph.py check`가 노드마다 허용되지 않는 키 에러를 내므로 키 제거 마이그레이션이 필요함
   - evidence: llm-wiki/scripts/graph.py REPO_KEYS
 - `constraint` llm-wiki references/publish.md의 `##` 절 제목 4개(1. 시작·2. 브랜치·3. 게시·4. 종료)는 스킬 5종이 장 번호로 참조하는 계약이라 변형 오버레이의 publish.md도 같은 제목을 가져야 하며 tools/overlay.py가 이를 대조함
   - evidence: llm-wiki/references/publish.md, tools/overlay.py
 - `why` 저장소 절차 이격은 references/publish.md 파일 통째 교체로 분리함 — pr-workflow식 호스트 자동 판별은 개인판 스킬에 사내 도구 문구가 상주하고 전 쓰기 PR·master 직접 push 금지 같은 정책 차이가 여전히 분기로 남으며, (파일, 원문, 대체문) 치환 규칙은 토큰은 최소지만 개인판 문장이 바뀔 때마다 규칙이 깨져 sync 비용이 남음. 대가는 쓰기 스킬 실행마다 publish.md Read 1회이며 세션 주입은 변하지 않음
-- `why` tools/overlay.py의 문자열 치환은 base에서 온 파일에만 적용하고 오버레이 교체 파일에는 적용하지 않음 — `LLM_WIKI_` 같은 원문이 대체문 `DEVCENTER_LLM_WIKI_` 안에 들어 있어 교체 파일에 다시 적용하면 이중 치환이 생기고, 같은 이유로 "치환 후 원문 잔존 없음" 검사 대신 키별 적중 수 0건 검사만 씀
+- `why` tools/overlay.py의 문자열 치환은 base에서 온 파일에만 적용하고 오버레이 교체 파일에는 적용하지 않음 — `LLM_WIKI_` 같은 원문이 대체문 `ACME_LLM_WIKI_` 안에 들어 있어 교체 파일에 다시 적용하면 이중 치환이 생기고, 같은 이유로 "치환 후 원문 잔존 없음" 검사 대신 키별 적중 수 0건 검사만 씀
 - `why` 회사판 훅의 자동 복제(락·스테이징·60분 실패 게이트)는 이식하지 않고 회사 사용자가 첫 세션에 init을 한 번 실행하게 함 — 훅 확장점과 동시성 코드를 개인판에 두지 않는 단순 구조를 택함
 - `context` 의도적 단순화: llm-wiki 훅이 startup·resume마다 pull하므로 여러 세션이 동시에 시작하면 pull이 겹쳐 한쪽이 `위키 동기화 실패`를 알릴 수 있음 — 사본은 다른 쪽 pull로 최신이 되며, 알림이 잦으면 짧은 주기 조건을 되살림
 - `constraint` llm-wiki init이 새로 만든 위키 저장소의 첫 push는 원격 추적 브랜치가 없어 publish.md 3장의 `pull --rebase && push`가 실패하므로, 이 경로만 init 스킬 안에 `git push -u origin {기준 브랜치}`로 남음
