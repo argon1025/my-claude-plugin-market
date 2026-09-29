@@ -4,7 +4,7 @@ description: Create the wiki skeleton if the configured remote is empty, then fo
 disable-model-invocation: true
 ---
 
-`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`baseRoot`·`remote`·`baseBranch`)을 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. `baseRoot`는 읽기 전용 사본이며 쓰기는 임시 clone에서 합니다.
+`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`baseRoot`·`remote`·`baseBranch`)을 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다.
 
 ## 1. 빈 원격 확인
 
