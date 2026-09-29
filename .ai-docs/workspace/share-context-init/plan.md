@@ -94,3 +94,16 @@
 - **골격 차이**: 빈 저장소 골격에 `state/`를 두지 않아 llm-wiki update가 같은 위키를 쓰면 `state/` 파일을 처음 만들 때 생성됨 — update 이관 단계에서 커서 저장 방식과 함께 결정
 - **후속 작업**: 다음 이관 단계는 register 또는 SessionStart 주입이며, 주입 단계에서 "위키 없음 — `/share-context:init` 실행" 안내를 훅에 추가
 - **승인 후 기록**: `.ai-docs/workspace/share-context-init/plan.md`에 이 계획을, `feedback.md`에 사용자 의도 `context`·고정 위키 트레이드오프 `why`·공개 레포와 공유 경로 `constraint`를 남겨 한 커밋으로 기록
+
+## Re-plan 2026-09-29 — 골격 작성을 스크립트로 분리
+
+- **계기**: 사용자 지시 "스킬 내 골격 구성은 프롬프트가 아니라 스크립트로 제공해도 무방할듯 함 / scripts 하위에 하나 생성, 스크립트는 파일 하나 당 하나의 책임(기능)만 수행 하도록 함"
+- **폐기**: 원점 재검토 표의 `catalog.py --check 등 스크립트 — 미채용` 판정과 SKILL.md 금지 사항의 `scripts` 참조 금지, 커밋 1 검증의 `grep -rE 'references/|scripts/|llm-wiki:'` 중 `scripts/` 항목
+- **신규**: `share-context/scripts/write_skeleton.sh` — 인자로 받은 위키 경로에 골격 4파일(`registry.json`·`deps.json`·`knowledge/.gitkeep`·`.gitignore`)만 작성하며, 대상 파일이 하나라도 이미 있으면 아무것도 쓰지 않고 종료 코드 1, bash만 사용해 전제 조건은 `git` 그대로 유지
+- **책임 경계**: 스크립트는 파일 작성 하나만 맡고 커밋·push는 스킬이 git 명령으로 수행 — push 실패 보고가 스킬의 실패 절 소관이기 때문
+- **변경**: `skills/init/SKILL.md` 골격 절을 스크립트 호출·커밋·push로 교체, `README.md` 전제 조건·골격 설명 갱신
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 4 | `share-context/scripts/write_skeleton.sh`·`skills/init/SKILL.md`·`README.md` — `refactor(share-context): 골격 작성 스크립트 분리` | `bash -n` 통과, 빈 폴더 실행 시 4파일 생성, 재실행 시 종료 코드 1·파일 불변, `grep -rE 'references/|llm-wiki:' share-context/skills` 출력 없음 |
+| 5 | 수동 E2E(커밋 없음) | 커밋 3의 ③ 빈 저장소 시나리오 재실행 결과 `chore(init): 위키 골격` 1건과 4파일, config.json 원복 확인 |

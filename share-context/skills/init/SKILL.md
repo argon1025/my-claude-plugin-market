@@ -15,7 +15,7 @@ disable-model-invocation: true
 
 ## 2. 골격
 
-- **파일**: `registry.json` `{"domains": {}}`, `deps.json` `{"deps": {}}`, `knowledge/.gitkeep` 빈 파일, `.gitignore` `.local/` 4종 작성
+- **파일**: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/write_skeleton.sh {baseRoot}`로 골격 4종 작성, 종료 코드 1이면 기존 파일이 있다는 뜻이므로 커밋하지 않고 보고
 - **게시**: `baseBranch`에 첫 커밋 `chore(init): 위키 골격` 후 `git push -u origin {baseBranch}`
 
 ## 3. 실패

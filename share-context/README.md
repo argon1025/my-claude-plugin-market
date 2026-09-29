@@ -17,7 +17,7 @@
 
 ## 전제 조건
 
-- **git**: 스킬이 git 명령만으로 동작하며 스크립트는 없음
+- **git**: 스킬은 git 명령으로 동작하며, 빈 저장소 골격 작성만 bash 스크립트 `scripts/write_skeleton.sh`가 맡음
 - **원격 접근**: `wiki.remote`에 clone·push 권한이 필요하며, 인증은 비대화식으로 시도하고 실패하면 직접 실행할 명령을 안내함
 
 ## 설정
@@ -33,7 +33,7 @@
 ## 특이 사항
 
 - **공존**: llm-wiki와 같은 `~/.llm-wiki`를 공유하며, 위키 트리가 `baseBranch`가 아닌 브랜치에 있거나 `origin`이 다르면 init은 브랜치 전환·stash 없이 보고만 함
-- **골격 범위**: 빈 저장소 골격은 `registry.json`·`deps.json`·`knowledge/.gitkeep`·`.gitignore`(`.local/`) 4종이며 `state/`는 두지 않음
+- **골격 범위**: 빈 저장소 골격은 `registry.json`·`deps.json`·`knowledge/.gitkeep`·`.gitignore`(`.local/`) 4종이며 `state/`는 두지 않고, 스크립트는 대상 파일이 하나라도 있으면 아무것도 쓰지 않음
 
 ## 이관 현황
 
