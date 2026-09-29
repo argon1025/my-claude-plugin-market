@@ -1,7 +1,0 @@
-{
-  "name": "share-context",
-  "description": "공유 컨텍스트 — 고정 위키 저장소(registry.json·deps.json·knowledge)를 로컬에 준비하는 init 스킬, 세션 주입·레포 등록·문서 갱신은 순차 이관 예정",
-  "version": "0.1.0",
-  "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
-  "keywords": ["wiki", "knowledge", "git", "위키", "공유 컨텍스트"]
-}

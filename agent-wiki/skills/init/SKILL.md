@@ -24,7 +24,7 @@ git -C {baseRoot} pull --ff-only origin {baseBranch}
 
 ## 2. 스켈레톤 생성
 
-컨텍스트 저장소가 비어 있으면 초기 구성을 진행 후 커밋합니다.
+위키 저장소가 비어 있으면 초기 구성을 진행 후 커밋합니다.
 
 ```
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/write_skeleton.sh {baseRoot}

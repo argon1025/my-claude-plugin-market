@@ -1,19 +1,19 @@
-# share-context
+# agent-wiki
 
-여러 레포와 팀원이 공유할 컨텍스트를 별도 git 위키 저장소에 두고 로컬에 준비하는 플러그인입니다. 위키 저장소는 사용자가 고르지 않고 `config.json`에 고정하며, 위키 문서 구조(`registry.json`·`deps.json`·`knowledge/`)는 llm-wiki와 같습니다.
+여러 레포와 팀원이 공유할 사실을 별도 git 위키 저장소에 두고 로컬에 준비하는 플러그인입니다. 위키 저장소는 사용자가 고르지 않고 `config.json`에 고정하며, 위키 문서 구조(`registry.json`·`deps.json`·`knowledge/`)는 llm-wiki와 같습니다.
 
 | 스킬 | 실행 | 역할 |
 | --- | --- | --- |
-| `/share-context:init` | 명시 호출만 | 위키 경로가 없으면 clone, 있으면 `pull --ff-only`, clone한 저장소가 비어 있으면 골격 작성·커밋·push |
+| `/agent-wiki:init` | 명시 호출만 | 위키 경로가 없으면 clone, 있으면 `pull --ff-only`, clone한 저장소가 비어 있으면 골격 작성·커밋·push |
 
 ## 설치
 
 ```
 /plugin marketplace add argon1025/my-claude-plugin-market
-/plugin install share-context@my-claude-plugin-market
+/plugin install agent-wiki@my-claude-plugin-market
 ```
 
-설치 후 새 세션에서 `/share-context:init`을 한 번 실행합니다.
+설치 후 새 세션에서 `/agent-wiki:init`을 한 번 실행합니다.
 
 ## 전제 조건
 
