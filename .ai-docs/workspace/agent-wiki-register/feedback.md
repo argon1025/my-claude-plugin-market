@@ -18,3 +18,5 @@
   - evidence: .ai-docs/workspace/share-context-init/feedback.md
 - `context` agent-wiki register 간선은 현재 레포가 `from`인 자기 블록만 기록하고 재실행 시 그 블록을 통째로 교체하므로, 다른 레포가 현재 레포를 보는 간선은 그 레포를 등록할 때만 생김 — 간선 에이전트 수가 등록 레포 수에 비례해 늘어나는 비용은 인자로 범위를 지정해 줄이고, 부담이 확인되면 도메인 단위로 묶는 방식을 도입함
   - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 워크스페이스 기본 경로는 위키 트리 안의 `~/.llm-wiki/.local/repos`가 아니라 위키와 독립된 `~/.llm-wiki-workspace`(`config.json` `workspace.root`)이며, 위키 트리 `~/.llm-wiki`에는 등록 레포 clone을 두지 않음 — 사용자 문장 "그냥 위키에 한번에 등록하지 말고 위키 경로도 바꾸자 ~/.llm-wiki ~/.llm-wiki-workspac 로 독립"
+  - source: 사용자 확인 2026-09-29

@@ -213,3 +213,31 @@
 - **워크스페이스 브랜치**: `sync_repos.py`는 워크스페이스 clone을 각 노드의 `defaultBranch`로 checkout하므로 워크스페이스 안에서 직접 작업하던 브랜치는 전환됨 — 위키 트리(`baseRoot`)는 전환하지 않으며, 워크스페이스 clone에 로컬 변경이 있어 checkout이 실패하면 `fail`로 보고함
 - **README 사용법**: agent-wiki README에 `sync_repos.py` 단독 실행 명령을 코드 블록 하나로 적어 등록 레포 일괄 최신화 용도로도 쓸 수 있게 함
 - **승인 후 기록**: `.ai-docs/workspace/agent-wiki-register/plan.md`에 이 계획을, `feedback.md`에 사용자 의도 `context`, 간선 단순화 `why`, 공유 트리·구형 데이터 `constraint`, 의도적 단순화 한계 `context`를 남겨 한 커밋으로 기록
+
+## Re-plan 2026-09-29 — 워크스페이스를 위키 트리 밖으로 독립
+
+- **폐기**: `## 확정 결정`의 워크스페이스 경로 기본값 `~/.llm-wiki/.local/repos`, `### config.json`의 `workspace.root` 값과 그 아래 `경로` 불릿(`.gitignore`의 `.local/` 제외에 기대는 근거), `## 특이 사항`의 해당 경로 언급 — 사용자 지시 "그냥 위키에 한번에 등록하지 말고 위키 경로도 바꾸자 ~/.llm-wiki ~/.llm-wiki-workspac 로 독립"
+- **경로**: 위키는 `~/.llm-wiki`(`wiki.baseRoot`) 그대로, 워크스페이스 기본값은 위키 트리 밖의 `~/.llm-wiki-workspace`(`workspace.root`)이며 clone 폴더는 `~/.llm-wiki-workspace/{slug}`
+- **config.json**:
+
+  ```json
+  {
+    "wiki": {
+      "baseRoot": "~/.llm-wiki",
+      "remote": "https://github.com/argon1025/argon1025-llm-wiki.git",
+      "baseBranch": "main"
+    },
+    "workspace": {
+      "root": "~/.llm-wiki-workspace"
+    }
+  }
+  ```
+
+- **영향**: `sync_repos.py`는 `workspace.root`가 없으면 만들고, 위키 트리의 `.gitignore`는 바꾸지 않음 — `write_skeleton.sh`의 `.local/` 항목은 그대로 둠
+- **README**: `agent-wiki/README.md` 설정 표의 `workspace.root` 기본값을 `~/.llm-wiki-workspace`로 적음
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 2 보강 | `sync_repos.py` | 존재하지 않는 `workspace.root`로 첫 실행 시 폴더가 생성되고 `ok` 줄 출력 |
+| 3 보강 | `agent-wiki/config.json` | `python3 -c "import json;assert json.load(open('agent-wiki/config.json'))['workspace']['root']=='~/.llm-wiki-workspace'"` 종료 코드 0, `grep -rn '.local/repos' agent-wiki` 출력 없음 |
+| 5 보강 | 수동 E2E | 워크스페이스를 `{스크래치}/repos`로 둔 채 실행한 뒤 `git -C {스크래치}/wiki status --porcelain` 출력 없음(위키 트리에 clone 흔적 없음) |
