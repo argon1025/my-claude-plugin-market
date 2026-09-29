@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# 등록 레포(와 --current로 받은 현재 레포)를 워크스페이스에 clone하고 원격 defaultBranch로 강제 정리한다.
-# 워크스페이스는 읽기 전용 사본이므로 로컬 변경·커밋·다른 브랜치는 버린다.
+# 나열한 등록 레포(와 --current로 받은 현재 레포)를 워크스페이스에 clone하고 원격 defaultBranch로 강제 정리한다.
+# register 분석 기준을 맞추기 위해 로컬 변경·커밋·다른 브랜치는 버린다.
 import argparse
 import json
 import os
@@ -27,7 +27,7 @@ def sync(path, node):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="slug를 생략하면 전체 등록 레포, --current가 있으면 나열한 slug만")
+    ap = argparse.ArgumentParser(description="나열한 slug와 --current 레포만 처리")
     ap.add_argument("registry")
     ap.add_argument("root")
     ap.add_argument("slugs", nargs="*")
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     nodes = {s: (n.get("remote"), n.get("defaultBranch"))
              for g in json.loads(Path(a.registry).expanduser().read_text()).get("domains", {}).values()
              for s, n in g.get("repos", {}).items()}
-    targets = {s: nodes.get(s) for s in (a.slugs or ([] if a.current else nodes))}
+    targets = {s: nodes.get(s) for s in a.slugs}
     targets |= {a.current[0]: tuple(a.current[1:])} if a.current else {}
     bad = False
     for slug, node in targets.items():
