@@ -1,6 +1,6 @@
 ---
 name: init
-description: Use when the wiki repo is not present on this machine or exists without registry.json ("위키 초기화", "위키 세팅", "위키 클론", session header says 위키가 없음) — clones the shared wiki into the wiki root, or git-inits a new one and asks for the remote, and writes the skeleton (registry.json, deps.json, state/, knowledge/, .gitignore) with a first commit. Registers nothing and writes no facts. NOT for registering the current repo (register skill).
+description: Use when the wiki repo is not present on this machine or exists without registry.json ("위키 초기화", "위키 세팅", "위키 클론", session header says 위키가 없음) — clones the wiki repo fixed in publish.md, otherwise asks for a clone URL or git-inits a new one with its remote, and writes the skeleton (registry.json, deps.json, state/, knowledge/, .gitignore) with a first commit. Registers nothing and writes no facts. NOT for registering the current repo (register skill).
 disable-model-invocation: true
 ---
 
@@ -15,7 +15,7 @@ disable-model-invocation: true
 ## 2. 저장소 — 정지점 하나
 
 - **질문**: `publish.md` 저장소 불릿에 clone URL이 없을 때만 AskUserQuestion으로 원격 URL(기존 위키 clone) 또는 "새로 만들기"를 물음 — 새로 만들기면 연결할 원격 URL도 같은 라운드에 받음(빈 값 허용)
-- **clone**: `git clone {URL} {WIKI_ROOT}` 뒤 registry.json이 있으면 4장, 없으면 3장
+- **clone**: 저장소 불릿의 URL 또는 답한 URL로 `git clone {URL} {WIKI_ROOT}` 뒤 registry.json이 있으면 4장, 없으면 3장
 - **새로 만들기**: `git init -b {기준 브랜치} {WIKI_ROOT}`
 
 ## 3. 골격

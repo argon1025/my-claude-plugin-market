@@ -55,7 +55,7 @@ def sync(wiki: Path, source: str) -> str:
 def build(source: str) -> str:
     wiki = Path(graph.DEFAULT_WIKI).expanduser()
     if not (wiki / "registry.json").is_file():
-        return f"# 위키가 {wiki} 에 없음 — {graph.SKILL_PREFIX}init 으로 clone 하거나 새로 만들 것"
+        return f"# 위키가 {wiki} 에 없음 — {graph.SKILL_PREFIX}init 실행"
     note = sync(wiki, source)
 
     # 포크에서는 upstream이 정본이고 노드에는 정본만 적으므로 upstream을 먼저 본다.

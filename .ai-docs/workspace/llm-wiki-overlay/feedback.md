@@ -42,3 +42,6 @@
   - evidence: llm-wiki/config.json, llm-wiki/scripts/graph.py DEFAULT_WIKI
 - `why` llm-wiki 변형 값은 소비 주체별로 파일을 나눔 — 코드가 읽는 값은 config.json, 에이전트가 읽는 절차(git·PR 명령, 기준 브랜치, 커밋 링크)는 publish.md에 두어 markdown 파싱을 없애고, 스킬 접두는 별도 값으로 두면 plugin.json name과 어긋날 수 있어 name에서 파생함
   - source: 사용자 확인 2026-09-29
+- `why` llm-wiki 변형의 위키 저장소 고정은 references/publish.md `저장소` 불릿에 clone URL을 적는 것으로 표현하고 config.json에 두지 않음 — clone URL을 읽는 쪽은 init 에이전트뿐이라 소비 주체 기준으로 publish.md에 속하며, 훅 자동 복제처럼 코드가 URL을 읽게 되면 그때 config.json으로 옮김, 이를 위해 훅의 위키 없음 안내와 init description은 clone·새로 만들기를 단정하지 않는 문구로 둠
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/skills/init/SKILL.md, llm-wiki/hooks/session_start.py
