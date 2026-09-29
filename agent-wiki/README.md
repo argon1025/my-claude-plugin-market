@@ -42,5 +42,5 @@
 등록 레포 전체를 `workspace.root`에 clone하고 각 `defaultBranch`로 checkout·pull합니다. 플러그인 폴더에서 실행하며, slug를 붙이면 그 레포만 처리합니다.
 
 ```
-python3 scripts/sync_repos.py ~/.llm-wiki/registry.json ~/.llm-wiki-workspace [slug ...]
+python3 scripts/sync_register_repositories.py ~/.llm-wiki/registry.json ~/.llm-wiki-workspace [slug ...]
 ```

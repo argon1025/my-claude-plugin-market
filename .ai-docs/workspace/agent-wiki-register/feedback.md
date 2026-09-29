@@ -25,3 +25,5 @@
 - `constraint` agent-wiki register는 코드 변화가 없어도 재실행할 때마다 에이전트가 `desc`·`responsibilities` 문장을 새로 쓰므로 위키에 `chore(register)` 커밋이 매번 새로 생기며, E2E 재실행에서 간선 항목 수는 1건으로 유지되고 문장만 바뀜
   - evidence: agent-wiki/skills/register/SKILL.md
 - `context` agent-wiki register E2E는 `claude -p --plugin-dir ./agent-wiki`로 헤드리스 실행하고 `--append-system-prompt`로 "AskUserQuestion을 쓸 수 없으면 `알아서`(초안 채택)로 간주" 지시를 넣어 재현하며, `config.json`을 스크래치 경로로 임시 교체했다가 `git checkout`으로 원복함 — 헤드리스에서는 AskUserQuestion 승인 라운드 자체는 검증되지 않음
+- `correction` agent-wiki `scripts/`의 검증 스크립트 이름은 `check_register.py`가 아니라 `verify_register_file.py`이고 등록 레포 일괄 동기화 스크립트 이름은 `sync_repos.py`가 아니라 `sync_register_repositories.py`이며, 앞선 항목과 plan.md 본문의 옛 이름은 이 두 파일을 가리킴
+  - source: 사용자 확인 2026-09-29

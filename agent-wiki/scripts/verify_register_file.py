@@ -53,7 +53,7 @@ def check(root, key):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        sys.exit("usage: check_register.py <wiki-root> <domain>/<slug>")
+        sys.exit("usage: verify_register_file.py <wiki-root> <domain>/<slug>")
     errs = check(Path(sys.argv[1]).expanduser(), sys.argv[2])
     if errs:
         sys.exit("\n".join(errs))

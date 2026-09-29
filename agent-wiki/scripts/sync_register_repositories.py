@@ -27,7 +27,7 @@ def sync(root, slug, node):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        sys.exit("usage: sync_repos.py <registry.json> <workspace-root> [slug ...]")
+        sys.exit("usage: sync_register_repositories.py <registry.json> <workspace-root> [slug ...]")
     registry = json.loads(Path(sys.argv[1]).expanduser().read_text())
     root = Path(sys.argv[2]).expanduser()
     root.mkdir(parents=True, exist_ok=True)

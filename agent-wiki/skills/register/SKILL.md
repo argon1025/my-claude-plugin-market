@@ -21,7 +21,7 @@ git -C {baseRoot} pull --ff-only origin {baseBranch}
 등록 레포(범위 지시가 있으면 그 slug만)와 현재 레포를 워크스페이스에 둡니다. 현재 레포의 slug는 `origin` URL 마지막 경로에서 `.git`을 뺀 소문자입니다.
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_repos.py {baseRoot}/registry.json {workspace.root} [slug ...]
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {baseRoot}/registry.json {workspace.root} [slug ...]
 git remote get-url origin
 git clone {remote} {workspace.root}/{slug}
 git -C {workspace.root}/{slug} branch --show-current
@@ -71,7 +71,7 @@ AskUserQuestion 한 라운드로 도메인과 초안 표를 확인받습니다.
 ```
 mkdir -p {baseRoot}/knowledge/{domain}/{slug}
 touch {baseRoot}/knowledge/{domain}/{slug}/.gitkeep
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/check_register.py {baseRoot} {domain}/{slug}
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify_register_file.py {baseRoot} {domain}/{slug}
 git -C {baseRoot} add registry.json deps.json knowledge/{domain}/{slug}
 git -C {baseRoot} commit -m "chore(register): {slug} → {domain}"
 git -C {baseRoot} push origin {baseBranch}

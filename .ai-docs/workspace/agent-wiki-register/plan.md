@@ -241,3 +241,9 @@
 | 2 보강 | `sync_repos.py` | 존재하지 않는 `workspace.root`로 첫 실행 시 폴더가 생성되고 `ok` 줄 출력 |
 | 3 보강 | `agent-wiki/config.json` | `python3 -c "import json;assert json.load(open('agent-wiki/config.json'))['workspace']['root']=='~/.llm-wiki-workspace'"` 종료 코드 0, `grep -rn '.local/repos' agent-wiki` 출력 없음 |
 | 5 보강 | 수동 E2E | 워크스페이스를 `{스크래치}/repos`로 둔 채 실행한 뒤 `git -C {스크래치}/wiki status --porcelain` 출력 없음(위키 트리에 clone 흔적 없음) |
+
+## Re-plan 2026-09-29 — 스크립트 이름 명시화
+
+- **이름 변경**: `scripts/check_register.py`는 `scripts/verify_register_file.py`로, `scripts/sync_repos.py`는 `scripts/sync_register_repositories.py`로 바꾸며 책임·인자·출력은 그대로 둠 — 사용자 지시 "스크립트 명을 좀 더 명시작으로 verify-register-file? sync_register_repository.."
+- **표기**: 기존 `write_skeleton.sh`의 snake_case를 따르고, 등록 레포 여러 개를 처리하므로 복수형 `repositories`를 씀
+- **영향**: `skills/register/SKILL.md`·`agent-wiki/README.md`의 명령과 두 스크립트의 usage 문자열만 갱신함
