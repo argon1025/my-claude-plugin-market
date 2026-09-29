@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# registry.json의 등록 레포를 워크스페이스에 clone하고 로컬 변경을 버린 채 원격 defaultBranch 최신으로 맞춘다.
-# 워크스페이스는 위키 전용이라 보존할 작업이 없으며, 위키 트리와 registry.json은 읽기만 한다.
+# 등록 레포(와 --current로 받은 현재 레포)를 워크스페이스에 clone하고 원격 defaultBranch 최신으로 맞춘다.
+# 기존 clone에 미커밋 변경·로컬 커밋·다른 브랜치가 있으면 dirty로 보고만 하고, --force일 때만 버리고 맞춘다.
+import argparse
 import json
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 ENV = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
@@ -15,34 +15,50 @@ def git(*args):
     if r.returncode != 0:
         lines = (r.stderr or r.stdout).strip().splitlines() or [f"git exit {r.returncode}"]
         raise RuntimeError(next((l for l in lines if l.startswith(("error:", "fatal:"))), lines[-1]))
+    return r.stdout.strip()
 
 
-def sync(root, slug, node):
-    path = root / slug
-    if not path.exists():
-        git("clone", node["remote"], str(path))
-    branch = node["defaultBranch"]
-    git("-C", str(path), "fetch", "origin", branch)
-    git("-C", str(path), "checkout", "-f", "-B", branch, f"origin/{branch}")
-    git("-C", str(path), "clean", "-fd")
+def sync(path, remote, branch, force):
+    fresh = not path.exists()
+    if fresh:
+        git("clone", remote, str(path))
+    p = str(path)
+    git("-C", p, "fetch", "origin", branch)
+    current = git("-C", p, "branch", "--show-current")
+    changes = git("-C", p, "status", "--porcelain")
+    ahead = git("-C", p, "rev-list", "--count", f"origin/{branch}..HEAD")
+    if not (force or fresh) and (current != branch or changes or ahead != "0"):
+        return f"dirty branch={current} changes={len(changes.splitlines())} ahead={ahead}"
+    git("-C", p, "checkout", "-f", "-B", branch, f"origin/{branch}")
+    git("-C", p, "clean", "-fd")
+    return "ok"
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.exit("usage: sync_register_repositories.py <registry.json> <workspace-root> [slug ...]")
-    registry = json.loads(Path(sys.argv[1]).expanduser().read_text())
-    root = Path(sys.argv[2]).expanduser()
+    ap = argparse.ArgumentParser(description="slug를 생략하면 전체 등록 레포, --current가 있으면 나열한 slug만")
+    ap.add_argument("registry")
+    ap.add_argument("root")
+    ap.add_argument("slugs", nargs="*")
+    ap.add_argument("--current", nargs=3, metavar=("SLUG", "REMOTE", "BRANCH"))
+    ap.add_argument("--force", action="store_true")
+    a = ap.parse_args()
+    root = Path(a.root).expanduser()
     root.mkdir(parents=True, exist_ok=True)
-    only = set(sys.argv[3:])
-    failed = False
-    for group in registry.get("domains", {}).values():
-        for slug, node in group.get("repos", {}).items():
-            if only and slug not in only:
-                continue
-            try:
-                sync(root, slug, node)
-                print(f"ok {slug}")
-            except (RuntimeError, KeyError) as e:
-                failed = True
-                print(f"fail {slug} {e}")
-    sys.exit(1 if failed else 0)
+    nodes = {s: (n.get("remote"), n.get("defaultBranch"))
+             for g in json.loads(Path(a.registry).expanduser().read_text()).get("domains", {}).values()
+             for s, n in g.get("repos", {}).items()}
+    targets = {s: nodes[s] for s in (a.slugs or ([] if a.current else nodes)) if s in nodes}
+    if a.current:
+        targets[a.current[0]] = tuple(a.current[1:])
+    bad = False
+    for slug in sorted(set(a.slugs) - nodes.keys()):
+        bad = True
+        print(f"fail {slug} not in registry")
+    for slug, (remote, branch) in targets.items():
+        try:
+            result = sync(root / slug, remote, branch, a.force)
+        except (RuntimeError, TypeError) as e:
+            result = f"fail {e}"
+        bad |= result != "ok"
+        print(f"{result.split()[0]} {slug} {' '.join(result.split()[1:])}".rstrip())
+    raise SystemExit(1 if bad else 0)

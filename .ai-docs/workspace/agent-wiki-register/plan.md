@@ -273,3 +273,11 @@
 - **폐기**: 직전 Re-plan의 "현재 레포 폴더에 로컬 변경이 있으면 상태 보고 후 중단" 규칙과 `checkout`·`pull --ff-only` 방식
 - **동작**: `sync_register_repositories.py`와 SKILL.md 3절의 현재 레포 명령은 `fetch origin {defaultBranch}`, `checkout -f -B {defaultBranch} origin/{defaultBranch}`, `clean -fd`로 로컬 변경·로컬 커밋·미추적 파일을 버리고 원격 기본 브랜치 최신으로 맞춤
 - **검증**: 다른 브랜치·미커밋 변경·로컬 전용 커밋·미추적 파일이 있는 clone에서 재실행 시 `ok`와 `## main...origin/main`, 원격 신규 커밋 반영
+
+## Re-plan 2026-09-29 — 변경사항 확인 후 정리
+
+- **계기**: 사용자 지시 "변경사항이 있다면 그냥보고 후 계속 진행 하겠냐고 물어보고 진행한다하면 변경사항 취소하고 최신화하고 기본브랜치로 체크아웃하면 됨", 적용 대상은 "둘 다.. register 하려면 변경사항을 반영하고 왔어야함"
+- **폐기**: 직전 Re-plan의 무조건 강제 동기화, 1절의 "다른 브랜치면 중단·pull 실패 시 복구 명령 보고", 6절의 복구 명령 보고
+- **위키 트리**: 1절은 `fetch`·`status --short --branch`로 다른 브랜치·미커밋 변경·`ahead`를 보고하고 AskUserQuestion(`변경 버리고 진행`·`중단`)으로 물은 뒤 `checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd`로 정리함 — 다른 로컬 브랜치와 `.gitignore` 대상 `.local/`은 남음
+- **워크스페이스**: `sync_register_repositories.py`가 `--current {slug} {origin} {defaultBranch}`로 현재 레포까지 처리하고, 기존 clone의 다른 브랜치·미커밋 변경·로컬 커밋은 `dirty` 줄로 보고만 하며 `--force`일 때 버리고 맞춤 — `--current`가 있으면 나열한 slug만, 없으면 slug 생략 시 전체, registry에 없는 slug는 `fail`
+- **분량**: 스크립트는 70줄 이내로 완화

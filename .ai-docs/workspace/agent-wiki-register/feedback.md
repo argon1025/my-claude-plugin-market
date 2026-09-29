@@ -37,3 +37,5 @@
   - source: 사용자 확인 2026-09-29
 - `correction` agent-wiki 워크스페이스(`workspace.root`) clone은 위키 전용이라 로컬 변경을 감지해 중단하지 않고, `sync_register_repositories.py`와 register 3절이 `fetch`·`checkout -f -B {defaultBranch} origin/{defaultBranch}`·`clean -fd`로 로컬 변경·로컬 커밋·미추적 파일을 버린 채 원격 기본 브랜치 최신으로 맞추므로, 앞선 `status --porcelain` 중단 항목은 더 이상 참이 아님
   - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki register는 위키 트리(`baseRoot`)가 다른 브랜치이거나 미커밋 변경·로컬 커밋이 있으면 중단하지 않고 보고 후 `변경 버리고 진행`을 확인받아 `checkout -f -B {baseBranch} origin/{baseBranch}`·`clean -fd`로 정리하며, 워크스페이스 clone도 `dirty` 보고 후 확인받아 `--force`로 정리함 — 사용자 문장 "register 하려면 변경사항을 반영하고 왔어야함", 앞선 "위키 트리 브랜치를 전환·stash하지 않음"과 "워크스페이스는 묻지 않고 강제 동기화" 항목은 더 이상 참이 아니며, 정리 후에도 llm-wiki `wiki-update/` 같은 다른 로컬 브랜치와 `.local/`은 남음
+  - source: 사용자 확인 2026-09-29

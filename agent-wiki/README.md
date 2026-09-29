@@ -39,7 +39,7 @@
 
 ## 등록 레포 일괄 최신화
 
-등록 레포 전체를 `workspace.root`에 clone하고 로컬 변경을 버린 채 각 원격 `defaultBranch` 최신으로 맞춥니다. 플러그인 폴더에서 실행하며, slug를 붙이면 그 레포만 처리합니다.
+등록 레포 전체를 `workspace.root`에 clone하고 각 원격 `defaultBranch` 최신으로 맞춥니다. 플러그인 폴더에서 실행하며, slug를 붙이면 그 레포만 처리합니다. 기존 clone에 변경이 있으면 `dirty`로 보고만 하고, `--force`를 붙이면 변경을 버리고 맞춥니다.
 
 ```
 python3 scripts/sync_register_repositories.py ~/.llm-wiki/registry.json ~/.llm-wiki-workspace [slug ...]

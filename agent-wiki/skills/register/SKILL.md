@@ -8,14 +8,19 @@ disable-model-invocation: true
 
 ## 1. 위키 최신화
 
-`{baseRoot}/registry.json`이 없으면 `/agent-wiki:init` 실행을 안내하고 중단합니다. 있으면 브랜치를 확인한 뒤 최신화합니다.
+`{baseRoot}/registry.json`이 없으면 `/agent-wiki:init` 실행을 안내하고 중단합니다. 있으면 상태를 확인합니다.
 
 ```
-git -C {baseRoot} branch --show-current
-git -C {baseRoot} pull --ff-only origin {baseBranch}
+git -C {baseRoot} fetch origin {baseBranch}
+git -C {baseRoot} status --short --branch
 ```
 
-브랜치가 `baseBranch`가 아니면 pull하지 않고 중단합니다. pull이 실패하면 `git -C {baseRoot} log --oneline origin/{baseBranch}..HEAD` 결과와 복구 명령 `git -C {baseRoot} reset --hard origin/{baseBranch}`를 보고하고 중단하며, 복구 명령은 실행하지 않습니다.
+브랜치가 `baseBranch`가 아니거나 미커밋 변경·로컬 커밋(`ahead`)이 있으면 그 출력을 보고하고 AskUserQuestion(`변경 버리고 진행`·`중단`)으로 묻습니다. 깨끗하거나 진행을 고르면 최신화합니다.
+
+```
+git -C {baseRoot} checkout -f -B {baseBranch} origin/{baseBranch}
+git -C {baseRoot} clean -fd
+```
 
 ## 2. 메타 질문
 
@@ -36,17 +41,13 @@ git ls-remote --symref {origin} HEAD
 
 ## 3. 레포 준비
 
-간선 대상 등록 레포(인자, 연동 레포 답, 둘 다 없으면 현재 레포를 뺀 전체)와 현재 레포를 워크스페이스에 둡니다. 간선 대상이 없으면 sync는 실행하지 않습니다.
+현재 레포와 간선 대상 등록 레포(인자, 연동 레포 답, 둘 다 없으면 현재 레포를 뺀 전체)를 워크스페이스에 clone하고 원격 기본 브랜치 최신으로 맞춥니다. 간선 대상 slug는 모두 나열하며, 없으면 비웁니다.
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {baseRoot}/registry.json {workspace.root} [slug ...]
-git clone {origin} {workspace.root}/{slug}
-git -C {workspace.root}/{slug} fetch origin {defaultBranch}
-git -C {workspace.root}/{slug} checkout -f -B {defaultBranch} origin/{defaultBranch}
-git -C {workspace.root}/{slug} clean -fd
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {baseRoot}/registry.json {workspace.root} --current {slug} {origin} {defaultBranch} [target ...]
 ```
 
-워크스페이스는 위키 전용이므로 로컬 변경은 버리고 원격 기본 브랜치 최신으로 맞춥니다. 아래 네 줄은 현재 레포용이며 clone은 `{workspace.root}/{slug}`가 없을 때만 실행합니다. sync의 종료 코드 1은 `fail` 줄이 있다는 뜻일 뿐 중단 사유가 아닙니다. `fail` 줄의 등록 레포는 간선 탐색에서 빼고 보고합니다. 현재 레포는 네 줄이 성공하면 `fail`을 무시하고, 하나라도 실패하면 보고 후 중단합니다.
+레포마다 `ok`·`dirty`·`fail` 한 줄이 나옵니다. `dirty` 줄(기존 clone의 다른 브랜치·미커밋 변경·로컬 커밋)이 있으면 그 줄을 보고하고 AskUserQuestion(`변경 버리고 진행`·`중단`)으로 묻고, 진행이면 같은 명령에 `--force`를 붙여 다시 실행합니다. `fail` 줄의 등록 레포는 간선 탐색에서 빼고 보고하며, 현재 레포가 `fail`이면 중단합니다.
 
 ## 4. 분석
 
@@ -104,7 +105,7 @@ git -C {baseRoot} commit -m "chore(register): {slug} → {domain}"
 git -C {baseRoot} push origin {baseBranch}
 ```
 
-검증이 종료 코드 1이면 출력대로 고쳐 다시 검증합니다. `diff --cached --quiet`가 종료 코드 0이면 변경이 없으므로 commit·push 두 줄을 실행하지 않고 `변경 없음`으로 보고합니다. push가 거절되면 `git -C {baseRoot} pull --rebase origin {baseBranch}` 후 한 번 더 push합니다. rebase가 충돌하면 `git -C {baseRoot} rebase --abort`를 실행하고, 두 번째 push도 거절되면 거기서 멈춥니다. 두 경우 모두 로컬 커밋 해시와 복구 명령 `git -C {baseRoot} reset --hard origin/{baseBranch}`를 보고하고 중단하며, 복구 명령은 실행하지 않습니다.
+검증이 종료 코드 1이면 출력대로 고쳐 다시 검증합니다. `diff --cached --quiet`가 종료 코드 0이면 변경이 없으므로 commit·push 두 줄을 실행하지 않고 `변경 없음`으로 보고합니다. push가 거절되면 `git -C {baseRoot} pull --rebase origin {baseBranch}` 후 한 번 더 push합니다. rebase가 충돌하면 `git -C {baseRoot} rebase --abort` 후, 두 번째 push도 거절되면 그대로 원인을 보고하고 중단합니다. 남은 로컬 커밋은 다음 실행의 1절에서 확인받아 정리됩니다.
 
 ## 7. 보고
 
