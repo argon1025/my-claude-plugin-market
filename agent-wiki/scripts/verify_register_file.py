@@ -38,8 +38,8 @@ def check(root, key):
         errors.append(f"{key}.hosts: keys qa/stg/prod with non-empty values")
     nodes = {f"{d}/{s}" for d, g in registry["domains"].items() for s in g.get("repos", {})}
     edges = deps.get("deps", {}).get(key, [])
-    if not isinstance(edges, list):
-        return errors + [f"deps.{key}: must be array"]
+    if not isinstance(edges, list) or key in deps.get("deps", {}) and not edges:
+        return errors + [f"deps.{key}: must be non-empty array, delete the key when no edges"]
     seen = set()
     for i, e in enumerate(edges):
         if not isinstance(e, dict) or set(e) != {"to", "desc"} or not (text(e["to"]) and text(e["desc"])):

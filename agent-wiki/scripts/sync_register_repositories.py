@@ -14,7 +14,7 @@ def git(*args):
     r = subprocess.run(["git", *args], env=ENV, capture_output=True, text=True)
     if r.returncode != 0:
         lines = (r.stderr or r.stdout).strip().splitlines() or [f"git exit {r.returncode}"]
-        raise RuntimeError(lines[-1])
+        raise RuntimeError(next((l for l in lines if l.startswith(("error:", "fatal:"))), lines[-1]))
 
 
 def sync(root, slug, node):
