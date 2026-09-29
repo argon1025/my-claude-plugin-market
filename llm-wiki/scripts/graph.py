@@ -23,12 +23,11 @@ from pathlib import Path
 
 import catalog
 
-# 변형 배포는 plugin.json(이름)과 references/publish.md(`사본` 불릿)만 바꾸므로 스킬 접두와 위키
-# 경로를 거기서 읽는다 — 훅과 스크립트가 같은 위키를 봐야 주입 명령에서 --wiki를 뺄 수 있다.
+# 변형 배포가 바꾸는 값이라 코드에 두지 않는다 — 스킬 접두는 plugin.json 이름, 위키 경로는 config.json.
+# 훅과 스크립트가 같은 위키를 봐야 주입 명령에서 --wiki를 뺄 수 있다.
 PLUGIN = Path(__file__).resolve().parent.parent
 SKILL_PREFIX = f"/{catalog.load_json(PLUGIN / '.claude-plugin' / 'plugin.json', {})['name']}:"
-DEFAULT_WIKI = re.search(r"^- \*\*사본\*\*: `([^`]+)`",
-                         (PLUGIN / "references" / "publish.md").read_text(encoding="utf-8"), re.M)[1]
+DEFAULT_WIKI = catalog.load_json(PLUGIN / "config.json", {})["wikiRoot"]
 
 REGISTRY_NAME = "registry.json"
 DEPS_NAME = "deps.json"

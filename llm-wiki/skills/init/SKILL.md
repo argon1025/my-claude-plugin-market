@@ -4,7 +4,7 @@ description: Use when the wiki repo is not present on this machine or exists wit
 disable-model-invocation: true
 ---
 
-위키 저장소를 이 머신에 놓습니다. 위키 경로 `{WIKI_ROOT}`와 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)를 따릅니다.
+위키 저장소를 이 머신에 놓습니다. 위키 경로 `{WIKI_ROOT}`는 `${CLAUDE_PLUGIN_ROOT}/config.json`의 `wikiRoot`이며, 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)를 따릅니다.
 
 ## 1. 판정
 

@@ -17,7 +17,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 /plugin install llm-wiki@my-claude-plugin-market
 ```
 
-설치 후 새 세션에서 `/llm-wiki:init`으로 위키 저장소를 놓고, 각 레포에서 `/llm-wiki:register`로 등록합니다. 위키 경로는 `references/publish.md`의 `사본` 불릿(`~/.ai-docs/wiki`)입니다.
+설치 후 새 세션에서 `/llm-wiki:init`으로 위키 저장소를 놓고, 각 레포에서 `/llm-wiki:register`로 등록합니다. 위키 경로는 `config.json`의 `wikiRoot`(`~/.ai-docs/wiki`)입니다.
 
 ## 전제 조건
 
@@ -37,7 +37,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 ## 위키 구조
 
 ```
-~/.ai-docs/wiki/                    # references/publish.md `사본`
+~/.ai-docs/wiki/                    # config.json wikiRoot
 ├── registry.json                   # register가 편집: 도메인과 레포 노드
 ├── deps.json                       # register·update·add가 편집: 레포 간 의존 간선
 ├── state/{slug}.json               # update만 편집: {"cursor", "at"}
@@ -61,8 +61,8 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 
 ## 변형 배포
 
-- **교체 파일**: 변형 플러그인은 이 폴더를 복사한 뒤 `references/publish.md`(저장소 절차·위키 경로), `.claude-plugin/plugin.json`(이름·버전 — 스킬 접두가 여기서 정해짐), `README.md` 세 파일만 바꿈 — 훅·스크립트가 스킬 접두는 `plugin.json` name, 위키 경로는 `publish.md` `사본` 불릿에서 읽음
-- **publish.md 구성**: 스킬이 `1. 시작`·`2. 브랜치`·`3. 게시`·`4. 종료` 장 번호와 머리 불릿(`사본`·`저장소`·`기준 브랜치`·`커밋 링크`)으로 참조하므로 교체 파일도 같은 구성을 유지함 — 자동 검사 없음
+- **교체 파일**: 변형 플러그인은 이 폴더를 복사한 뒤 `references/publish.md`(에이전트가 읽는 저장소 절차), `config.json`(코드가 읽는 위키 경로), `.claude-plugin/plugin.json`(이름·버전 — 스킬 접두가 name에서 정해짐), `README.md` 네 파일만 바꿈
+- **publish.md 구성**: 스킬이 `1. 시작`·`2. 브랜치`·`3. 게시`·`4. 종료` 장 번호와 머리 불릿(`저장소`·`기준 브랜치`·`커밋 링크`)으로 참조하므로 교체 파일도 같은 구성을 유지함 — 자동 검사 없음
 
 ```
 rsync -a --delete --exclude=__pycache__ llm-wiki/ {출력 플러그인 폴더}/

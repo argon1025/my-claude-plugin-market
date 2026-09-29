@@ -241,3 +241,9 @@ claude plugin validate .
 - **변경**: 훅·`graph.py`·`update.py`는 스킬 접두를 `plugin.json` name에서(`graph.SKILL_PREFIX`), 위키 경로를 `publish.md` `사본` 불릿에서 읽고, 규약은 `{SKILL_PREFIX}` 자리표시, 스킬·템플릿 본문은 네임스페이스 없이 스킬 이름으로 가리키며, `LLM_WIKI_ROOT` 환경변수 지원과 `tools/overlay.py`를 삭제함
 - **변형 절차**: 이 폴더를 `rsync -a --delete --exclude=__pycache__`로 복사한 뒤 `publish.md`·`plugin.json`·`README.md` 세 파일을 덮어씀 — 드리프트 자동 검사는 없음
 - **검증**: 세션 주입 3종 diff 없음, 원본 대비 스크립트 출력은 앞선 정리의 문구 2건 외 동일, 픽스처 훅 4건은 `사본` 불릿으로 경로를 준 복사본에서 원본과 동일, 이름·`사본`만 바꾼 복사본의 훅이 `/acme-llm-wiki:`와 바꾼 경로를 출력
+
+## Re-plan 2026-09-29 — 위키 경로를 config.json으로
+
+- **계기**: 사용자가 "md 파일 파싱해서 사용할 이유가 있나 싶음 각 쓰임새에 따라 레퍼런스 파일을 분리해서 관리해야하는게 아닌지"라며 `publish.md` `사본` 불릿 파싱을 물음
+- **변경**: 코드가 읽는 위키 경로는 플러그인 루트 `config.json`의 `wikiRoot`로 옮기고 `publish.md` `사본` 불릿을 삭제함 — `publish.md`는 에이전트가 읽는 절차만, 스킬 접두는 이름의 두 번째 출처를 만들지 않도록 `plugin.json` name 파생을 유지
+- **변형 교체 파일**: `references/publish.md`·`config.json`·`.claude-plugin/plugin.json`·`README.md` 4종

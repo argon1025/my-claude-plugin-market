@@ -37,3 +37,8 @@
 - `constraint` llm-wiki의 위키 경로 출처는 references/publish.md의 `사본` 불릿 한 줄(`- **사본**: ` 뒤 백틱으로 감싼 경로)이며 graph.py가 import 시점에 정규식으로 읽음 — 불릿 형식이 깨지면 스크립트는 import 에러로 멈추고 훅은 주입 없이 종료 코드 0으로 끝남, 환경변수 LLM_WIKI_ROOT는 지원하지 않음
   - source: 사용자 확인 2026-09-29
   - evidence: llm-wiki/scripts/graph.py DEFAULT_WIKI
+- `correction` llm-wiki의 위키 경로 출처는 references/publish.md `사본` 불릿이 아니라 플러그인 루트 config.json의 `wikiRoot`이며 graph.py가 import 시점에 읽음 — 키가 없으면 스크립트는 import 에러로 멈추고 훅은 주입 없이 종료 코드 0으로 끝나며, 변형 교체 파일은 publish.md·config.json·plugin.json·README.md 4종임
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/config.json, llm-wiki/scripts/graph.py DEFAULT_WIKI
+- `why` llm-wiki 변형 값은 소비 주체별로 파일을 나눔 — 코드가 읽는 값은 config.json, 에이전트가 읽는 절차(git·PR 명령, 기준 브랜치, 커밋 링크)는 publish.md에 두어 markdown 파싱을 없애고, 스킬 접두는 별도 값으로 두면 plugin.json name과 어긋날 수 있어 name에서 파생함
+  - source: 사용자 확인 2026-09-29
