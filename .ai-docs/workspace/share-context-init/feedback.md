@@ -12,3 +12,4 @@
   - evidence: llm-wiki/references/publish.md
 - `context` share-context `config.json`은 `{"wiki": {"baseRoot", "remote", "baseBranch"}}`처럼 용도별 최상위 객체로 구성하며, 이후 단계의 설정도 같은 방식으로 객체를 추가함
   - source: 사용자 확인 2026-09-29
+- `context` `feat/share-context-init` 브랜치의 계획·작업 기록은 브랜치 slug(`feat-share-context-init`)가 아닌 `.ai-docs/workspace/share-context-init/`에 있으며, 이 브랜치의 추가 기록도 같은 폴더에 덧붙임
