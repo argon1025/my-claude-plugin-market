@@ -89,7 +89,7 @@ set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가
 입력: {work}/assign.json `docs`에서 `doc`이 "{doc}"인 항목 — 문서 {tmp}/knowledge/{domain}/{doc}, 신규 여부, 사실 행.
 기준: `sed -n '/^## 2\./,/^## 8\./p' {doc_contract_path}` — 2~7장.
 판정: 사실을 주어진 순서대로 7장으로 판정한다 — 동일·추가·교체는 본문에 반영하고, 건너뜀(7장 다른 값의 근거 없음)은 본문을 고치지 않는다.
-신규 문서: 2장 위치·파일명, 3장 description, 4장 모양으로 만든다.
+신규 문서: 2장 위치·파일명, 3장 description, 4장 모양으로 만든다. 도메인 루트 문서는 `## 적용 대상`을 사실 행의 레포·모듈로 반드시 둔다.
 코드값: set이 있는 사실은 4장 집합 표기대로 `## 코드값` 표에 사실이 뜻을 말한 원소만 담고, 표 위에 set_total이 0이면 `원본: \`{set}\` — 일부`, 아니면 `원본: \`{set}\` 전 {set_total}종`을 둔다. 기존 표에 원소를 더할 때는 기존 원본 줄의 `전 N종`을 `— 일부`로 낮추지 않되, 더한 원소로 N이 맞지 않으면 `— 일부`로 바꾼다.
 금지: 이 문서 밖 파일 편집, 코드 저장소 조회, 사전 지식.
 출력: {work}/applied/{doc_slug}.json에 Write —
@@ -118,8 +118,9 @@ set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가
 출력: {work}/review/{doc_slug}.json에 Write —
 {"doc": "{doc}", "removed": [{"bullet", "reason", "ids": ["그 불릿이 담던 사실 id"]}],
  "fixed_sets": [{"set", "before": "고치기 전 원본 줄과 행 수", "after": "고친 뒤"}],
+ "edited": [{"bullet": "고친 뒤 불릿 또는 절", "reason": "고친 규약 조항과 이유 한 구"}],
  "reject": false, "reject_reason": ""}
-응답은 삭제·맞춤 건수와 reject 여부만.
+응답은 삭제·맞춤·수정 건수와 reject 여부만.
 ```
 
 ## 7. 커밋·커서
