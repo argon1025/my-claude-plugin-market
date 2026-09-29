@@ -24,3 +24,5 @@
   - source: 사용자 확인 2026-09-29
 - `context` 계획 수립 전 `main` 작업 트리에 적용한 미커밋 변경은 계획 기준선으로 포함하며, 구현은 브랜치 `feat/agent-wiki-readonly-policy`에서 새 세션 `/plan-workflow:execute`로 진행함
   - source: 사용자 확인 2026-09-29
+- `context` 브랜치 `feat/agent-wiki-readonly-policy`의 계획·작업 기록은 세션 주입이 브랜치명에서 만든 slug `feat-agent-wiki-readonly-policy`가 아니라 `.ai-docs/workspace/agent-wiki-readonly-policy/`에 있음 — 계획 수립이 브랜치 생성 전 `main`에서 이뤄졌기 때문이며, 이 브랜치의 후속 기록도 이 폴더에 덧붙임
+  - evidence: .ai-docs/workspace/agent-wiki-readonly-policy/plan.md
