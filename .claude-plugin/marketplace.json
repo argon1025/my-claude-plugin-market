@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "argon1025의 개인 Claude Code 플러그인 마켓플레이스",
-    "version": "3.1.0"
+    "version": "3.2.0"
   },
   "plugins": [
     {
@@ -46,6 +46,17 @@
       "name": "llm-wiki",
       "source": "./llm-wiki",
       "description": "LLM 위키 — 별도 git 저장소의 사실과 레포 그래프(registry.json 노드·deps.json 간선)를 세션 시작 시 그래프 파생 주입(현재 도메인 레포 지도·현재 레포 의존 힌트) + 문서 목록 + 스킬 5종(init·register·update·add·audit) + 그래프 화면(view.py), 무인 갱신은 전 도메인 미처리 머지를 시각 순으로 반영해 PR로 올리고 머지로 승인",
+      "category": "knowledge",
+      "tags": [
+        "wiki",
+        "knowledge",
+        "git"
+      ]
+    },
+    {
+      "name": "share-context",
+      "source": "./share-context",
+      "description": "공유 컨텍스트 — 고정 위키 저장소(registry.json·deps.json·knowledge)를 로컬에 준비하는 init 스킬, 세션 주입·레포 등록·문서 갱신은 순차 이관 예정",
       "category": "knowledge",
       "tags": [
         "wiki",
