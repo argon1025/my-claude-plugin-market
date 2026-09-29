@@ -16,3 +16,13 @@
   - evidence: agent-wiki/skills/register/SKILL.md, agent-wiki/scripts/generate_repository_map.py
 - `context` agent-wiki 쓰기 스킬은 자료의 값이 현재 코드와 달라도 그 코드를 바꾼 커밋·작업 기록이 변경 의도를 밝히면 충돌로 남기지 않고 코드 값으로 갱신하며, 의도를 찾지 못하거나 코드가 잘못 작성된 경우만 미해결 충돌로 기록 없이 넘김 — 사용자 문장 "시간이 지날수록 사실은 변할 수 있음 … 이때는 충돌로 기록할것이 아니고 충돌이면 업데이트 해야하는것임 plan이나 커밋 메시지로는 해당 내용이나 뭔가 코드가 잘못 작성된 경우 (의도 파악이 안되는 케이스)만 충돌 미해결로 패스해야할 듯함"이며, update는 머지를 시간 순으로 반영하므로 순서가 뒤집히는 경우가 없음
   - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki update·add의 추출 에이전트는 현재 지도(책임·호스트·간선)와 등록 레포 목록 없이 diff·자료만 보면 간선 대상을 도메인 없이 오기하고, 기존 책임과 비교하지 못해 새 기능 단위 diff에서 책임 후보를 내지 않음 — 추출 프롬프트에 `{지도}`를 넘겨 해소함 (onestore-cmsapp-api@150727c·9d038d5 검증)
+  - evidence: agent-wiki/skills/update/SKILL.md, agent-wiki/skills/add/SKILL.md
+- `constraint` agent-wiki 검토의 위치 삭제는 복합 사실의 불릿 일부에서도 일어나며 실제 레포 update 시나리오 4개 중 3개에서 발생함 — 재배정은 사실 행 전체가 아니라 삭제된 불릿 문장 단위로 해야 앞 문서에 남은 주장과 중복되지 않음 (onestore-cmsapp-api@9d038d5·87c08cf·0fce4ef)
+  - evidence: agent-wiki/references/apply.md
+- `why` agent-wiki add 4절에서 사용자가 고른 답은 `{work}/input/answers.md` 원문과 `사용자 확인` 근거로 남김 — 검토의 자료 대조는 input 원문만 보므로, 답이 원문에 없으면 자료 속 다른 값을 근거로 답을 되돌림(A2 1회차)
+- `constraint` 등록 레포 작업 기록(`.devcenter/workspace/progress/*/feedback.md`)은 같은 기록의 뒤 라운드나 후속 머지로 옛 값이 된 사실을 담는 경우가 흔함 — 실제 기록 2건에서 추출한 18건 중 3건이 check 시점 코드와 달랐고, 규약 7장 시간 순 판정으로 두 건은 코드 값으로 갱신되고 한 건은 뒤 라운드 기록을 근거로 지워짐 (onestore-cmsapp-api@d85a7cf)
+  - evidence: agent-wiki/references/doc-contract.md
+- `constraint` agent-wiki register 노드 에이전트는 소스 2천 개 이상 레포에서 진입점·설정·대표 컨트롤러 16개만 열고 책임을 쓰며 나머지는 미열람 목록으로 남김 — 책임 문장의 누락은 이후 update·add의 책임 추가 후보로 보완됨 (onestore-cmsapp-api R1)
+- `constraint` agent-wiki 검토 에이전트의 판정 편차는 이번에도 있음 — U2 재배정 문서의 두 번째 검토는 도메인 루트와 겹치는 불릿을 6장 겹침이 아니라 `위치` 사유로 지워 `위치 재배정` 행을 만들었고, 한 추출 에이전트는 `sed '/^## 9\./,$p'` 인용을 셸 따옴표 문제로 읽지 못함
+- `context` agent-wiki add 이관 실제 레포 검증(onestore-cmsapp-api·agent·client·integration-admin fixture 위키, 시나리오 U1·U2·U3(S1·S3)·R1·A1~A7)은 1회차 불일치 6건을 스킬·규약 수정 4건과 하네스 행 교체로 해소한 뒤 전 시나리오 규약 부합·예상 일치로 판정함 — update의 머지 3건 이하 메인 직접 추출 경로는 이번에도 서브에이전트로 대체해 검증하지 않았고, 실제 위키 원격 대상 실행·PR 게시는 범위 밖임
