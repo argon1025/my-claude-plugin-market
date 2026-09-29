@@ -8,9 +8,6 @@
 
 치환은 교체 파일과 병합한 plugin.json에 걸지 않는다 — 교체 파일은 이미 변형 표기라, 원문이
 대체문 안에 들어 있으면(`LLM_WIKI_` ⊂ `ACME_LLM_WIKI_`) 이중 치환이 생긴다.
-
-출력은 임시 폴더에 전부 만든 뒤 검사가 통과해야 기존 출력과 바꾼다 — 에러가 나면 기존 출력은
-그대로다. 표준 라이브러리만 쓴다.
 """
 
 from __future__ import annotations
@@ -77,10 +74,11 @@ def build(base: Path, overlay: Path, tmp: Path, errors: list[str]) -> tuple[int,
     table = load_spec(overlay / OVERLAY_SPEC, errors)
     base_files = collect(base)
     replaced = {rel: path for rel, path in collect(overlay).items() if rel != OVERLAY_SPEC}
+    common = sorted(set(replaced) & set(base_files))
 
     for rel in sorted(set(replaced) - set(base_files)):
         errors.append(f"교체 파일 {rel}이 base에 없음 — 개인판에서 이름이 바뀌었는지 확인")
-    for rel in sorted(set(replaced) & set(base_files)):
+    for rel in common:
         if not rel.endswith(".md") or Path(rel).name == "README.md":
             continue
         want = headings(base_files[rel].read_text(encoding="utf-8"))
@@ -124,7 +122,7 @@ def build(base: Path, overlay: Path, tmp: Path, errors: list[str]) -> tuple[int,
     for key, count in hits.items():
         if not count:
             errors.append(f"치환 원문 {key!r}이 base에 한 번도 없음 — 개인판 문구가 바뀌었는지 확인")
-    return len(base_files), sorted(set(replaced) & set(base_files)), hits
+    return len(base_files), common, hits
 
 
 def main() -> int:
