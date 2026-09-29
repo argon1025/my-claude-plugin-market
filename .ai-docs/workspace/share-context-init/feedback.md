@@ -21,3 +21,5 @@
   - source: 사용자 확인 2026-09-29
 - `constraint` agent-wiki 스킬 본문은 절마다 제목, 한 줄 조건, 실행할 명령 코드 블록, 예외 한 줄로 쓰고 굵은 라벨 불릿이나 근거 서술을 두지 않음 — 에이전트가 아는 git 명령은 설명 없이 명령만 보임
   - source: 사용자 확인 2026-09-29
+- `constraint` agent-wiki의 plugin.json·marketplace.json description과 루트 README 표 설명은 "에이전트 위키"만 쓰고, 플러그인 README와 함께 이관 진행 상황·예정 기능 같은 현재 상태는 적지 않음 — 사용자 문장 "현상태 작성 금지 그냥 단순히 에이전트 위키라고만 언급", "readme도 정리"
+  - source: 사용자 확인 2026-09-29
