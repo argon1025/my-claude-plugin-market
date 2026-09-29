@@ -308,6 +308,8 @@ def check_repo(domain: str, slug: str, info: dict, errors: list[tuple[str, str]]
         errors.append((REGISTRY_NAME, f"{label}: remote는 정본 하나를 담은 문자열"))
     elif remote and "://" in remote:
         errors.append((REGISTRY_NAME, f"{label}: remote에 scheme이 있음 — `{normalize_remote(remote)}` 꼴로 적음"))
+    elif remote and "/~" in remote:
+        errors.append((REGISTRY_NAME, f"{label}: remote {remote}가 개인 네임스페이스 — 정본만 적음"))
     elif remote and normalize_remote(remote) != remote:
         errors.append((REGISTRY_NAME, f"{label}: remote가 정규화 꼴이 아님 — `{normalize_remote(remote)}`"))
     elif "remote" in info and not remote:

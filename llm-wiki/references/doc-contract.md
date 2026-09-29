@@ -134,7 +134,7 @@ type: policy
 
 - **중첩**: 노드는 소속 도메인 아래에 두고 `domain`을 따로 적지 않음 — 레포는 한 도메인에만 속하고 프로젝트 계층은 두지 않음
 - **status**: `dormant`는 update 대상에서 빠지고 지도 행에 `(휴면)`이 붙되 지식 필드와 끝점 간선은 유지 — 휴면 레포도 소비처로 남을 수 있음
-- **remote**: 정본 하나, 개인 포크 금지 — update와 세션의 clone이 `https://{remote}.git`을 씀
+- **remote**: 정본 하나, 개인 포크와 개인 네임스페이스(`/~`) 경로 금지 — update와 세션의 clone이 `https://{remote}.git`을 씀
 - **defaultBranch**: update가 머지를 걷는 기준 브랜치
 - **stack**: 주 언어·주 프레임워크만 버전(`Java 21`·`Spring Boot 3.5`), 나머지는 이름만(`MyBatis`·`AMQP`)
 - **summary**: 소관 한 줄, 업무 낱말 우선

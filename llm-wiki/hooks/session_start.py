@@ -14,7 +14,6 @@ import json
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 sys.dont_write_bytecode = True  # 플러그인 캐시에 __pycache__를 남기지 않는다
@@ -44,19 +43,14 @@ def git(cwd, *args: str) -> str:
 
 
 def sync(wiki: Path, source: str) -> str:
-    """마지막 fetch가 주기보다 오래됐으면 pull을 걸고 3초까지 기다린다. 알릴 것이 있으면 그 한 줄.
+    """startup·resume마다 pull을 걸고 3초까지 기다린다. 알릴 것이 있으면 그 한 줄.
 
     세션 시작을 붙잡지 않는 것이 최신 사본보다 중요하다 — 늦으면 pull은 뒤에서 마저 돌고
     이번 주입은 이전 사본으로 간다.
     """
     if source not in ("startup", "resume"):
         return ""
-    git_dir = git(wiki, "rev-parse", "--absolute-git-dir")
-    if not git_dir or not git(wiki, "remote", "get-url", "origin"):
-        return ""
-    minutes = os.environ.get("LLM_WIKI_SYNC_MINUTES", "")
-    fetched = Path(git_dir, "FETCH_HEAD")
-    if fetched.is_file() and time.time() - fetched.stat().st_mtime < (int(minutes) if minutes.isdecimal() else 10) * 60:
+    if not git(wiki, "remote", "get-url", "origin"):
         return ""
     pull = subprocess.Popen(["git", "-C", str(wiki), "pull", "--ff-only", "--quiet"],
                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
