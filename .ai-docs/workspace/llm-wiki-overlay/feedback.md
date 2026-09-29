@@ -22,3 +22,9 @@
 - `correction` llm-wiki init에서 `publish.md` 3장의 `pull --rebase && push`가 실패하는 경로는 새로 만든 저장소만이 아니라 빈 원격을 clone한 저장소도 포함함 — clone이 `branch.main.merge`를 설정해도 원격에 브랜치가 없어 pull이 `no such ref was fetched`로 실패하므로, init 3장은 원격에 기준 브랜치가 없는 두 경로 모두 `git push -u origin {기준 브랜치}`로 첫 push함
   - source: 사용자 확인 2026-09-29
   - evidence: llm-wiki/skills/init/SKILL.md
+- `context` 에이전트는 기존 프롬프트나 코드 구문을 그대로 두고 최소로 수정하는 경향이 있음 꼭 이 줄이 필요한지 비효율적으로 작성되진 않았는지 검토해보고 재작성, 수정, 삭제 진행 — llm-wiki 변형 분리 브랜치가 손댄 파일은 바꾼 줄뿐 아니라 파일 전체를 필요성·효율 기준으로 다시 씀
+  - source: 사용자 확인 2026-09-29
+- `why` llm-wiki doc-contract.md 9장 remote 불릿에는 `/~` 개인 네임스페이스 금지를 적지 않음 — 9장은 `graph.py check`가 검사하는 형식을 되풀이하지 않고 스크립트에 없는 의미만 적는 규칙이라, `/~`는 check 에러와 register 1장 포크 의심 판정만 가짐
+  - evidence: llm-wiki/references/doc-contract.md, llm-wiki/scripts/graph.py check_repo
+- `correction` llm-wiki register는 정본 remote를 정하지 못해도 빈 값으로 노드를 기록할 수 없음 — `graph.py check`가 빈 remote를 에러로 내 5장 검사가 반드시 실패하므로, 3장에서 끝내 정하지 못하면 기록 없이 중단함
+  - evidence: llm-wiki/skills/register/SKILL.md, llm-wiki/scripts/graph.py check_repo

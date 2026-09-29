@@ -92,12 +92,11 @@ disable-model-invocation: true
 
 - **전수 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge` — 손대지 않은 문서의 에러는 고치지 않고 보고
 - **되돌림**: `--check` 에러가 남은 편집 문서는 `git -C {WIKI_ROOT} checkout -- {경로}`로 원복(신규는 삭제)해 `검사 실패` 기각으로, 검토로 본문이 빈 신규 문서도 삭제
-- **문서 커밋**: 문서마다 `docs({domain}): {도메인 루트 기준 상대경로} {요약}`, 본문은 규약 8장
+- **문서 커밋**: 문서마다 규약 8장대로
 - **커서**: 레포마다 전역 선택 안에서 처리한 마지막 머지까지 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" advance {slug} {sha} --wiki {WIKI_ROOT}` — 되돌린 묶음이 있으면 그 첫 머지 직전까지, 사실 0건 머지도 전진, `--range`는 불변, 레포마다 `chore(update): {slug} 커서 {sha7} · 머지 N건`
 - **그래프 커밋**: 노드·간선이 바뀌면 `docs(graph): 간선 N건 · 책임 M건 · 호스트 K건` 한 커밋, 본문은 규약 8장
 
-## 7. PR·보고
+## 7. 게시·보고
 
 - **본문**: `${CLAUDE_PLUGIN_ROOT}/templates/update-pr.md`대로 `{스크래치}/pr.md` 작성
-- **게시**: `{스크래치}/pr.md`를 본문으로 `publish.md` 3·4장
-- **터미널**: PR 링크와 `요약` 절 집계 한 줄
+- **게시**: `{스크래치}/pr.md`를 본문으로 `publish.md` 3·4장 — 보고에 `요약` 절 집계 한 줄을 더함
