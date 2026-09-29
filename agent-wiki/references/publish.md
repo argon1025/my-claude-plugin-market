@@ -1,0 +1,30 @@
+# 위키 PR 절차
+
+update 스킬이 위키 원격 호스트와 주고받는 절차만 담습니다. 위키 원격 호스트를 바꾸면 이 파일만 고칩니다. 현재 절차는 GitHub `gh` CLI 기준이며, 명령은 모두 위키 clone `{tmp}`에서 실행합니다.
+
+## 1. 열린 update PR
+
+```
+gh pr list --state open --json url,headRefName
+```
+
+`headRefName`이 `wiki-update/`로 시작하는 PR이 있으면 그 링크를 보고하고 중단합니다. 커서가 PR 머지 전까지 기준 브랜치에 없어 같은 머지를 두 번 추출하기 때문입니다. 명령이 실패해도 오류 한 줄을 보고하고 중단합니다.
+
+## 2. 게시
+
+```
+git -C {tmp} push -u origin {branch}
+gh pr create --base {baseBranch} --head {branch} --title "update({domain}): {YYYY-MM-DD} 머지 {N}건 · 문서 {M}장" --body-file {work}/pr.md
+```
+
+본문이 60,000바이트를 넘으면 `추출 사실` 절을 떼어 `{work}/facts.md`에 쓰고 본문에 "사실 원장은 첫 코멘트" 한 줄을 둔 뒤, PR 생성 후 뗀 절을 코멘트로 올립니다.
+
+```
+gh pr comment {url} --body-file {work}/facts.md
+```
+
+실패하면 단계·브랜치 이름·오류 한 줄을 보고합니다.
+
+## 3. 인증 실패
+
+`gh` 인증 오류면 사용자가 `! gh auth login`을 마친 뒤 스킬을 다시 실행하도록 안내합니다.
