@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# register가 기록한 현재 레포 노드(registry.json)와 자기 간선 블록(deps.json)을 검증한다.
+# register·update·add가 기록한 레포 노드(registry.json)와 그 간선 블록(deps.json)을 검증한다.
 # 다른 노드·블록은 보지 않으며, 수정·커밋은 호출한 스킬이 맡는다.
 import json
 import sys
