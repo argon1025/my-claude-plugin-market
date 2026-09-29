@@ -247,3 +247,22 @@
 - **이름 변경**: `scripts/check_register.py`는 `scripts/verify_register_file.py`로, `scripts/sync_repos.py`는 `scripts/sync_register_repositories.py`로 바꾸며 책임·인자·출력은 그대로 둠 — 사용자 지시 "스크립트 명을 좀 더 명시작으로 verify-register-file? sync_register_repository.."
 - **표기**: 기존 `write_skeleton.sh`의 snake_case를 따르고, 등록 레포 여러 개를 처리하므로 복수형 `repositories`를 씀
 - **영향**: `skills/register/SKILL.md`·`agent-wiki/README.md`의 명령과 두 스크립트의 usage 문자열만 갱신함
+
+## Re-plan 2026-09-29 — 가상 테스트 반영과 첫 등록 메타 질문
+
+- **계기**: 서브에이전트 가상 테스트 3종(신규 등록·예외 경로·분석 프롬프트)에서 1절 순서, 충돌 뒤 재실행 막힘, 4절 도메인 미정, 노드 전수 읽기 실패, 간선 역방향 오탐이 드러남
+- **메타 질문**: 사용자 지시 "처음 register 진행 시 사용자에게 메타 정보들은 물어볼것 이 프로젝트가 하는 역할 등 먼저 물어보고 진행하면 더 빠를듯" — 신규 slug면 레포 준비 전에 AskUserQuestion 한 라운드로 도메인(기존 하위 또는 신규 생성·description), 역할 한 줄, 연동 레포, 기본 브랜치를 물음
+  - 역할 답은 `summary` 초안이 되고 노드 에이전트에 힌트로 전달됨
+  - 연동 레포 답이 있으면 간선 에이전트를 그 레포만 실행하고, `모름`이면 전체 등록 레포를 조사하며, 인자 범위 지시가 있으면 인자가 우선함
+  - 기본 브랜치 후보는 `git ls-remote --symref {origin} HEAD`로 얻고, 워크스페이스 clone은 답한 브랜치로 checkout함
+- **재등록**: 사용자 선택 "질문 생략, 기존 값 유지" — 메타 질문 없이 기존 도메인·`defaultBranch`를 유지하고 기존 `summary`·`responsibilities`를 노드 에이전트 힌트로 전달하며, 초안 표에 `기존` 칸을 두고 `알아서`는 기존에만 있는 값을 유지함
+- **분석 프롬프트**: 사용자 선택 "넣음 + 대형 폴백" — 노드는 `git ls-files` 목록과 Read 파일별 열람, `읽음 N/M` 자기보고, 다 열 수 없을 때 진입점·라우트·메시지·설정 우선 폴백, hosts는 자기 서빙 호스트만, responsibilities는 기능 단위로 한정하고, 간선은 "보고 있다"의 방향 정의와 역방향·주석 제외, 첫 줄 JSON 또는 `없음` 한 단어 응답 형식으로 한정함
+- **예외 보강**: 1절은 pull 전 브랜치 확인과 pull 실패 시 미push 커밋 보고 후 중단, 2절은 `{remote}`를 `{origin}`으로 개명하고 현재 레포 폴더가 이미 있는데 `fail`이면 상태 보고 후 중단, sync 종료 코드 1은 중단 사유가 아님을 명시, 범위 인자가 registry와 대조되지 않으면 보고 후 확인, 5절은 Edit으로 대상 줄만 수정·서식 유지, 변경이 없으면 commit·push 생략, 두 번째 push 거절·rebase 충돌 시 로컬 커밋 해시와 복구 명령 보고 후 중단
+- **스크립트**: `verify_register_file.py`는 빈 간선 배열을 에러로 보고(키 삭제 규칙), `sync_register_repositories.py`는 `fail` 사유로 git 출력의 `error:`·`fatal:` 줄을 우선함
+- **분량**: 사용자 선택 "상한 120줄로 완화" — `skills/register/SKILL.md` 코드 블록 포함 120줄 이내
+- **범위 밖 유지**: 등록 순서가 반대면 간선이 빠지는 한계는 의도적 단순화 2 그대로 둠
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 6 | `agent-wiki/scripts/verify_register_file.py`·`agent-wiki/scripts/sync_register_repositories.py` — `fix(agent-wiki): register 스크립트 예외 출력 보강` | 기존 픽스처 재통과, `deps.{key}: []` 픽스처 종료 코드 1, 로컬 변경 checkout 실패 픽스처에서 `fail` 사유가 `error:` 줄, 두 파일 60·50줄 이내 |
+| 7 | `agent-wiki/skills/register/SKILL.md` — `feat(agent-wiki): register 메타 질문·예외 처리·분석 프롬프트 보강` | `wc -l` 120 이하, `claude plugin validate ./agent-wiki` 통과, `grep -rnE 'references/\|llm-wiki:\|컨텍스트' agent-wiki` 출력 없음, 가상 테스트 에이전트 1개로 신규 등록·재등록·B2·B5b·B6 재실행 시 막힘 0건 |
