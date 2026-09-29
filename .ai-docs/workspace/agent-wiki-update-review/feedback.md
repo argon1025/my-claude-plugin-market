@@ -17,3 +17,5 @@
   - source: 사용자 확인 2026-09-29
 - `context` agent-wiki update의 커서 없는 레포는 스킬이 시작 지점을 사용자에게 묻고, PR 확인·생성 절차는 `agent-wiki/references/publish.md`에 분리해 회사 위키(Bitbucket) 전환 시 그 파일만 고침
   - source: 사용자 확인 2026-09-29
+- `context` agent-wiki update 구현 후 PR 전에 실제 작업 레포 diff로 추출 검증을 수행함 — 사용자 문장 "작업 완료 후 onestore-cmsapp-api 와 같은 실제 작업 레포에서 diff 기반으로 추출 검증 테스트 진행하여 docs-contract 에 부합하는지 현 계획의 예상대로 나왔는지 등 체크단계도 필요할듯"
+  - source: 사용자 확인 2026-09-29
