@@ -55,7 +55,7 @@ def sync(wiki: Path, source: str) -> str:
 def build(source: str) -> str:
     wiki = Path(graph.DEFAULT_WIKI).expanduser()
     if not (wiki / "registry.json").is_file():
-        return f"# 위키가 {wiki} 에 없음 — /llm-wiki:init 으로 clone 하거나 새로 만들 것"
+        return f"# 위키가 {wiki} 에 없음 — {graph.SKILL_PREFIX}init 으로 clone 하거나 새로 만들 것"
     note = sync(wiki, source)
 
     # 포크에서는 upstream이 정본이고 노드에는 정본만 적으므로 upstream을 먼저 본다.
@@ -66,12 +66,12 @@ def build(source: str) -> str:
     slug, domain = graph.resolve_repo(registry, remote, common_dir)
 
     if not domain:
-        rows = [f"# 위키 {wiki} — " + (f"미등록 레포 {slug}, 등록은 `/llm-wiki:register`" if slug else "git 레포 밖")]
+        rows = [f"# 위키 {wiki} — " + (f"미등록 레포 {slug}, 등록은 `{graph.SKILL_PREFIX}register`" if slug else "git 레포 밖")]
         domains = graph.domain_line(registry)
         if domains:
             rows.append(f"- **도메인**: {domains} — 노드·간선은 `{wiki}/registry.json`·`deps.json`, "
                         f"문서는 `{wiki}/knowledge/{{domain}}`")
-        rows.append("- **수정**: 위키는 `/llm-wiki:` 스킬로만 고침")
+        rows.append(f"- **수정**: 위키는 `{graph.SKILL_PREFIX}` 스킬로만 고침")
         return "\n".join(filter(None, [note, *rows]))
 
     # 다른 레포 사본 위치({REPOS_DIR})는 common dir(본 저장소의 .git)에서 세션마다 계산한다 —
@@ -79,7 +79,7 @@ def build(source: str) -> str:
     knowledge = wiki / "knowledge" / domain
     guide = (PLUGIN / "rules" / "agent-guide.md").read_text(encoding="utf-8").strip()
     for key, value in {"{WIKI_ROOT}": wiki, "{REPOS_DIR}": Path(common_dir).parent.parent,
-                       "{DOMAIN_DIR}": knowledge}.items():
+                       "{DOMAIN_DIR}": knowledge, "{SKILL_PREFIX}": graph.SKILL_PREFIX}.items():
         guide = guide.replace(key, str(value))
 
     # 목록은 어떤 크기에서도 줄이지 않는다 — 에이전트는 description만으로 문서를 열지 정하므로
@@ -91,7 +91,7 @@ def build(source: str) -> str:
             blocks.append(catalog.build(knowledge / slug, f"레포 {slug}"))
     context = "\n\n".join(filter(None, blocks))
     if len(context) > WARN_CHARS:
-        context = (f"# 위키 주입 {len(context):,}자 — 10,000자를 넘으면 뒤가 잘리므로 /llm-wiki:audit 로 정리 권장\n\n"
+        context = (f"# 위키 주입 {len(context):,}자 — 10,000자를 넘으면 뒤가 잘리므로 {graph.SKILL_PREFIX}audit 로 정리 권장\n\n"
                    + context)
     return context
 

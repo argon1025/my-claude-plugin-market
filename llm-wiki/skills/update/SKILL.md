@@ -1,6 +1,6 @@
 ---
 name: update
-description: Use when merged code in repos registered in the wiki must be reflected ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --repo/--range) — unattended; takes pending merges across all domains in merge-time order, adds new facts, replaces an existing value only when a plan·feedback·commit message quote states the intent, skips the rest into the PR fact ledger, and opens a PR carrying docs and cursors. NOT for material the user hands over (/llm-wiki:add) and NOT for sweeping existing docs (/llm-wiki:audit).
+description: Use when merged code in repos registered in the wiki must be reflected ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --repo/--range) — unattended; takes pending merges across all domains in merge-time order, adds new facts, replaces an existing value only when a plan·feedback·commit message quote states the intent, skips the rest into the PR fact ledger, and opens a PR carrying docs and cursors. NOT for material the user hands over (add skill) and NOT for sweeping existing docs (audit skill).
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,7 @@ disable-model-invocation: true
 ## 1. 범위
 
 - **저장소**: `publish.md` 1장 — 열린 update PR 확인 포함
-- **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러(없음·규약에 없는 값·adr 위치 불일치)가 있으면 해당 문서 목록과 "먼저 `/llm-wiki:audit`"를 보고 후 중단 — type 에러 문서에 반영하면 6장 되돌림에 걸려 사실이 보고 없이 사라짐
+- **유형 검사**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.py" --check --root {WIKI_ROOT}/knowledge`에 `type`이 들어간 에러(없음·규약에 없는 값·adr 위치 불일치)가 있으면 해당 문서 목록과 "먼저 `audit` 스킬"을 보고 후 중단 — type 에러 문서에 반영하면 6장 되돌림에 걸려 사실이 보고 없이 사라짐
 - **실행**: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/update.py" pending --wiki {WIKI_ROOT} --out {스크래치} {인자}` — 전 도메인 미처리 머지를 시각 순으로 골라 diff 파일·레포별 `commits`·`batches[{id, shas, bytes}]`·`remaining`과 전역 순서 `order[{slug, sha7, date}]`를 `work.json`에 씀, 묶음은 다시 나누지 않음
 - **종료 코드**: 0 작업 또는 부트스트랩 있음(`work.json`만 Read), 10 미처리 없음(한 줄 보고 후 종료), 1 오류(stderr 전달 후 중단)
 - **작업 브랜치**: 종료 코드 0이고 `--dry-run`이 아니면 `publish.md` 2장

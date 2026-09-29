@@ -234,3 +234,10 @@ claude plugin validate .
 - **계기**: 빈 원격을 clone한 위키에서 첫 커밋 뒤 `git pull --rebase`는 `no such ref was fetched`로 실패하고 `git push`는 성공함(git 2.39.5 재현) — init이 골격을 쓰는 주 경로라 계획의 "clone한 저장소는 `publish.md` 3·4장"으로는 게시가 실패함
 - **변경**: init 3장 `원격` 불릿을 "원격에 기준 브랜치가 없으면(새로 만든 저장소·빈 원격 clone) URL이 있을 때 `git remote add origin {URL}` 뒤 `git push -u origin {기준 브랜치}`, 그 밖의 clone은 `publish.md` 3·4장"으로 씀
 - **불변**: `publish.md` 계약과 커밋 1 검증(`git push`는 init 첫 push 1줄) 그대로
+
+## Re-plan 2026-09-29 — 변형 차이를 파일 교체만으로
+
+- **계기**: 사용자가 "애초에 특정 문서 내용만 변경해서 유지하면 되도록 설계를 했던건데"라며 `tools/overlay.py`의 필요성을 물음 — `publish.md` 밖에 박힌 스킬 접두(`/llm-wiki:` 12개 파일 38회)와 위키 경로(`LLM_WIKI_ROOT`·`~/.ai-docs/wiki`) 때문에 치환 스크립트가 필요했던 것이 설계 결함임
+- **변경**: 훅·`graph.py`·`update.py`는 스킬 접두를 `plugin.json` name에서(`graph.SKILL_PREFIX`), 위키 경로를 `publish.md` `사본` 불릿에서 읽고, 규약은 `{SKILL_PREFIX}` 자리표시, 스킬·템플릿 본문은 네임스페이스 없이 스킬 이름으로 가리키며, `LLM_WIKI_ROOT` 환경변수 지원과 `tools/overlay.py`를 삭제함
+- **변형 절차**: 이 폴더를 `rsync -a --delete --exclude=__pycache__`로 복사한 뒤 `publish.md`·`plugin.json`·`README.md` 세 파일을 덮어씀 — 드리프트 자동 검사는 없음
+- **검증**: 세션 주입 3종 diff 없음, 원본 대비 스크립트 출력은 앞선 정리의 문구 2건 외 동일, 픽스처 훅 4건은 `사본` 불릿으로 경로를 준 복사본에서 원본과 동일, 이름·`사본`만 바꾼 복사본의 훅이 `/acme-llm-wiki:`와 바꾼 경로를 출력

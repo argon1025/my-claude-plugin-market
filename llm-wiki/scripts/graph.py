@@ -17,15 +17,18 @@ deps.json `deps.{from}[]`에 있고 그 둘이 정본이다. 레포 지도(현�
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
 
 import catalog
 
-# 빈 문자열도 미설정으로 본다 — 훅과 스크립트가 같은 위키를 봐야 주입 명령에서 --wiki를 뺄 수 있다.
-DEFAULT_WIKI = os.environ.get("LLM_WIKI_ROOT") or "~/.ai-docs/wiki"
+# 변형 배포는 plugin.json(이름)과 references/publish.md(`사본` 불릿)만 바꾸므로 스킬 접두와 위키
+# 경로를 거기서 읽는다 — 훅과 스크립트가 같은 위키를 봐야 주입 명령에서 --wiki를 뺄 수 있다.
+PLUGIN = Path(__file__).resolve().parent.parent
+SKILL_PREFIX = f"/{catalog.load_json(PLUGIN / '.claude-plugin' / 'plugin.json', {})['name']}:"
+DEFAULT_WIKI = re.search(r"^- \*\*사본\*\*: `([^`]+)`",
+                         (PLUGIN / "references" / "publish.md").read_text(encoding="utf-8"), re.M)[1]
 
 REGISTRY_NAME = "registry.json"
 DEPS_NAME = "deps.json"
@@ -278,7 +281,7 @@ def check_repo(domain: str, slug: str, info: dict, errors: list[tuple[str, str]]
     elif remote and normalize_remote(remote) != remote:
         errors.append((REGISTRY_NAME, f"{label}: remote가 정규화 꼴이 아님 — `{normalize_remote(remote)}`"))
     elif "remote" in info and not remote:
-        errors.append((REGISTRY_NAME, f"{label}: remote 없음 — /llm-wiki:register --resurvey"))
+        errors.append((REGISTRY_NAME, f"{label}: remote 없음 — {SKILL_PREFIX}register --resurvey"))
 
     branch = info.get("defaultBranch")
     if not isinstance(branch, str) or not branch.strip():
@@ -291,7 +294,7 @@ def check_repo(domain: str, slug: str, info: dict, errors: list[tuple[str, str]]
     elif len(summary) > SUMMARY_LIMIT:
         errors.append((REGISTRY_NAME, f"{label}: summary가 {len(summary)}자 — 상한 {SUMMARY_LIMIT}자"))
     elif status == "active" and not summary.strip():
-        errors.append((REGISTRY_NAME, f"{label}: summary 없음 — /llm-wiki:register --resurvey"))
+        errors.append((REGISTRY_NAME, f"{label}: summary 없음 — {SKILL_PREFIX}register --resurvey"))
 
     # stack·summary·responsibilities는 휴면 노드에 비우라고도 채우라고도 하지 않는다 —
     # 휴면 레포가 여전히 소비 중일 수 있어 무엇이었는지가 필요하고, 조사할 사람이 없는
@@ -306,7 +309,7 @@ def check_repo(domain: str, slug: str, info: dict, errors: list[tuple[str, str]]
                            f"{label}: stack이 {len(rows)}개 — 상한 {STACK_MAX}개, "
                            "주 언어·프레임워크만 버전을 남기고 나머지는 이름만"))
         if not rows and status == "active":
-            errors.append((REGISTRY_NAME, f"{label}: stack 없음 — /llm-wiki:register --resurvey"))
+            errors.append((REGISTRY_NAME, f"{label}: stack 없음 — {SKILL_PREFIX}register --resurvey"))
 
     duties = info.get("responsibilities")
     if "responsibilities" in info and not is_text_list(duties):
@@ -324,7 +327,7 @@ def check_repo(domain: str, slug: str, info: dict, errors: list[tuple[str, str]]
                 errors.append((REGISTRY_NAME,
                                f"{label}: 책임 {line!r}에 `/` — 도메인 접두는 폐지됨, 문장만 적음"))
         if not rows and status == "active":
-            errors.append((REGISTRY_NAME, f"{label}: responsibilities 없음 — /llm-wiki:register --resurvey"))
+            errors.append((REGISTRY_NAME, f"{label}: responsibilities 없음 — {SKILL_PREFIX}register --resurvey"))
 
     hosts = info.get("hosts")
     if "hosts" in info and not isinstance(hosts, dict):
@@ -462,7 +465,7 @@ def check_errors(wiki_root: Path) -> list[tuple[str, str]]:
 
     path = wiki_root / REGISTRY_NAME
     if not path.is_file():
-        return [(REGISTRY_NAME, f"{path} 없음 — /llm-wiki:init")]
+        return [(REGISTRY_NAME, f"{path} 없음 — {SKILL_PREFIX}init")]
 
     raw = catalog.load_json(path, None)
     if not isinstance(raw, dict):

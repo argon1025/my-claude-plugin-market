@@ -94,7 +94,7 @@ def ensure_clone(wiki: Path, slug: str, info: dict) -> tuple[str | None, str]:
     """
     remote = str(info.get("remote") or "").strip()
     if not remote:
-        return None, "remote 없음 — /llm-wiki:register"
+        return None, f"remote 없음 — {graph.SKILL_PREFIX}register"
     url = f"https://{remote}.git"
     path = clone_path(wiki, slug)
     if not path.is_dir():
@@ -193,7 +193,7 @@ def cmd_pending(args) -> int:
     registry = graph.load_registry(wiki)
     repos = registry["repos"]
     if not repos:
-        print(f"# 등록된 레포가 없음: {wiki}/registry.json — /llm-wiki:register", file=sys.stderr)
+        print(f"# 등록된 레포가 없음: {wiki}/registry.json — {graph.SKILL_PREFIX}register", file=sys.stderr)
         return 1
 
     out_dir = Path(args.out).expanduser()

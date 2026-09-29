@@ -2,6 +2,7 @@
 
 쓰기 스킬(init·register·add·audit·update)이 위키 사본을 다루는 시작과 끝입니다.
 
+- **사본**: `~/.ai-docs/wiki` — `{WIKI_ROOT}`, 훅·스크립트가 이 값을 읽음
 - **저장소**: 고정 없음
 - **기준 브랜치**: `main`
 - **커밋 링크**: `https://{remote}/commit/{sha}` — `remote`는 registry 노드 값

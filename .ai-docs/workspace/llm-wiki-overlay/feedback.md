@@ -28,3 +28,12 @@
   - evidence: llm-wiki/references/doc-contract.md, llm-wiki/scripts/graph.py check_repo
 - `correction` llm-wiki register는 정본 remote를 정하지 못해도 빈 값으로 노드를 기록할 수 없음 — `graph.py check`가 빈 remote를 에러로 내 5장 검사가 반드시 실패하므로, 3장에서 끝내 정하지 못하면 기록 없이 중단함
   - evidence: llm-wiki/skills/register/SKILL.md, llm-wiki/scripts/graph.py check_repo
+- `context` 굳이 이걸 유지해야하나? publish.md 내용만 교체하면 되도록 구성한게 아닌가 그게 아니라면 설계가 잘못된거같은데 애초에 특정 문서 내용만 변경해서 유지하면 되도록 설계를 했던건데 — 변형 플러그인은 llm-wiki 폴더 복사 뒤 references/publish.md·.claude-plugin/plugin.json·README.md 세 파일 교체만으로 만들고 병합 스크립트를 두지 않음
+  - source: 사용자 확인 2026-09-29
+- `correction` llm-wiki 변형 배포에 tools/overlay.py(문자열 치환·plugin.json 병합·절 제목 대조)는 없음 — 앞선 overlay.py 관련 why(치환 범위·이중 치환)와 constraint(절 제목 대조) 항목은 더 이상 참이 아니며, publish.md 절 제목·머리 불릿 구성은 자동 검사 없이 변형 쪽에서 맞춤
+  - source: 사용자 확인 2026-09-29
+- `constraint` llm-wiki의 스킬·템플릿·규약·스크립트 문구에는 `/llm-wiki:` 접두와 위키 경로를 직접 쓰지 않음 — 변형은 plugin.json 이름과 publish.md만 바꾸므로 박힌 값은 틀린 명령·경로를 안내함, 훅과 스크립트 출력은 graph.SKILL_PREFIX, 규약은 `{SKILL_PREFIX}` 자리표시, 스킬 본문은 스킬 이름만 씀, README는 변형이 통째로 바꾸므로 예외
+  - evidence: llm-wiki/scripts/graph.py SKILL_PREFIX·DEFAULT_WIKI, llm-wiki/hooks/session_start.py
+- `constraint` llm-wiki의 위키 경로 출처는 references/publish.md의 `사본` 불릿 한 줄(`- **사본**: ` 뒤 백틱으로 감싼 경로)이며 graph.py가 import 시점에 정규식으로 읽음 — 불릿 형식이 깨지면 스크립트는 import 에러로 멈추고 훅은 주입 없이 종료 코드 0으로 끝남, 환경변수 LLM_WIKI_ROOT는 지원하지 않음
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/scripts/graph.py DEFAULT_WIKI

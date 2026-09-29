@@ -17,11 +17,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 /plugin install llm-wiki@my-claude-plugin-market
 ```
 
-설치 후 새 세션에서 `/llm-wiki:init`으로 위키 저장소를 놓고, 각 레포에서 `/llm-wiki:register`로 등록합니다. 위키 경로 기본값은 `~/.ai-docs/wiki`이며, 바꾸려면 `~/.claude/settings.json`의 `env`에 지정합니다.
-
-```json
-{ "env": { "LLM_WIKI_ROOT": "/절대/경로/wiki" } }
-```
+설치 후 새 세션에서 `/llm-wiki:init`으로 위키 저장소를 놓고, 각 레포에서 `/llm-wiki:register`로 등록합니다. 위키 경로는 `references/publish.md`의 `사본` 불릿(`~/.ai-docs/wiki`)입니다.
 
 ## 전제 조건
 
@@ -41,7 +37,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 ## 위키 구조
 
 ```
-~/.ai-docs/wiki/                    # LLM_WIKI_ROOT
+~/.ai-docs/wiki/                    # references/publish.md `사본`
 ├── registry.json                   # register가 편집: 도메인과 레포 노드
 ├── deps.json                       # register·update·add가 편집: 레포 간 의존 간선
 ├── state/{slug}.json               # update만 편집: {"cursor", "at"}
@@ -65,12 +61,12 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 
 ## 변형 배포
 
-- **분리 지점**: 변형 플러그인과 갈리는 곳은 저장소 절차 `references/publish.md` 한 파일과 스킬 네임스페이스(`/llm-wiki:`)·환경변수(`LLM_WIKI_`)·위키 기본 경로(`~/.ai-docs/wiki`) 문자열이며, 오버레이 폴더에 `overlay.json`(`{"replace": {"원문": "대체문"}}`)과 이 플러그인과 같은 상대 경로의 교체 파일(`.claude-plugin/plugin.json`은 얕은 병합)을 둠
-- **생성**: 마켓플레이스 레포 루트에서 아래 명령으로 출력 폴더를 통째로 다시 만들며, 치환은 교체하지 않은 파일에만 걸림
-- **실패 조건**: 치환 원문 적중 0건, 이 플러그인에 없는 교체 파일, README 외 교체 `.md`의 `##` 절 제목 불일치 중 하나라도 있으면 종료 코드 1로 멈추고 기존 출력은 그대로 둠 — 버전업으로 생긴 드리프트를 sync 시점에 드러냄
+- **교체 파일**: 변형 플러그인은 이 폴더를 복사한 뒤 `references/publish.md`(저장소 절차·위키 경로), `.claude-plugin/plugin.json`(이름·버전 — 스킬 접두가 여기서 정해짐), `README.md` 세 파일만 바꿈 — 훅·스크립트가 스킬 접두는 `plugin.json` name, 위키 경로는 `publish.md` `사본` 불릿에서 읽음
+- **publish.md 구성**: 스킬이 `1. 시작`·`2. 브랜치`·`3. 게시`·`4. 종료` 장 번호와 머리 불릿(`사본`·`저장소`·`기준 브랜치`·`커밋 링크`)으로 참조하므로 교체 파일도 같은 구성을 유지함 — 자동 검사 없음
 
 ```
-python3 tools/overlay.py --base llm-wiki --overlay {오버레이 폴더} --out {출력 플러그인 폴더}
+rsync -a --delete --exclude=__pycache__ llm-wiki/ {출력 플러그인 폴더}/
+cp -R {오버레이 폴더}/. {출력 플러그인 폴더}/
 ```
 
 ## 한계

@@ -1,6 +1,6 @@
 ---
 name: register
-description: Use when the current git repo must be registered in the wiki, moved to another domain, re-surveyed, or its status inspected ("이 레포 위키에 등록", "레포 등록", "도메인 이동", "위키 상태", session header says 미등록 레포) — surveys the repo once and records its node and dependency edges in registry.json/deps.json, then prints the repo status table. Writes no doc facts (/llm-wiki:add, /llm-wiki:update) and does not create the wiki skeleton (/llm-wiki:init).
+description: Use when the current git repo must be registered in the wiki, moved to another domain, re-surveyed, or its status inspected ("이 레포 위키에 등록", "레포 등록", "도메인 이동", "위키 상태", session header says 미등록 레포) — surveys the repo once and records its node and dependency edges in registry.json/deps.json, then prints the repo status table. Writes no doc facts (add, update skills) and does not create the wiki skeleton (init skill).
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 ## 1. 전제
 
-- **위키**: `{WIKI_ROOT}/registry.json`이 없으면 `/llm-wiki:init` 안내 후 중단, 있으면 `publish.md` 1장
+- **위키**: `{WIKI_ROOT}/registry.json`이 없으면 `init` 스킬 안내 후 중단, 있으면 `publish.md` 1장
 - **레포**: 현재 디렉터리가 git 레포가 아니면 중단, `--status`만 있으면 6장으로
 - **정본 remote**: 순서대로 시도하고 scheme·`.git` 없는 소문자 정규화 꼴 하나만 기록
   1. `git remote get-url upstream`이 있으면 그 URL
@@ -87,6 +87,6 @@ disable-model-invocation: true
 ## 6. 상태 표·보고
 
 - **상태 표**: `registry.json`·`state/*.json`으로 `| 레포 | 도메인 | 상태 | 책임 | 간선(out/in) | 브랜치 | 커서 |` 표를 출력 — `책임`은 문장 건수, 커서 없음은 `없음`
-- **상대 미정**: 4장에서 간선이 되지 못한 `deps[]` 항목을 `| 식별자 | 외부·내부 미등록 | 근거 |`로 나열 — 내부 미등록 상대는 그 레포를 등록하거나 `/llm-wiki:add`로 간선을 직접 넣으면 이어짐
+- **상대 미정**: 4장에서 간선이 되지 못한 `deps[]` 항목을 `| 식별자 | 외부·내부 미등록 | 근거 |`로 나열 — 내부 미등록 상대는 그 레포를 등록하거나 `add` 스킬로 간선을 직접 넣으면 이어짐
 - **조사 품질**: 2.5장의 `선언 위치 위반 N건`(라이브러리 심볼 import를 근거로 낸 http 항목)을 레인별로 적음
-- **다음**: 세션을 다시 열면 레포 지도·의존이 주입되고, 머지 반영은 `/llm-wiki:update`, 자료 반영은 `/llm-wiki:add`
+- **다음**: 세션을 다시 열면 레포 지도·의존이 주입되고, 머지 반영은 `update` 스킬, 자료 반영은 `add` 스킬

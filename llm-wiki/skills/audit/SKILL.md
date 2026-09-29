@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Use when the wiki must be swept after unattended updates or on a schedule ("위키 정리", "위키 감사", "문서 정리", "중복 정리") — flags fragments, duplicate facts, over-long descriptions and contract violations, then applies the rows you approve. Adds no new facts. NOT for landing new material or merged code (/llm-wiki:add, /llm-wiki:update).
+description: Use when the wiki must be swept after unattended updates or on a schedule ("위키 정리", "위키 감사", "문서 정리", "중복 정리") — flags fragments, duplicate facts, over-long descriptions and contract violations, then applies the rows you approve. Adds no new facts. NOT for landing new material or merged code (add, update skills).
 ---
 
 기존 문서만 고치고 새 사실을 들이지 않습니다. 규약은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`이며 서브에이전트에게는 절대 경로로 넘기고, 저장소 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`(시작 전에 Read)를 따릅니다. 인자: `--scope {domain}|{domain}/{slug}`(기본 현재 도메인 루트 + 현재 레포), `--docs {경로...}`(지목 문서만).
