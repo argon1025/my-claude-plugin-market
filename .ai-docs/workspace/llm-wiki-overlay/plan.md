@@ -247,3 +247,9 @@ claude plugin validate .
 - **계기**: 사용자가 "md 파일 파싱해서 사용할 이유가 있나 싶음 각 쓰임새에 따라 레퍼런스 파일을 분리해서 관리해야하는게 아닌지"라며 `publish.md` `사본` 불릿 파싱을 물음
 - **변경**: 코드가 읽는 위키 경로는 플러그인 루트 `config.json`의 `wikiRoot`로 옮기고 `publish.md` `사본` 불릿을 삭제함 — `publish.md`는 에이전트가 읽는 절차만, 스킬 접두는 이름의 두 번째 출처를 만들지 않도록 `plugin.json` name 파생을 유지
 - **변형 교체 파일**: `references/publish.md`·`config.json`·`.claude-plugin/plugin.json`·`README.md` 4종
+
+## Re-plan 2026-09-29 — 명시 호출 스킬 설명 축약·위키 경로 변경
+
+- **계기**: 사용자가 add 외 스킬은 명시 실행용이라 설명을 짧게, 위키 기본 경로를 `~/.llm-wiki`로 요청함
+- **변경**: init·register·update·audit description을 한 문장으로 줄이고 audit에 `disable-model-invocation: true`를 더함, README 스킬 표는 트리거 예 대신 실행 방식, `config.json` `wikiRoot`는 `~/.llm-wiki`
+- **검증**: `wikiRoot`만 옛 경로로 바꾼 사본의 세션 주입 3종이 기준 출력과 같음, 현재본은 `~/.llm-wiki` 부재 안내를 출력

@@ -1,6 +1,6 @@
 ---
 name: update
-description: Use when merged code in repos registered in the wiki must be reflected ("위키 업데이트", "무인 갱신", "머지 반영", "최근 머지 위키에 반영", a scheduled run, or a pointed --repo/--range) — unattended; takes pending merges across all domains in merge-time order, adds new facts, replaces an existing value only when a plan·feedback·commit message quote states the intent, skips the rest into the PR fact ledger, and opens a PR carrying docs and cursors. NOT for material the user hands over (add skill) and NOT for sweeping existing docs (audit skill).
+description: Reflect merged code of registered repos into the wiki unattended and open a PR carrying docs and cursors.
 disable-model-invocation: true
 ---
 

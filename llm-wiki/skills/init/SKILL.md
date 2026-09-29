@@ -1,6 +1,6 @@
 ---
 name: init
-description: Use when the wiki repo is not present on this machine or exists without registry.json ("위키 초기화", "위키 세팅", "위키 클론", session header says 위키가 없음) — clones the wiki repo fixed in publish.md, otherwise asks for a clone URL or git-inits a new one with its remote, and writes the skeleton (registry.json, deps.json, state/, knowledge/, .gitignore) with a first commit. Registers nothing and writes no facts. NOT for registering the current repo (register skill).
+description: Clone or create the wiki repo at the wiki root and write its skeleton.
 disable-model-invocation: true
 ---
 

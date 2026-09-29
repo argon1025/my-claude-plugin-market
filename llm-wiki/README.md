@@ -2,13 +2,13 @@
 
 LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답하는 현행 합의이며, 레포 밖에 공유할 사실과 코드에 없는 사실(레포 사이에 맞춰야 하는 값·방식, 정책, 결정 근거, 외부 계약, 함정)과 레포 그래프(노드·간선)를 별도 git 저장소에 모으고, 세션 시작 시 그 목록과 그래프를 주입합니다. 위키는 플러그인 저장소 밖에 있어 여러 머신과 팀원이 같은 저장소를 공유합니다.
 
-| 스킬 | 트리거 예 | 역할 |
+| 스킬 | 실행 | 역할 |
 | --- | --- | --- |
-| `/llm-wiki:init` | "위키 초기화", "위키 세팅" | 위키 clone 또는 생성, 원격 연결, 골격(`registry.json`·`deps.json`·`state/`·`knowledge/`) 생성 |
-| `/llm-wiki:register` | "이 레포 위키에 등록", "도메인 이동" | 정본 remote를 판별하고 현재 레포를 4레인 병렬 조사로 노드·의존 간선 기록, 근거 없는 호스트는 질문, 도메인 선택, 상태 표 |
-| `/llm-wiki:update` | "위키 업데이트", "머지 반영" | 전 도메인 미처리 머지를 시각 순으로 무인 반영 — 새 사실은 추가, 기존 값은 의도 인용이 있을 때만 교체, 나머지는 건너뛰어 PR 본문 사실 원장에 기록, 문서·커서 커밋을 PR로 올려 머지로 승인 |
-| `/llm-wiki:add` | "위키에 정리해줘", "정책으로 기록해줘" | 건넨 자료·대화·update가 건너뛴 행의 사실을 반영, 기존 값과 다른 건은 두 값을 보이고 질문 한 라운드 |
-| `/llm-wiki:audit` | "위키 정리", "중복 정리" | 조각·중복·과길이 description·위치·규약 위반을 승인 표 하나로 정리 |
+| `/llm-wiki:init` | 명시 호출만 | 위키 clone 또는 생성, 원격 연결, 골격(`registry.json`·`deps.json`·`state/`·`knowledge/`) 생성 |
+| `/llm-wiki:register` | 명시 호출만 | 정본 remote를 판별하고 현재 레포를 4레인 병렬 조사로 노드·의존 간선 기록, 근거 없는 호스트는 질문, 도메인 선택, 상태 표 |
+| `/llm-wiki:update` | 명시 호출만 | 전 도메인 미처리 머지를 시각 순으로 무인 반영 — 새 사실은 추가, 기존 값은 의도 인용이 있을 때만 교체, 나머지는 건너뛰어 PR 본문 사실 원장에 기록, 문서·커서 커밋을 PR로 올려 머지로 승인 |
+| `/llm-wiki:add` | 자동 판단 — "위키에 정리해줘", "정책으로 기록해줘" | 건넨 자료·대화·update가 건너뛴 행의 사실을 반영, 기존 값과 다른 건은 두 값을 보이고 질문 한 라운드 |
+| `/llm-wiki:audit` | 명시 호출만 | 조각·중복·과길이 description·위치·규약 위반을 승인 표 하나로 정리 |
 
 ## 설치
 
@@ -17,7 +17,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 /plugin install llm-wiki@my-claude-plugin-market
 ```
 
-설치 후 새 세션에서 `/llm-wiki:init`으로 위키 저장소를 놓고, 각 레포에서 `/llm-wiki:register`로 등록합니다. 위키 경로는 `config.json`의 `wikiRoot`(`~/.ai-docs/wiki`)입니다.
+설치 후 새 세션에서 `/llm-wiki:init`으로 위키 저장소를 놓고, 각 레포에서 `/llm-wiki:register`로 등록합니다. 위키 경로는 `config.json`의 `wikiRoot`(`~/.llm-wiki`)입니다.
 
 ## 전제 조건
 
@@ -37,7 +37,7 @@ LLM 위키 플러그인입니다. 위키는 "지금 무엇이 참인가"를 답�
 ## 위키 구조
 
 ```
-~/.ai-docs/wiki/                    # config.json wikiRoot
+~/.llm-wiki/                        # config.json wikiRoot
 ├── registry.json                   # register가 편집: 도메인과 레포 노드
 ├── deps.json                       # register·update·add가 편집: 레포 간 의존 간선
 ├── state/{slug}.json               # update만 편집: {"cursor", "at"}

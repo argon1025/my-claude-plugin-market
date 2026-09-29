@@ -45,3 +45,10 @@
 - `why` llm-wiki 변형의 위키 저장소 고정은 references/publish.md `저장소` 불릿에 clone URL을 적는 것으로 표현하고 config.json에 두지 않음 — clone URL을 읽는 쪽은 init 에이전트뿐이라 소비 주체 기준으로 publish.md에 속하며, 훅 자동 복제처럼 코드가 URL을 읽게 되면 그때 config.json으로 옮김, 이를 위해 훅의 위키 없음 안내와 init description은 clone·새로 만들기를 단정하지 않는 문구로 둠
   - source: 사용자 확인 2026-09-29
   - evidence: llm-wiki/skills/init/SKILL.md, llm-wiki/hooks/session_start.py
+- `context` 스킬 add 를 제외한 전부는 명시적으로 실행하는 용이라 설명을 길게 유지할 필요가 없다 — llm-wiki init·register·update·audit은 `disable-model-invocation: true`와 한 문장 description만 두고 트리거 문구를 싣지 않으며, 자동 판단 대상은 add뿐임
+  - source: 사용자 확인 2026-09-29
+- `context` 위키 플러그인 내 사내 식별자도 정리 진행 — llm-wiki 폴더와 이 작업 기록(llm-wiki-overlay)의 사내 레포·플러그인 이름·호스트는 중립 표기로 고쳤고, main에 이미 올라간 다른 기록 폴더와 git 이력의 식별자는 범위 밖으로 둠, 이 정리를 위해 기록의 덧붙이기 규칙 예외로 앞선 항목을 수정함
+  - source: 사용자 확인 2026-09-29
+- `context` llm-wiki 위키 기본 경로는 `~/.llm-wiki`(config.json `wikiRoot`)이며 기존 `~/.ai-docs/wiki` 사본은 옮기지 않음 — 설치된 5.6.0 이하 플러그인이 아직 옛 경로를 읽으므로 5.7.0으로 올린 뒤 `mv ~/.ai-docs/wiki ~/.llm-wiki`로 옮기거나 init으로 다시 clone함
+  - source: 사용자 확인 2026-09-29
+  - evidence: llm-wiki/config.json

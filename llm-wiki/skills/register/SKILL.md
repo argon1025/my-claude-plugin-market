@@ -1,6 +1,6 @@
 ---
 name: register
-description: Use when the current git repo must be registered in the wiki, moved to another domain, re-surveyed, or its status inspected ("이 레포 위키에 등록", "레포 등록", "도메인 이동", "위키 상태", session header says 미등록 레포) — surveys the repo once and records its node and dependency edges in registry.json/deps.json, then prints the repo status table. Writes no doc facts (add, update skills) and does not create the wiki skeleton (init skill).
+description: Register the current repo in the wiki as a node with dependency edges; also moves its domain, re-surveys it, or prints the status table.
 disable-model-invocation: true
 ---
 
