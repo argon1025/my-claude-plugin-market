@@ -1,0 +1,26 @@
+# agent-wiki-readonly-policy 작업 기록
+
+- `context` agent-wiki 위키·워크스페이스 정책은 "위키, 워크스페이스는 무조건 읽기 전용으로 수정 작업 금지, 수정사항 파악되면 취소 후 그냥 remote 기준으로 베이스 브랜치를 보도록", "수정이 필요한 경우 각각 자기가 알아서 임시폴더에 클론 or 기존 사용자가 클론해둔 레포를 찾은후 수정", "위키를 새로 업데이트 하는 시점은 각 세션이 시작할 때"임
+  - source: 사용자 확인 2026-09-29
+- `correction` agent-wiki 워크스페이스(`workspace.root`) 일괄 최신화는 update 스킬을 포함해 어떤 형태로도 도입하지 않음 — 사용자 문장 "워크스페이스를 일괄 업데이트 하는 시점은 별도 도입 불필요 그냥 작업자 에이전트가 읽기가 필요하면 ... 자기가 임시폴더에 클론, 기존 사용자 레포 활용하거나 워크스페이스에 클론해서 읽기전용으로 쓰거나.. 딱히 최신화 할 필요 없음", 앞선 agent-wiki-structure-review의 "워크스페이스 사본 갱신은 이후 update 스킬이 맡음" 항목과 `sync_register_repositories.py`의 인자 없는 전체 레포 동기화 모드는 더 이상 참이 아님
+  - source: 사용자 확인 2026-09-29
+  - evidence: agent-wiki/scripts/sync_register_repositories.py
+- `context` agent-wiki 세션 주입의 위키 수정 규칙은 "직접 고치지 말고 사용자에게 알림"을 유지하며, 위키 수정은 이후 도입할 위키 수정 스킬이 위키 레포를 별도 임시 폴더에 clone해 수행함 — 일반 세션 에이전트는 임시 clone으로도 위키를 고치지 않음
+  - source: 사용자 확인 2026-09-29
+  - evidence: agent-wiki/scripts/generate_wiki_rules.py
+- `why` agent-wiki register는 `baseRoot`를 최신화하지도 읽지도 않고 1절에서 만든 임시 clone `{tmp}` 하나로 registry 조회·레포 준비·기록을 모두 처리하며, 기록 결과는 다음 세션 시작 때 로컬 사본에 반영됨 — 위키 사본 최신화 시점을 세션 시작 하나로 두면서도 최신 registry로 판단하기 위함이며, 대가는 중단되는 실행에서도 위키 전체 clone 비용이 든다는 점임
+  - evidence: agent-wiki/skills/register/SKILL.md
+- `why` agent-wiki 훅은 SessionStart `source`가 `startup`·`resume`·`clear`일 때 위키 사본을 강제 정리하고 `compact`에서는 하지 않음 — `/clear`는 새 대화를 여는 세션 시작이고 `compact`는 진행 중인 세션의 문맥 압축이기 때문임
+  - evidence: agent-wiki/hooks/session_start.py
+- `context` agent-wiki init의 3절 위키 동기화는 세션 시작 외의 최신화이지만 최초 clone을 만드는 사용자 명시 설치 단계이므로 유지함
+  - evidence: agent-wiki/skills/init/SKILL.md
+- `correction` agent-wiki 워크스페이스(`workspace.root`)는 읽기 전용이 아니라 사용 자유이며, 세션 주입은 "다른 에이전트가 덮어쓸 수 있어 변경 사항이 사라질 수 있다"는 위험만 고지하고 원격 기본 브랜치 기준 열람·로컬 변경 정리·최신화 금지 같은 강제 지시를 두지 않음 — 사용자 문장 "워크스페이스는 뭐 쓰는건 자유 알아서 쓰세요 다른 에이전트가 건들면 변경사항 다 날라갈 수 있음 정도로 정리하면 될 것 같은데 이걸 굳이 무조건 베이스 브랜치로 하세요 이런 무의미한 프롬프트들은 없었으면함", 이 파일 첫 항목의 "위키, 워크스페이스는 무조건 읽기 전용"은 위키에만 참임
+  - source: 사용자 확인 2026-09-29
+  - evidence: agent-wiki/scripts/generate_repository_map.py
+- `context` agent-wiki 위키 사본(`wiki.baseRoot`)은 "위키는 무조건 읽기 기준, 세션 시작시 초기화됨"이며, 세션 주입 위키 규칙은 초기화 사실을 이유로 붙여 "직접 고치지 말고 사용자에게 알림"을 유지함
+  - source: 사용자 확인 2026-09-29
+  - evidence: agent-wiki/scripts/generate_wiki_rules.py
+- `context` 이번 작업의 검증은 "검증은 스크립트로 진행하지말고 직접 읽고 불필요한 프롬프트 있는지 검토하고 수정, 삭제, 재작성할것"에 따라 스크립트·헤드리스 실행 없이 스킬·주입 텍스트·README 정독으로 수행함
+  - source: 사용자 확인 2026-09-29
+- `context` 계획 수립 전 `main` 작업 트리에 적용한 미커밋 변경은 계획 기준선으로 포함하며, 구현은 브랜치 `feat/agent-wiki-readonly-policy`에서 새 세션 `/plan-workflow:execute`로 진행함
+  - source: 사용자 확인 2026-09-29
