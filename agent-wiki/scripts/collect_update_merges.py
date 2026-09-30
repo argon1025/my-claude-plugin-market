@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
-# update가 반영할 도메인 레포의 미처리 first-parent 머지를 커서부터 모아 시각 순으로 세우고, diff를 파일로 꺼내 묶음으로 자른다.
+# update가 반영할 도메인 레포의 미처리 first-parent 머지를 커서부터 모아 시각 순으로 세우고, diff를 파일로 꺼내며 큰 머지는 파일 경계 조각으로 나눈다.
 # 워크스페이스 clone은 fetch만 하고 작업 트리는 건드리지 않으며 origin/{defaultBranch} ref만 읽는다.
 # 문서·커서 파일 수정은 스킬이 하며, 여기서는 무엇을 볼지만 정해 work.json 경로를 마지막 줄에 낸다.
 import argparse
 import json
 import os
+import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
 DIFF_MAX_BYTES = 400_000
-# 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.
-BATCH_MERGES = 5
-BATCH_BYTES = 500_000
+# 추출 에이전트 1회가 끝까지 읽는 조각 상한 — 25만 바이트 입력부터 미열람이 관측됨.
+PART_BYTES = 150_000
 # 머리말에 싣는 딸린 커밋 수 상한 — 대형 머지에서 머리말이 diff를 밀어내지 않게 함.
 MESSAGE_MAX_COMMITS = 20
 # 생성물·잠금 파일처럼 사실이 나올 수 없는 경로만 뺀다.
 EXCLUDE_PATHSPECS = [
-    ":(exclude)**/package-lock.json",
-    ":(exclude)**/yarn.lock",
-    ":(exclude)**/pnpm-lock.yaml",
-    ":(exclude)**/poetry.lock",
-    ":(exclude)**/composer.lock",
-    ":(exclude)**/gradle.lockfile",
-    ":(exclude)**/*.min.js",
-    ":(exclude)**/*.min.css",
-    ":(exclude)**/*.svg",
-    ":(exclude)**/dist/**",
-    ":(exclude)**/node_modules/**",
+    ":(exclude,glob)**/package-lock.json",
+    ":(exclude,glob)**/yarn.lock",
+    ":(exclude,glob)**/pnpm-lock.yaml",
+    ":(exclude,glob)**/poetry.lock",
+    ":(exclude,glob)**/composer.lock",
+    ":(exclude,glob)**/gradle.lockfile",
+    ":(exclude,glob)**/*.min.js",
+    ":(exclude,glob)**/*.min.css",
+    ":(exclude,glob)**/*.svg",
+    ":(exclude,glob)**/dist/**",
+    ":(exclude,glob)**/node_modules/**",
 ]
 CANDIDATES = [("HEAD", 0), ("최근 10건 앞", 10), ("최근 30건 앞", 30)]
 
@@ -87,9 +87,7 @@ def extract_diff(path, slug, row, out_dir):
     if row["truncated"]:
         body = encoded[:DIFF_MAX_BYTES].decode("utf-8", errors="ignore")
     out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / f"{row['sha'][:7]}.diff"
-    header = (
-        f"# {slug} {row['sha']} ({row['date']})\n"
+    rest = (
         f"# 제목: {row['subject']}\n"
         f"# 변경 파일 {row['files_changed']}건"
         + (" — diff가 400KB에서 절단됨, 아래 파일 목록은 온전함\n" if row["truncated"] else "\n")
@@ -99,22 +97,32 @@ def extract_diff(path, slug, row, out_dir):
         + name_status
         + "\n# --- diff (제외 규칙 적용) ---\n"
     )
-    target.write_text(header + body, encoding="utf-8")
-    row["diff_path"] = str(target)
-    row["bytes"] = target.stat().st_size
+    parts = split_parts(body)
+    row["parts"] = []
+    for i, part in enumerate(parts, 1):
+        # 끝 줄바꿈을 채워 줄 수가 wc -l과 같게 함 — 앞 두 줄(식별 줄·조각 줄)을 더한 파일 전체 줄 수.
+        text = rest + part
+        if not text.endswith("\n"):
+            text += "\n"
+        lines = text.count("\n") + 2
+        part_id = row["sha"][:7] if len(parts) == 1 else f"{row['sha'][:7]}-{i}"
+        target = out_dir / f"{part_id}.diff"
+        target.write_text(f"# {slug} {row['sha']} ({row['date']})\n# 조각 {i}/{len(parts)} · {lines}줄\n" + text,
+                          encoding="utf-8")
+        row["parts"].append({"id": part_id, "path": str(target), "bytes": target.stat().st_size})
 
 
-def batches(rows):
-    # 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면 새 묶음 — 단독으로 상한을 넘는 diff도 묶음 하나를 차지.
-    result, current, total = [], [], 0
-    for row in rows + [None]:
-        if current and (row is None or len(current) >= BATCH_MERGES or total + row["bytes"] > BATCH_BYTES):
-            result.append({"id": f"b{len(result) + 1:02d}", "shas": [r["sha"][:7] for r in current], "bytes": total})
-            current, total = [], 0
-        if row is not None:
-            current.append(row)
-            total += row["bytes"]
-    return result
+def split_parts(body):
+    # 파일 단위로 앞에서부터 담다가 상한을 넘게 되면 새 조각 — 단독으로 상한을 넘는 파일도 조각 하나를 차지.
+    parts, size = [""], 0
+    for chunk in re.split(r"(?m)^(?=diff --git )", body):
+        n = len(chunk.encode("utf-8"))
+        if parts[-1] and size + n > PART_BYTES:
+            parts.append("")
+            size = 0
+        parts[-1] += chunk
+        size += n
+    return parts
 
 
 def main():
@@ -124,7 +132,7 @@ def main():
     ap.add_argument("--domain", required=True)
     ap.add_argument("--out", required=True, help="diff와 work.json을 쓸 디렉터리")
     ap.add_argument("--start", action="append", default=[], metavar="SLUG=REV", help="커서 없는 레포의 시작 지점(HEAD 또는 sha)")
-    ap.add_argument("--max-merges", type=int, default=40)
+    ap.add_argument("--max-merges", type=int, default=10)
     a = ap.parse_args()
 
     wiki, workspace, out = (Path(p).expanduser() for p in (a.wiki, a.workspace, a.out))
@@ -190,7 +198,7 @@ def main():
         pool += rows
         spans[slug] = rows
         work["repos"][slug] = {"path": str(path), "branch": branch, "head": head, "cursor": cursor,
-                               "bootstrapped": bootstrapped, "commits": [], "batches": [], "remaining": 0}
+                               "bootstrapped": bootstrapped, "commits": [], "remaining": 0}
 
     work_path = out / "work.json"
     if work["unset"]:
@@ -210,7 +218,6 @@ def main():
         entry = work["repos"][slug]
         entry["commits"] = [{k: v for k, v in r.items() if k != "_key"} for r in rows if id(r) in picked]
         entry["remaining"] = len(rows) - len(entry["commits"])
-        entry["batches"] = batches(entry["commits"])
     work_path.write_text(json.dumps(work, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     for slug, reason in sorted(work["skipped"].items()):
@@ -218,7 +225,8 @@ def main():
     for slug, entry in sorted(work["repos"].items()):
         tail = f" · 예산 밖 {entry['remaining']}건" if entry["remaining"] else ""
         mark = " · 부트스트랩" if entry["bootstrapped"] else ""
-        print(f"{slug}: 머지 {len(entry['commits'])}건 · 묶음 {len(entry['batches'])}개{tail}{mark}")
+        count = sum(len(c["parts"]) for c in entry["commits"])
+        print(f"{slug}: 머지 {len(entry['commits'])}건 · 조각 {count}개{tail}{mark}")
     busy = any(e["commits"] or e["bootstrapped"] for e in work["repos"].values())
     if not busy:
         print("(미처리 없음)")
