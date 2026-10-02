@@ -54,3 +54,7 @@
   - source: 사용자 확인 2026-10-02
 - `constraint` agent-wiki 반영 판정 줄에 "추가·교체한 사실 때문에 거짓이 되는 기존 문장은 같은 편집에서 고치거나 지우고 교체로" 규칙을 둬도, sonnet 반영 에이전트는 같은 식별자를 말하는 기존 문장의 조건 표현이 다르면 별개로 보고 남김 — director-cut 재현에서 F42는 "화면·서버 검증 양쪽에서 막힘"을 "화면에서 막힘"으로 교체했으나, F39(CMS_APP_5180 = DC Y 게임의 앱 카테고리 변경 검증요청)를 `## 코드값`에 추가하면서 `## 결정`의 "Director's Cut 필수값 검증(CMS_APP_5180)은 두지 않음"은 "조건이 달라" 그대로 둠
   - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc/knowledge/onestore-cmsapp/director-cut.md 99행
+- `constraint` agent-wiki 반영 판정 줄을 "같은 식별자를 말하는 기존 문장을 절을 가리지 않고 찾아 함께 참일 수 없으면 고치거나 지움"으로 둔 뒤 director-cut 재현에서 5180 결정 문장은 지워졌으나, F42 교체가 기존 문장의 거짓 부분("서버 검증")만이 아니라 참인 부분(운영자 integration-admin은 Y에서 N 해제만 가능)까지 함께 지움 — 거짓이 된 문장 정리는 과삭제를 낳을 수 있고 PR `교체` 행의 `old`로 리뷰어가 봄
+  - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc/knowledge/onestore-cmsapp/director-cut.md
+- `constraint` agent-wiki update 추출 에이전트의 Read 1회 상한은 줄 수가 아니라 25,000토큰(`File content (26369 tokens) exceeds maximum allowed tokens (25000)`)이며 이 diff들에서 약 400줄·30~37KB에 해당하고, 에이전트는 offset으로 이어 읽어 이 상한에서 멈추지 않음 — front 934d282(조각 4개 444KB) 단독 묶음에서 에이전트는 목록 밖 파일을 열지 않았으나 누적 입력 약 19만 토큰(`.diff`·`.2.diff` 전부와 `.3.diff` 1246행까지, 약 0.55토큰/바이트)에서 스스로 grep·sed 발췌로 전환해 나머지를 읽지 않았고 이후 22만 토큰까지 진행해 컨텍스트 한도에 걸린 것은 아님, 앞선 변경 검증에서는 같은 머지를 묶음당 약 29만 토큰으로 끝까지 읽어 대용량 입력에서의 발췌 전환은 실행마다 다름
+  - evidence: scratchpad fx/work4/facts/onestore-cmsapp-front/b01.json, 추출 에이전트 Read 호출·usage 기록
