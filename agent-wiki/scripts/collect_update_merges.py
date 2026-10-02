@@ -12,7 +12,7 @@ from pathlib import Path
 # 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.
 BATCH_MERGES = 5
 BATCH_BYTES = 200_000
-# diff 조각 상한 — Read 1회가 끝까지 담는 크기.
+# diff 조각 상한 — 묶음 상한을 넘는 머지를 여러 묶음에 나누는 단위.
 PART_BYTES = 120_000
 # 머리말에 싣는 딸린 커밋 수 상한 — 대형 머지에서 머리말이 diff를 밀어내지 않게 함.
 MESSAGE_MAX_COMMITS = 20
@@ -138,18 +138,27 @@ def extract_diff(path, slug, row, out_dir):
 
 
 def batches(rows):
-    # 머지 단위로 묶어 같은 머지의 조각은 한 묶음에 둔다 — 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면
-    # 새 묶음이고, 단독으로 상한을 넘는 머지도 묶음 하나를 차지.
+    # 머지마다 조각을 상한까지 이어 붙인 단위로 나눈다 — 상한 이하 머지는 단위 하나라 조각이 한 묶음에 들고,
+    # 상한을 넘는 머지만 여러 묶음에 걸침.
+    units = []
+    for row in rows:
+        groups, size = [[]], 0
+        for p in row["parts"]:
+            if groups[-1] and size + p["bytes"] > BATCH_BYTES:
+                groups, size = groups + [[]], 0
+            groups[-1].append(p)
+            size += p["bytes"]
+        units += [(row["sha"][:7], g, sum(p["bytes"] for p in g)) for g in groups]
+    # 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면 새 묶음.
     result, current, total = [], [], 0
-    for row in rows + [None]:
-        size = sum(p["bytes"] for p in row["parts"]) if row else 0
-        if current and (row is None or len(current) >= BATCH_MERGES or total + size > BATCH_BYTES):
-            result.append({"id": f"b{len(result) + 1:02d}", "shas": [r["sha"][:7] for r in current],
-                           "diffs": [p["path"] for r in current for p in r["parts"]], "bytes": total})
+    for unit in units + [None]:
+        if current and (unit is None or len(current) >= BATCH_MERGES or total + unit[2] > BATCH_BYTES):
+            result.append({"id": f"b{len(result) + 1:02d}", "shas": list(dict.fromkeys(s for s, _, _ in current)),
+                           "diffs": [p["path"] for _, g, _ in current for p in g], "bytes": total})
             current, total = [], 0
-        if row is not None:
-            current.append(row)
-            total += size
+        if unit is not None:
+            current.append(unit)
+            total += unit[2]
     return result
 
 
