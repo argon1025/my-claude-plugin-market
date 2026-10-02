@@ -58,3 +58,7 @@
   - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc/knowledge/onestore-cmsapp/director-cut.md
 - `constraint` agent-wiki update 추출 에이전트의 Read 1회 상한은 줄 수가 아니라 25,000토큰(`File content (26369 tokens) exceeds maximum allowed tokens (25000)`)이며 이 diff들에서 약 400줄·30~37KB에 해당하고, 에이전트는 offset으로 이어 읽어 이 상한에서 멈추지 않음 — front 934d282(조각 4개 444KB) 단독 묶음에서 에이전트는 목록 밖 파일을 열지 않았으나 누적 입력 약 19만 토큰(`.diff`·`.2.diff` 전부와 `.3.diff` 1246행까지, 약 0.55토큰/바이트)에서 스스로 grep·sed 발췌로 전환해 나머지를 읽지 않았고 이후 22만 토큰까지 진행해 컨텍스트 한도에 걸린 것은 아님, 앞선 변경 검증에서는 같은 머지를 묶음당 약 29만 토큰으로 끝까지 읽어 대용량 입력에서의 발췌 전환은 실행마다 다름
   - evidence: scratchpad fx/work4/facts/onestore-cmsapp-front/b01.json, 추출 에이전트 Read 호출·usage 기록
+- `constraint` agent-wiki update에서 묶음 상한을 넘는 머지를 조각별 묶음으로 나누면 각 에이전트는 목록 파일을 끝까지 읽지만(front 934d282 묶음 4개 모두 Read로 마지막 줄까지, 에이전트당 약 10만 토큰), 첫 조각에만 커밋 메시지·작업 기록이 있고 코드 변경 줄은 다른 조각에 있어 "변경 줄 값 우선" 판정을 못 하고(CMS_APP_5180을 b01이 충돌로 보고 뺌) 같은 기능의 graph 판정이 묶음마다 엇갈림(충전형 화면 responsibilities add를 b01·b04는 냄, b03은 기존 책임으로 봄) — 메인 4장 정리는 diff를 보지 않아 이를 바로잡지 못함
+  - evidence: scratchpad fx/work5/facts/onestore-cmsapp-front/b01~b04.json
+- `context` 대형 머지는 조각별 묶음 구조를 유지하고, 사용자가 제안한 PR 에이전트 아래 조각별 서브에이전트 팬아웃(PR 에이전트가 머리말을 보고 자식 결과를 병합)은 채택하지 않음 — 위 판정 품질 문제가 반복되면 이 안을 다시 검토하며, 이 환경에서는 서브에이전트가 Agent 도구로 손자 에이전트를 띄울 수 있음을 확인했으나 다른 Claude Code 버전의 지원 여부는 확인하지 않음
+  - source: 사용자 확인 2026-10-02
