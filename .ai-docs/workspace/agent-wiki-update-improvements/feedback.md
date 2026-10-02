@@ -48,3 +48,7 @@
   - evidence: agent-wiki/skills/update/SKILL.md 3장, agent-wiki/skills/add/SKILL.md 3장
 - `constraint` agent-wiki `collect_update_merges.py`의 diff 조각은 본문 기준 120KB(`BATCH_BYTES`)이고 첫 조각은 머리말 몫을 빼며 둘째부터는 3줄 머리말이 더해져 파일 크기가 상한을 수백 바이트 넘을 수 있음 — onestore-cmsapp front #203(934d282)은 조각 4개 합 444KB로, 이전 400KB 절단에서 잘리던 뒤 파일까지 묶음에 들어감
   - evidence: agent-wiki/scripts/collect_update_merges.py split()
+- `constraint` agent-wiki update의 diff 조각 묶음에서 sonnet 추출 에이전트는 둘째 이후 조각 머리말의 "커밋 메시지·변경 파일 목록은 {sha7}.diff" 안내와 프롬프트의 "조각 파일은 첫 조각의 머리말을 가리킨다"를 따라 같은 머지의 다른 조각까지 모두 읽음 — 변경 검증 드라이런에서 front 934d282 조각 4개 중 묶음 3개가 조각 4개를 모두 읽어 한 머지에서 사실 171건(묶음당 약 29만 토큰)이 나왔고, 프롬프트 금지 "diff 밖 파일 열기"는 같은 머지의 다른 조각을 막지 못함
+- `constraint` agent-wiki update 반영 에이전트는 근거 없는 교체가 허용돼도 사실의 표현이 기존 문장과 다르면 `추가`로 판정해 기존 문장을 남김 — 변경 검증 드라이런에서 director-cut F39·F42가 추가되며 "5180 검증 없음"·"N에서 Y 설정은 서버 검증이 막음" 문장이 그대로 남아 문서가 자기모순이 됐고, 검토는 이번 변경 줄만 고쳐 이를 바로잡지 않음
+- `correction` agent-wiki update 추출의 미독 원인은 묶음 총량이 아니라 Read 1회에 담기지 않는 diff 파일 하나의 크기였음 — 변경 검증 드라이런에서 sonnet 추출 에이전트가 120KB 이하 조각 4개(444KB, 6287줄)를 모두 마지막 줄까지 읽었으므로, 조각은 Read 크기 맞춤(`PART_BYTES`)으로만 쓰고 묶음은 머지 단위(같은 머지 조각은 한 묶음)로 둠
+  - source: 사용자 확인 2026-10-02

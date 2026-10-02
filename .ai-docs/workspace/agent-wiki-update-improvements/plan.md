@@ -255,3 +255,72 @@
 - **조각과 병합**: 한 머지가 여러 묶음으로 나뉘면 묶음 안 병합이 아니라 4장 정리 병합에 기대며, 둘째 조각부터는 커밋 메시지가 없어 작업 기록 근거 사실은 첫 조각에서만 나옴
 - **긴 경로 오기**: 판정 파일 누락의 원인인 긴 `mktemp` 경로 오기는 출력 확인으로 재실행할 뿐 막지는 않음 — 반복되면 `{work}`를 짧은 고정 접두 경로로 바꿈
 - **범위 밖**: 재검토가 첫 반영 줄을 `ids` 없이 지우는 경우(adhub-product-meta-sync 4건)와 같은 이름 집합 충돌(`AdhubResultCode`)은 그대로 둠
+
+## Re-plan 2026-10-02 — 변경 검증 드라이런: 조각은 Read 크기로만, 묶음은 머지 단위, 거짓이 된 기존 문장 정리
+
+### 의도
+
+- **왜**: 변경 검증 드라이런에서 diff 조각마다 묶음을 만들자 추출 에이전트가 같은 머지의 다른 조각까지 모두 읽어 한 머지(front 934d282)에서 사실 171건이 중복으로 나왔고, 반영 에이전트는 표현이 다른 사실을 `추가`로 판정해 그 사실 때문에 거짓이 된 기존 문장을 남김
+- **누가**: 위키 운영자가 `/agent-wiki:update`를 실행하고 PR을 리뷰하며, 등록 레포 에이전트가 그 문서를 읽음
+- **완료**: 같은 머지의 조각이 한 묶음에 함께 들어가 에이전트 1개가 목록 순서대로 끝까지 읽고, 반영이 추가·교체한 사실과 어긋나는 기존 문장을 같은 편집에서 고치는 agent-wiki 0.7.0이 개인판에 커밋되고 사내판 미러링이 갱신된 상태
+
+### 배경
+
+- **읽기 한계의 실체**: front 묶음 3개가 묶음 상한 120KB를 넘어 934d282 조각 4개(444KB, 6287줄)를 모두 마지막 줄까지 읽었음 — 0.7.0 드라이런의 미독은 총량이 아니라 Read 1회에 담기지 않는 파일 하나(f415b06 177KB·2964줄)가 원인이었음
+- **중복 원인**: 둘째 이후 조각 머리말 `# 조각 {k}/{n} — 커밋 메시지·변경 파일 목록은 {sha7}.diff`와 추출 프롬프트 입력 줄 "조각 파일은 첫 조각의 머리말을 가리킨다"를 따라 에이전트가 다른 조각을 열었고, 금지 "diff 밖 파일 열기"는 같은 머지의 조각을 막지 못함 — front b04만 첫 조각 머리말만 읽고 나머지 조각은 열지 않음
+- **현재 수집 코드**: `agent-wiki/scripts/collect_update_merges.py`의 `split()`이 `BATCH_BYTES`(120KB)로 조각을 자르고, `batches()`가 조각 단위로 `BATCH_MERGES`(5)·`BATCH_BYTES`까지 묶어 `{"id", "shas", "diffs", "bytes"}`를 냄 — `extract_diff()`는 `row["parts"] = [{"path", "bytes"}]`를 채움
+- **거짓이 된 기존 문장**: director-cut F39(CMS_APP_5180 = DC Y 게임을 앱 카테고리로 바꾼 검증요청)·F42(api에 directorCutYn 변경 거부 서버 검증 없음)가 `추가`로 반영되며 "검증요청 시 5180 검증은 두지 않음"(결정 절)과 "N에서 Y 설정은 화면·서버 검증 양쪽에서 막힘"(규칙 절)이 남음 — 규약 7장 `**현재 값만**`이 같은 편집에서 지우라고 하지만 반영 프롬프트 판정 줄에 없고, 검토는 이번 변경 줄만 고침
+- **확인된 동작**: 같은 검증에서 변경 줄 우선(api 150727c 경로 1건), 치환 충돌 제거, 재배정 사실 원복 제외(api 커서 2145cd9), `quote` 삭제, 근거 없는 교체(instant-game-deploy F97 `교체`)는 의도대로 동작함
+- **사내판 상태**: 사내판 `feat/agent-wiki-update-improvements` 브랜치에 0.7.0 미러링 커밋 `3c87f4f`가 있음
+
+### 확정 결정 (사용자 확인 2026-10-02)
+
+- 폐기: 앞 Re-plan 절 `**diff 분할**`의 "조각마다 묶음 단위가 되며" — 조각은 Read 크기를 맞추는 파일 분할일 뿐이고 묶음은 머지 단위로 둠, 사용자 문장 "diff 파일목록 전달하고 하나 씩 읽으라고 하면 문제없는거같긴하네"
+- **묶음**: 같은 머지의 조각은 항상 한 묶음에 들어가고, 묶음은 머지 단위로 `BATCH_MERGES` 5건·`BATCH_BYTES` 200KB까지 합치며, 머지 하나가 상한을 넘으면 그 머지만으로 묶음 하나
+- **조각 크기**: 조각 상한은 `PART_BYTES` 120KB로 따로 둠
+- **읽기 지시**: 추출 프롬프트가 diff 목록을 한 파일씩 순서대로 끝까지 읽게 하고 목록 밖 파일 열기를 금지함
+- **거짓이 된 문장**: 반영 판정 줄에 "추가·교체한 사실 때문에 거짓이 되는 기존 문장은 같은 편집에서 고치거나 지우고 교체로 적는다"를 둠
+- **버전**: 머지 전이므로 0.7.0 유지, 사내판은 같은 브랜치에 미러링 커밋을 하나 더 남김
+
+### 작업
+
+| 파일 | 변경 | 사다리 |
+|---|---|---|
+| `agent-wiki/scripts/collect_update_merges.py` | `PART_BYTES` 분리, `batches()` 머지 단위 복귀, 둘째 조각 머리말 문구 | 기존 파일 수정 |
+| `agent-wiki/skills/update/SKILL.md` | 3장 입력 줄·금지 줄 | 기존 파일 수정 |
+| `agent-wiki/references/apply.md` | 2장 판정 줄 | 기존 파일 수정 |
+| 사내판 `plugins/agent-wiki/scripts/collect_update_merges.py`·`skills/update/SKILL.md`·`references/apply.md` | 개인판 복사 | 기존 파일 수정 |
+
+#### agent-wiki/scripts/collect_update_merges.py
+
+- **상수**: 주석과 함께 `PART_BYTES = 120_000`(`# diff 조각 상한 — Read 1회가 끝까지 담는 크기.`)을 두고, `BATCH_BYTES = 120_000` → `200_000`, 묶음 주석은 `# 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.`으로 되돌림
+- **분할**: `split()`과 그 안의 `cut()` 호출 조건·`extract_diff()`의 `split(body, ...)` 인자에서 `BATCH_BYTES`를 `PART_BYTES`로 바꿈
+- **둘째 조각 머리말**: `# 조각 {k}/{n} — 커밋 메시지·변경 파일 목록은 {sha7}.diff` → `# 조각 {k}/{n} — 같은 머지 앞 조각에 이어짐`
+- **묶음**: `batches()`를 머지 행 단위로 되돌림 — 행 바이트는 `sum(p["bytes"] for p in row["parts"])`, 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면 새 묶음, 출력은 `{"id", "shas": 행 sha7 목록, "diffs": 행마다 parts 경로를 순서대로 이은 목록, "bytes"}`
+
+#### agent-wiki/skills/update/SKILL.md
+
+- **3장 입력 줄**: `입력: {diff 목록}을 순서대로 끝까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록이 있고, 조각 파일은 첫 조각의 머리말을 가리킨다.` → `입력: {diff 목록}을 목록 순서대로 한 파일씩 끝까지 Read(길면 offset으로 나눔) — 머지마다 첫 파일 머리말에 PR 제목·커밋 메시지·변경 파일 목록이 있고, {sha7}.{k}.diff는 같은 머지의 이어지는 조각이다.`
+- **3장 금지 줄**: `금지: diff 밖 파일 열기, 사전 지식으로 채우기.` → `금지: 입력 목록 밖 파일 열기, 사전 지식으로 채우기.`
+
+#### agent-wiki/references/apply.md
+
+- **2장 판정 줄**: `동일·추가·교체는 본문에 반영하고,` → `동일·추가·교체는 본문에 반영하되 추가·교체한 사실 때문에 거짓이 되는 기존 문장은 같은 편집에서 고치거나 지우고 교체로 적으며(old에 기존 문장),`
+
+### 커밋 분해
+
+개인판 `feat/agent-wiki-update-improvements` 브랜치에서 이어 작업함. `{fx}`는 검증용 임시 폴더, `{ws}`는 `~/.agent-wiki-workspace`, `{T2}`는 변경 검증 위키 clone `/var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc`(registry·state만 읽음).
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 1 | `collect_update_merges.py` 묶음 머지 단위 | `python3 -m py_compile agent-wiki/scripts/collect_update_merges.py` 통과. `python3 agent-wiki/scripts/collect_update_merges.py --wiki {T2} --workspace {ws} --domain onestore-cmsapp --out {fx}/out --max-merges 40` 종료 코드 0, `find {fx}/out -name '*.diff' -size +125k` 0행, `work.json`에서 front 묶음 하나의 `diffs`가 `934d282.diff`·`934d282.2.diff`·`934d282.3.diff`·`934d282.4.diff`를 모두 담고 agent 묶음 하나가 `f415b06.diff`·`f415b06.2.diff`를 모두 담음, 같은 sha7이 두 묶음의 `shas`에 동시에 나오지 않음(python으로 확인), `grep -c '앞 조각에 이어짐' {fx}/out/onestore-cmsapp-front/934d282.2.diff` 1 |
+| 2 | update `SKILL.md`·`apply.md` 문장 | `grep -c '첫 조각의 머리말을 가리킨다' agent-wiki/skills/update/SKILL.md` 0, `grep -n '입력 목록 밖 파일 열기' agent-wiki/skills/update/SKILL.md` 1행, `grep -n '거짓이 되는 기존 문장' agent-wiki/references/apply.md` 1행(2장) |
+| 3 | 반영 동작 확인(커밋 없음) | `{T2}`에서 `git -C {T2} checkout -- knowledge` 후, 0.6.1 실행 산출물 `/var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.xzR2WSp1IH/facts.json`의 F39·F42를 `quote`=`source`로 둔 배정으로 새 `apply.md` 2장 프롬프트를 sonnet 에이전트 1개로 director-cut.md에 실행 — 통과 조건: F39·F42 중 하나 이상이 `교체`이고 `grep -c '5180)은 두지 않음\|N에서 Y로 설정은 화면·서버 검증 양쪽에서 막힘' {T2}/knowledge/onestore-cmsapp/director-cut.md` 0 |
+| 4 | 추출 동작 확인(커밋 없음) | 커밋 1 산출물의 front 934d282 묶음 하나를 새 `SKILL.md` 3장 프롬프트로 sonnet 에이전트 1개에 실행 — 통과 조건: 에이전트가 조각 4개를 마지막 줄까지 읽었다고 보고하고 출력 JSON이 파싱되며 묶음 밖 파일을 열지 않음 |
+| 5 | 사내판 미러링 | 사내판 `feat/agent-wiki-update-improvements` 브랜치에 개인판 세 파일을 복사해 커밋 `fix(agent-wiki): update 조각 묶음 머지 단위·거짓이 된 기존 문장 정리 미러링, 0.7.0` — `diff -rq plugins/agent-wiki {개인판}/agent-wiki` 결과가 `config.json`·`references/publish.md`·`README.md` 3행뿐 |
+
+### 특이 사항
+
+- **대형 머지 한계**: 머지 하나의 diff가 아주 크면(조각 수 증가) 에이전트 1개가 모두 읽어야 함 — 이번 검증의 444KB·6287줄은 끝까지 읽혔으며, 더 큰 머지에서 미독이 다시 보이면 그 머지만 조각 단위 묶음으로 나누는 예외를 검토함
+- **기존 문장 정리 범위**: 반영 에이전트가 거짓이 된 기존 문장을 판단하는 것은 같은 문서 안에 한하며, 다른 문서에 남은 거짓 문장은 audit 몫
+- **검증 비용**: 커밋 3·4는 서브에이전트 2회만 씀
