@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# update가 반영할 도메인 레포의 미처리 first-parent 머지를 커서부터 모아 시각 순으로 세우고, diff를 파일로 꺼내 묶음으로 자른다.
+# update가 반영할 도메인 레포의 미처리 first-parent 머지를 커서부터 모아 시각 순으로 세우고, diff를 조각 파일로 꺼내 묶음으로 자른다.
 # 워크스페이스 clone은 fetch만 하고 작업 트리는 건드리지 않으며 origin/{defaultBranch} ref만 읽는다.
 # 문서·커서 파일 수정은 스킬이 하며, 여기서는 무엇을 볼지만 정해 work.json 경로를 마지막 줄에 낸다.
 import argparse
@@ -9,25 +9,25 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-DIFF_MAX_BYTES = 400_000
-# 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.
-BATCH_MERGES = 5
-BATCH_BYTES = 500_000
+# 추출 에이전트 1회가 읽는 묶음 상한 — 머지 하나가 넘으면 조각을 나눠 여러 묶음에 둠, 바이트는 컨텍스트 예산.
+BATCH_BYTES = 200_000
+# diff 조각 상한 — 묶음 상한을 넘는 머지를 여러 묶음에 나누는 단위.
+PART_BYTES = 120_000
 # 머리말에 싣는 딸린 커밋 수 상한 — 대형 머지에서 머리말이 diff를 밀어내지 않게 함.
 MESSAGE_MAX_COMMITS = 20
 # 생성물·잠금 파일처럼 사실이 나올 수 없는 경로만 뺀다.
 EXCLUDE_PATHSPECS = [
-    ":(exclude)**/package-lock.json",
-    ":(exclude)**/yarn.lock",
-    ":(exclude)**/pnpm-lock.yaml",
-    ":(exclude)**/poetry.lock",
-    ":(exclude)**/composer.lock",
-    ":(exclude)**/gradle.lockfile",
-    ":(exclude)**/*.min.js",
-    ":(exclude)**/*.min.css",
-    ":(exclude)**/*.svg",
-    ":(exclude)**/dist/**",
-    ":(exclude)**/node_modules/**",
+    ":(exclude,glob)**/package-lock.json",
+    ":(exclude,glob)**/yarn.lock",
+    ":(exclude,glob)**/pnpm-lock.yaml",
+    ":(exclude,glob)**/poetry.lock",
+    ":(exclude,glob)**/composer.lock",
+    ":(exclude,glob)**/gradle.lockfile",
+    ":(exclude,glob)**/*.min.js",
+    ":(exclude,glob)**/*.min.css",
+    ":(exclude,glob)**/*.svg",
+    ":(exclude,glob)**/dist/**",
+    ":(exclude,glob)**/node_modules/**",
 ]
 CANDIDATES = [("HEAD", 0), ("최근 10건 앞", 10), ("최근 30건 앞", 30)]
 
@@ -64,8 +64,38 @@ def first_parent(path, span):
         parts = line.split("\t", 3)
         if len(parts) == 4:
             sha, parents, when, subject = parts
-            rows.append({"sha": sha, "parents": len(parents.split()), "date": when, "subject": subject})
+            rows.append({"sha": sha, "parents": len(parents.split()), "date": when, "subject": subject,
+                         "_parent": parents.split()[0] if parents else ""})
     return rows
+
+
+def cut(text, limit):
+    """limit 이하 덩어리로 줄 경계에서 자른다 — 한 줄이 상한을 넘으면 그 줄만 한 덩어리."""
+    chunks, current, size = [], [], 0
+    for line in text.splitlines(keepends=True):
+        n = len(line.encode("utf-8"))
+        if current and size + n > limit:
+            chunks.append("".join(current))
+            current, size = [], 0
+        current.append(line)
+        size += n
+    return chunks + ["".join(current)] if current else chunks
+
+
+def split(body, room):
+    """diff 본문을 파일 경계로 나눠 조각마다 머리말 몫을 뺀 room까지 이어 붙인다."""
+    files = [f if i == 0 else "diff --git " + f for i, f in enumerate(body.split("\ndiff --git "))]
+    for i in range(len(files) - 1):
+        files[i] += "\n"
+    pieces, current, size = [], "", 0
+    for chunk in (c for f in files for c in (cut(f, room) if len(f.encode("utf-8")) > room else [f])):
+        n = len(chunk.encode("utf-8"))
+        if current and size + n > room:
+            pieces.append(current)
+            current, size = "", 0
+        current += chunk
+        size += n
+    return pieces + [current] if current else pieces or [""]
 
 
 def extract_diff(path, slug, row, out_dir):
@@ -82,38 +112,42 @@ def extract_diff(path, slug, row, out_dir):
     else:
         _, message = git(path, "log", "-1", "--format=%s%n%b", row["sha"])
     _, body = git(path, *head, *span, "--", ".", *EXCLUDE_PATHSPECS)
-    encoded = body.encode("utf-8")
-    row["truncated"] = len(encoded) > DIFF_MAX_BYTES
-    if row["truncated"]:
-        body = encoded[:DIFF_MAX_BYTES].decode("utf-8", errors="ignore")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / f"{row['sha'][:7]}.diff"
-    header = (
-        f"# {slug} {row['sha']} ({row['date']})\n"
+    sha7 = row["sha"][:7]
+    # 조각마다 같은 머리말을 둔다 — 둘째 줄 조각 번호·줄 수는 조각을 쓸 때 채움.
+    rest = (
         f"# 제목: {row['subject']}\n"
-        f"# 변경 파일 {row['files_changed']}건"
-        + (" — diff가 400KB에서 절단됨, 아래 파일 목록은 온전함\n" if row["truncated"] else "\n")
+        + f"# 변경 파일 {row['files_changed']}건\n"
         + ("# --- 딸린 커밋 메시지 ---\n" if merge else "# --- 커밋 메시지 ---\n")
         + "\n".join(f"# {l}" for l in message.splitlines())
         + "\n# --- 변경 파일 목록 (제외 규칙 미적용 전체) ---\n"
         + name_status
         + "\n# --- diff (제외 규칙 적용) ---\n"
     )
-    target.write_text(header + body, encoding="utf-8")
-    row["diff_path"] = str(target)
-    row["bytes"] = target.stat().st_size
+    first = f"# {slug} {row['sha']} ({row['date']})\n"
+    pieces = split(body, PART_BYTES - len((first + "# 조각 00/00 · 000000줄\n" + rest).encode("utf-8")))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    row["parts"] = []
+    for k, piece in enumerate(pieces, 1):
+        target = out_dir / (f"{sha7}.diff" if k == 1 else f"{sha7}.{k}.diff")
+        # 끝 줄바꿈을 채워 줄 수가 wc -l과 같게 함 — 앞 두 줄(식별 줄·조각 줄)을 더한 파일 전체 줄 수.
+        text = rest + piece if (rest + piece).endswith("\n") else rest + piece + "\n"
+        lines = text.count("\n") + 2
+        target.write_text(first + f"# 조각 {k}/{len(pieces)} · {lines}줄\n" + text, encoding="utf-8")
+        row["parts"].append({"path": str(target), "bytes": target.stat().st_size})
 
 
 def batches(rows):
-    # 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면 새 묶음 — 단독으로 상한을 넘는 diff도 묶음 하나를 차지.
-    result, current, total = [], [], 0
-    for row in rows + [None]:
-        if current and (row is None or len(current) >= BATCH_MERGES or total + row["bytes"] > BATCH_BYTES):
-            result.append({"id": f"b{len(result) + 1:02d}", "shas": [r["sha"][:7] for r in current], "bytes": total})
-            current, total = [], 0
-        if row is not None:
-            current.append(row)
-            total += row["bytes"]
+    # 머지마다 묶음 하나 — 상한을 넘는 머지만 조각을 상한까지 이어 붙여 여러 묶음에 둔다.
+    result = []
+    for row in rows:
+        groups, size = [[]], 0
+        for p in row["parts"]:
+            if groups[-1] and size + p["bytes"] > BATCH_BYTES:
+                groups, size = groups + [[]], 0
+            groups[-1].append(p)
+            size += p["bytes"]
+        result += [{"id": f"b{len(result) + i:02d}", "shas": [row["sha"][:7]], "diffs": [p["path"] for p in g],
+                    "bytes": sum(p["bytes"] for p in g)} for i, g in enumerate(groups, 1)]
     return result
 
 
@@ -124,7 +158,7 @@ def main():
     ap.add_argument("--domain", required=True)
     ap.add_argument("--out", required=True, help="diff와 work.json을 쓸 디렉터리")
     ap.add_argument("--start", action="append", default=[], metavar="SLUG=REV", help="커서 없는 레포의 시작 지점(HEAD 또는 sha)")
-    ap.add_argument("--max-merges", type=int, default=40)
+    ap.add_argument("--max-merges", type=int, default=10)
     a = ap.parse_args()
 
     wiki, workspace, out = (Path(p).expanduser() for p in (a.wiki, a.workspace, a.out))
@@ -181,6 +215,10 @@ def main():
             continue
 
         rows = first_parent(path, f"{cursor}..{head}")
+        # 커서가 first-parent 위에 있으면 범위 첫 행의 첫 부모가 커서이고, 행이 없으면 커서가 head임.
+        if rows and rows[0]["_parent"] != cursor:
+            work["skipped"][slug] = f"커서 {cursor[:7]}가 origin/{branch} first-parent 밖 — registry defaultBranch 확인"
+            continue
         # 정렬 키는 레포 안 누적 최대 시각 — committer date가 first-parent 순서와 어긋나도 레포 안 선택이
         # 앞부분이 되어 커서가 선택되지 않은 머지를 넘지 않음, 타임존이 달라 epoch로 비교.
         latest = 0.0
@@ -208,7 +246,7 @@ def main():
     picked = {id(r) for r in chosen}
     for slug, rows in spans.items():
         entry = work["repos"][slug]
-        entry["commits"] = [{k: v for k, v in r.items() if k != "_key"} for r in rows if id(r) in picked]
+        entry["commits"] = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows if id(r) in picked]
         entry["remaining"] = len(rows) - len(entry["commits"])
         entry["batches"] = batches(entry["commits"])
     work_path.write_text(json.dumps(work, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

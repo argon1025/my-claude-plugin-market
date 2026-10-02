@@ -21,7 +21,7 @@ git -C {tmp} push -u origin {branch}
 gh pr create --base {baseBranch} --head {branch} --title "{제목}" --body-file {work}/pr.md
 ```
 
-본문이 60,000바이트를 넘으면 `추출 사실` 절을 떼어 `{work}/facts.md`에 쓰고 본문에 "사실 원장은 첫 코멘트" 한 줄을 둔 뒤, PR 생성 후 뗀 절을 코멘트로 올립니다.
+본문이 60,000바이트를 넘으면 `사실 목록` 절을 떼어 `{work}/facts.md`에 쓰고 본문에 "사실 원장은 첫 코멘트" 한 줄을 둔 뒤, PR 생성 후 뗀 절을 코멘트로 올립니다.
 
 ```
 gh pr comment {url} --body-file {work}/facts.md
@@ -31,13 +31,13 @@ gh pr comment {url} --body-file {work}/facts.md
 
 ## 3. update PR 읽기
 
-add가 update PR의 `건너뜀`·`위치 재배정` 행을 읽을 때 씁니다.
+add가 update PR의 `제외된 사실 목록` 행을 읽을 때 씁니다.
 
 ```
-gh pr view {url} --json body,comments
+gh pr view {url} --json body
 ```
 
-본문에 "사실 원장은 첫 코멘트"가 있으면 첫 코멘트의 `추출 사실` 표를 읽고, 없으면 본문의 표를 읽습니다.
+본문의 `제외된 사실 목록` 표를 읽습니다 — 본문이 길어 코멘트로 떼는 절은 `사실 목록`뿐입니다.
 
 ## 4. 인증 실패
 

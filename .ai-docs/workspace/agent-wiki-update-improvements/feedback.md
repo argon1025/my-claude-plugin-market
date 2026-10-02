@@ -1,0 +1,70 @@
+# agent-wiki-update-improvements 작업 기록
+
+- `context` agent-wiki 0.6.1 update 스킬 개선은 onestore-cmsapp 도메인 첫 `update --dry-run`(커서 `0a4560e`, 머지 40건) 관찰 기록 `onestore-devcenter-claude-plugin-marketplace/agent-wiki-update-improvements.md`의 15개 항목을 검토해 정하며, 수정 원본은 개인판 `agent-wiki`이고 사내판 `plugins/agent-wiki`로 미러링함
+  - source: agent-wiki-update-improvements.md
+- `constraint` 위키 registry의 onestore-cmsapp-front `defaultBranch`는 `master`이지만 기능 PR은 `develop`으로 머지되고 `master` first-parent는 `Release/…`·`Hotfix/…` 묶음 머지뿐이며, 커서 `77bad80`(PR #186)은 `develop` first-parent 위에만 있음 — `cursor..origin/master --first-parent`가 커서 이전 머지(#180·#188)를 다시 내고 릴리스 머지 diff가 400KB 상한을 넘는 두 문제의 공통 원인임
+  - evidence: ~/.agent-wiki-workspace/onestore-cmsapp-front `git log --first-parent origin/master`, 위키 state/onestore-cmsapp-front.json
+- `correction` update 검토의 코드 확인 리비전 오류는 `apply.md` 3장 "뒤 사실 행의 rev" 규칙만의 문제가 아니라 update SKILL.md 4장이 `check`를 사실의 레포 1개(`repos[slug].path`)로만 정의해 레포를 넘는 병합 사실(이번 실행 208건 중 11건)의 레포별 rev 규칙이 없는 데서 생김
+  - evidence: agent-wiki/skills/update/SKILL.md 4장, {work}/facts.json F145·F161·F164
+- `constraint` agent-wiki `scripts/generate_document_list.py`는 frontmatter `description:` 뒤 문자열을 따옴표째 세션 목록에 싣으므로, YAML상 따옴표가 필요한 description(`@Async`처럼 `@`로 시작)은 세션 목록에 따옴표가 노출됨
+  - evidence: agent-wiki/scripts/generate_document_list.py, 위키 knowledge/onestore-cmsapp/onestore-cmsapp-api/async-executor.md
+- `context` agent-wiki update의 범위는 지정된 diff 범위 안 변경을 정확히 기록하는 것이며 범위 밖 현재 기본 브랜치 코드와의 정합은 보지 않고 audit 스킬로 넘김 — 사용자 문장 "작업 도중에 여러번 동일한 사실이 바뀌면 그냥 순서대로 적용하면됨", "지정된 diff 범위내 변경사항에 대해 정확히 기록, 현 시점의 메인 브랜치 코드를 보면당연히 범위내 diff 와 다를 수 있음 수정했을수도 있고.. 이것까지 다 고려하면 안될듯함", "문서에대한 이후 정합은 audit 스킬을 새로만들어서 하는거고.."
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 개선안 채택 기준은 단순한 구조와 간결한 프롬프트가 최우선이며 update의 역할은 범위 안 변경 상태의 명확한 전사로 한정함 — 사용자 문장 "제일 우선순위는 간단한 구조, 간결한 프롬프트임", "해당 update의 역할은 현 변경상태의 명확한 전사만 있으면됨 (이걸 깔끔하게 완성하는것은 다른 audit 의 역할..)"
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update의 위키 기존 문장 대비 판정은 신규는 바로 추가, diff가 지운 대상을 말하는 문장은 근거 없이 삭제, 값이 다른 수정은 PR 제목(머지 커밋 제목)·딸린 커밋 메시지·diff 속 plan·feedback에서 의도를 확인할 때만 교체하고 없으면 건너뜀으로 함 — 사용자 문장 "신규/삭제는 그냥 추가 및 삭제 하면되고, 수정인경우는 의도를 확인해야함 (해당 경우엔 잘못 수정한 케이스도 있을 수 있기 때문.. PR 이던 커밋이던 확인되어야함)"이며 PR 본문 수집은 호스트 조회가 늘어 두지 않음
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 지도 확인은 간선 대상 레포를 현행대로 `origin/{defaultBranch}`에서 실재 확인함 — 같은 도메인 레포는 수집 스크립트가 이미 fetch해 조회 절감이 작고 규약 9장 예외 문장이 늘며 잘못된 대상 간선을 거르지 못하게 되기 때문임
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki `apply.md` 4장 위치 재배정 루프는 유지하고, 검토 출력 `removed`에 위치 사유일 때 단독으로 읽히는 `fact`와 `target` 문서 경로를 두어 4장이 그 값으로 배정하며 재배정에서도 1장 신규 문서 규칙을 적용함 — 루프를 없애 PR 행으로 넘기는 안은 위치 오판 사실이 그 PR에 반영되지 않아 기각함
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 추출은 묶음 크기와 무관하게 모두 sonnet 서브에이전트로 실행하고 메인 직접 처리 분기를 없앰 — 추출 경로를 하나로 두며 그 분기는 이전 실제 레포 검증에서 한 번도 검증되지 않았음
+  - source: 사용자 확인 2026-10-02
+- `context` 위키 PR 본문(`agent-wiki/templates/wiki-pr.md`)은 `## 레포`·`## 사실 목록`·`## 제외된 사실 목록`·`## 문서별 적용 내역`·`## 레포 지도`만 두고 `## 요약`·`## 검토 방법`은 삭제함 — 사용자 문장 "pr 템플릿도 간결하게 수정하면 좋을듯 # 사실 목록 # 제외된 사실 목록 (수정에서 근거없어서 제외된 항목) # 문서별 적용 내역"이며 레포·지도 절은 리뷰어가 커서·지도 변경을 알아야 해서 유지함
+  - source: 사용자 확인 2026-10-02
+- `context` 위키 PR `## 제외된 사실 목록`은 머지 후 add가 처리할 건너뜀·위치 재배정·미해결 충돌 행을 모두 담고 add는 그 절의 행을 고르지 않고 전부 처리함 — 사용자 문장 "이것때문에 add 처리 대상을 판단해야한다면 제외, 아니라면 함께 넣어도됨"
+  - source: 사용자 확인 2026-10-02
+- `context` onestore-cmsapp-front의 위키 registry `defaultBranch`는 사용자가 `develop`으로 전환 완료했으며, 사내판 `plugins/agent-wiki` 미러링은 개인판 변경 뒤 마지막 커밋으로 같은 계획에 포함함
+  - source: 사용자 확인 2026-10-02
+- `constraint` 위키 PR 본문에서 `## 검토 방법` 절을 빼면 "squash 금지(문서별 커밋 근거 유지)" 안내가 사라지므로, 위키 원격의 머지 전략 설정으로 squash를 막는 것이 후속 작업임
+- `correction` 위키 PR 템플릿 절 이름은 add SKILL.md·README 외에 `agent-wiki/references/publish.md` 2장(60KB 초과 시 코멘트로 떼는 절)과 3장(add가 읽는 표)도 이름으로 참조하므로 계획의 publish.md 3장 첫 문장만이 아니라 그 두 곳도 고쳐야 했음 — 코멘트로 떼는 절은 `사실 목록`이고 add가 읽는 `제외된 사실 목록`은 본문에 남아 add는 본문만 읽음, 사내판 publish.md에도 같은 수정이 필요함
+  - evidence: agent-wiki/references/publish.md 2·3장
+- `context` agent-wiki 프롬프트·코드를 고칠 때는 기존 줄을 유지한 채 덧붙이지 말고 줄마다 필요성을 검토해 고치거나 지우며, 더 간결한 구조가 가능하면 기존 구조를 버리고 재작성함 — 사용자 문장 "에이전트는 코드나 프롬프트 수정 시 기존것은 최대한 유지하고 줄만 추가나 수정하는 경향이 있음 / 보고 꼭 필요한지 검토후 수정, 삭제할듯 / 더 간결한 구조가 가능하다면 재작성도 권장함 / 꼭 기존 구조를 유지할 필요가 없음"
+  - source: 사용자 확인 2026-10-02
+- `why` agent-wiki update·add의 `--dry-run`은 커밋 없이 PR 본문 `{work}/pr.md`까지 쓰고 그 경로를 보고함 — 기존 드라이런 보고 항목(문서 diff·판정 집계·지도 ops)이 PR 본문과 겹치고, 드라이런으로 PR 본문 형식까지 검증할 수 있음
+  - evidence: agent-wiki/references/apply.md 7장, agent-wiki/skills/update/SKILL.md 8절
+- `constraint` agent-wiki 0.7.0 update 드라이런(2026-10-02, onestore-cmsapp 머지 40건)에서 반영 에이전트 2개가 출력 경로의 `mktemp -d` 폴더 단계를 빠뜨려 `$TMPDIR/applied/`에 판정 파일을 썼고, 같은 폴더에 이전 실행의 파일이 남아 있었음 — `apply.md` 2·3장은 추출(SKILL.md 3장)과 달리 출력 파일 존재를 확인하는 규칙이 없어 판정이 조용히 빠질 수 있음
+  - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/applied/
+- `constraint` agent-wiki 0.7.0 update 드라이런에서 sonnet 반영 에이전트가 `quote`가 빈 사실(F24, 상품유형별 Crypto·확률형 아이템 설정 범위)을 두 문서에서 `교체`로 판정함 — 규약 7장 다른 값 규칙(의도 근거 없으면 건너뜀)이 반영 프롬프트에서 지켜지지 않는 경우가 있음
+- `constraint` agent-wiki update `SKILL.md` 6장 원복 커서 규칙은 원복 문서의 사실이 4장 재배정으로 다른 문서에 반영된 경우를 구분하지 않아, 0.7.0 드라이런처럼 검토가 유일한 불릿을 위치로 옮기고 문서를 reject하면(onestore-cmsapp-api/binary-signing-fingerprint.md, F60) 이미 반영된 사실 때문에 커서가 그 머지 앞으로 물러남
+- `constraint` agent-wiki update 3장 추출 프롬프트의 `` 간선 to는 등록 레포 `{domain}/{slug}`만 `` 은 형식 표기인데 같은 프롬프트의 `{slug}` 치환 변수와 이름이 겹쳐, 그대로 치환하면 "등록 레포 `{domain}/onestore-cmsapp-client`만"처럼 뜻이 바뀜
+- `constraint` onestore-cmsapp-front는 `develop` 기본 브랜치에서도 `Feature/{날짜}` 통합 브랜치 머지(PR #203, diff 414KB 절단)와 비머지 직접 커밋이 first-parent에 섞여, 기본 브랜치 전환만으로 큰 묶음 머지가 사라지지 않음
+  - evidence: ~/.agent-wiki-workspace/onestore-cmsapp-front `git log --first-parent origin/develop`
+- `correction` agent-wiki update의 다른 값(위키 기존 문장과 값이 다른 수정)은 의도 근거 없이도 범위 안 머지 diff 값으로 교체함 — 앞선 결정 "수정인경우는 의도를 확인해야함"을 바꾼 것이며, 사용자 문장 "그냥 근거없는 교체도 허용하자 나중에 감사 스킬에서 수정하면 되니까"
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 추출 출력에서 `quote`(의도 원문)를 빼고 정리 단계가 근거 머지 `source`로 채우며, 수집 스크립트는 120KB를 넘는 diff를 `diff --git` 경계 조각으로 나눠 조각마다 묶음 단위로 삼고 400KB 절단을 없앰 — 0.7.0 드라이런에서 177KB diff(agent f415b06)가 offset 지시에도 끝까지 읽히지 않았고 front #203이 400KB에서 잘렸기 때문이며, 앞서 기각한 diff 분할을 되살린 결정임
+  - source: 사용자 확인 2026-10-02
+- `why` agent-wiki update·add 추출 프롬프트의 graph 줄은 간선 대상을 `{지도}` 같은 치환 변수로 다시 가리키지 않고 "현재 지도의 등록 레포"라는 낱말로 가리킴 — 프롬프트 안 중괄호는 모두 메인이 치환하므로 문장 속에 변수를 다시 쓰면 지도 JSON이 두 번 실리거나 `{slug}`처럼 다른 값으로 바뀜
+  - evidence: agent-wiki/skills/update/SKILL.md 3장, agent-wiki/skills/add/SKILL.md 3장
+- `constraint` agent-wiki `collect_update_merges.py`의 diff 조각은 본문 기준 120KB(`BATCH_BYTES`)이고 첫 조각은 머리말 몫을 빼며 둘째부터는 3줄 머리말이 더해져 파일 크기가 상한을 수백 바이트 넘을 수 있음 — onestore-cmsapp front #203(934d282)은 조각 4개 합 444KB로, 이전 400KB 절단에서 잘리던 뒤 파일까지 묶음에 들어감
+  - evidence: agent-wiki/scripts/collect_update_merges.py split()
+- `constraint` agent-wiki update의 diff 조각 묶음에서 sonnet 추출 에이전트는 둘째 이후 조각 머리말의 "커밋 메시지·변경 파일 목록은 {sha7}.diff" 안내와 프롬프트의 "조각 파일은 첫 조각의 머리말을 가리킨다"를 따라 같은 머지의 다른 조각까지 모두 읽음 — 변경 검증 드라이런에서 front 934d282 조각 4개 중 묶음 3개가 조각 4개를 모두 읽어 한 머지에서 사실 171건(묶음당 약 29만 토큰)이 나왔고, 프롬프트 금지 "diff 밖 파일 열기"는 같은 머지의 다른 조각을 막지 못함
+- `constraint` agent-wiki update 반영 에이전트는 근거 없는 교체가 허용돼도 사실의 표현이 기존 문장과 다르면 `추가`로 판정해 기존 문장을 남김 — 변경 검증 드라이런에서 director-cut F39·F42가 추가되며 "5180 검증 없음"·"N에서 Y 설정은 서버 검증이 막음" 문장이 그대로 남아 문서가 자기모순이 됐고, 검토는 이번 변경 줄만 고쳐 이를 바로잡지 않음
+- `correction` agent-wiki update 추출의 미독 원인은 묶음 총량이 아니라 Read 1회에 담기지 않는 diff 파일 하나의 크기였음 — 변경 검증 드라이런에서 sonnet 추출 에이전트가 120KB 이하 조각 4개(444KB, 6287줄)를 모두 마지막 줄까지 읽었으므로, 조각은 Read 크기 맞춤(`PART_BYTES`)으로만 쓰고 묶음은 머지 단위(같은 머지 조각은 한 묶음)로 둠
+  - source: 사용자 확인 2026-10-02
+- `constraint` agent-wiki 반영 판정 줄에 "추가·교체한 사실 때문에 거짓이 되는 기존 문장은 같은 편집에서 고치거나 지우고 교체로" 규칙을 둬도, sonnet 반영 에이전트는 같은 식별자를 말하는 기존 문장의 조건 표현이 다르면 별개로 보고 남김 — director-cut 재현에서 F42는 "화면·서버 검증 양쪽에서 막힘"을 "화면에서 막힘"으로 교체했으나, F39(CMS_APP_5180 = DC Y 게임의 앱 카테고리 변경 검증요청)를 `## 코드값`에 추가하면서 `## 결정`의 "Director's Cut 필수값 검증(CMS_APP_5180)은 두지 않음"은 "조건이 달라" 그대로 둠
+  - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc/knowledge/onestore-cmsapp/director-cut.md 99행
+- `constraint` agent-wiki 반영 판정 줄을 "같은 식별자를 말하는 기존 문장을 절을 가리지 않고 찾아 함께 참일 수 없으면 고치거나 지움"으로 둔 뒤 director-cut 재현에서 5180 결정 문장은 지워졌으나, F42 교체가 기존 문장의 거짓 부분("서버 검증")만이 아니라 참인 부분(운영자 integration-admin은 Y에서 N 해제만 가능)까지 함께 지움 — 거짓이 된 문장 정리는 과삭제를 낳을 수 있고 PR `교체` 행의 `old`로 리뷰어가 봄
+  - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc/knowledge/onestore-cmsapp/director-cut.md
+- `constraint` agent-wiki update 추출 에이전트의 Read 1회 상한은 줄 수가 아니라 25,000토큰(`File content (26369 tokens) exceeds maximum allowed tokens (25000)`)이며 이 diff들에서 약 400줄·30~37KB에 해당하고, 에이전트는 offset으로 이어 읽어 이 상한에서 멈추지 않음 — front 934d282(조각 4개 444KB) 단독 묶음에서 에이전트는 목록 밖 파일을 열지 않았으나 누적 입력 약 19만 토큰(`.diff`·`.2.diff` 전부와 `.3.diff` 1246행까지, 약 0.55토큰/바이트)에서 스스로 grep·sed 발췌로 전환해 나머지를 읽지 않았고 이후 22만 토큰까지 진행해 컨텍스트 한도에 걸린 것은 아님, 앞선 변경 검증에서는 같은 머지를 묶음당 약 29만 토큰으로 끝까지 읽어 대용량 입력에서의 발췌 전환은 실행마다 다름
+  - evidence: scratchpad fx/work4/facts/onestore-cmsapp-front/b01.json, 추출 에이전트 Read 호출·usage 기록
+- `constraint` agent-wiki update에서 묶음 상한을 넘는 머지를 조각별 묶음으로 나누면 각 에이전트는 목록 파일을 끝까지 읽지만(front 934d282 묶음 4개 모두 Read로 마지막 줄까지, 에이전트당 약 10만 토큰), 첫 조각에만 커밋 메시지·작업 기록이 있고 코드 변경 줄은 다른 조각에 있어 "변경 줄 값 우선" 판정을 못 하고(CMS_APP_5180을 b01이 충돌로 보고 뺌) 같은 기능의 graph 판정이 묶음마다 엇갈림(충전형 화면 responsibilities add를 b01·b04는 냄, b03은 기존 책임으로 봄) — 메인 4장 정리는 diff를 보지 않아 이를 바로잡지 못함
+  - evidence: scratchpad fx/work5/facts/onestore-cmsapp-front/b01~b04.json
+- `context` 대형 머지는 조각별 묶음 구조를 유지하고, 사용자가 제안한 PR 에이전트 아래 조각별 서브에이전트 팬아웃(PR 에이전트가 머리말을 보고 자식 결과를 병합)은 채택하지 않음 — 위 판정 품질 문제가 반복되면 이 안을 다시 검토하며, 이 환경에서는 서브에이전트가 Agent 도구로 손자 에이전트를 띄울 수 있음을 확인했으나 다른 Claude Code 버전의 지원 여부는 확인하지 않음
+  - source: 사용자 확인 2026-10-02
+- `context` 이 브랜치는 열린 PR #35(`feat/agent-wiki-update-improve`, 같은 agent-wiki 0.7.0)를 대체하며 #35의 glob 제외 규칙·조각마다 머리말 전체와 줄 수·`--max-merges` 기본 10·기록 폴더를 가져오고, 이어 읽기와 #35 기록의 9축 결정은 가져오지 않음 — 추출 단위(머지 5건 묶음 대 머지 1건)는 사용자 문장 "어떤게 더 나을지 드라이런으로 실 추출 비교검증 후 채택하자"대로 실추출 비교로 정하며, #35 닫기는 PR 생성 뒤 사용자가 함
+  - source: 사용자 확인 2026-10-02
+- `why` agent-wiki update 추출 단위는 머지 1건(200KB 초과 머지는 조각 묶음)으로 정함 — onestore-cmsapp api 7건·client 5건을 현행 묶음 B(머지 5건·200KB)와 머지 1건 M으로 2회씩 실추출해 채점 에이전트가 같은 주장 묶음으로 대조한 결과 유효 사실 50건 기준 재현율 B 0.84·0.86(평균 0.85), M 0.90·0.84(평균 0.87)로 계획의 선정 규칙(M ≥ B − 5%p면 단순한 M)을 충족함, 대가는 토큰 합계 B 약 26만 대 M 약 59만(약 2.3배, 머지마다 규약·프롬프트 고정 읽기 약 3.9만 토큰 반복)이며 병렬이라 회당 소요는 M이 짧음(최장 에이전트 B 약 99초, M 약 36초)
+  - evidence: scratchpad fx/cmp/score/onestore-cmsapp-api.json, fx/cmp/score/onestore-cmsapp-client.json
+- `constraint` agent-wiki update 머지 1건 단위 추출에서도 sonnet 에이전트가 작은 diff(api 3721cba 807줄, 약 6만 토큰)의 테스트 파일 변경분 460줄 이후를 스스로 건너뛰고 응답에 그 사실을 적은 경우가 30회 중 1회 있었음 — 읽기 총량이 아니라 테스트 파일을 사실 없음으로 보는 판단이며 같은 머지를 담은 148KB 묶음은 두 회차 모두 끝까지 읽음, 사용자 지시로 이 1건을 포함해 채점함
+- `constraint` agent-wiki update 추출의 graph 후보는 같은 입력에서도 회차마다 달라짐 — api b01 간선 후보 B1 1건·B2 3건, client 837eb7d 책임 추가 M1 0건·M2 1건이라, graph는 6장 지도 확인 판정에 기대야 함

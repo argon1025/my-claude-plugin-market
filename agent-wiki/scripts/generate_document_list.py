@@ -14,7 +14,7 @@ def description(path):
         if line.strip() == "---":
             break
         if line.startswith("description:"):
-            return line[len("description:"):].strip()
+            return line[len("description:"):].strip().strip("\"'")
     return ""
 
 

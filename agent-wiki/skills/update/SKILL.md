@@ -1,12 +1,12 @@
 ---
 name: update
-description: Reflect merged code of one domain's registered repos into the wiki in time-ordered batches and open a wiki PR carrying the docs and cursors.
+description: Reflect merged code of one domain's registered repos into the wiki in time order and open a wiki PR carrying the docs and cursors.
 disable-model-invocation: true
 ---
 
 `${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `${CLAUDE_PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
-인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 40), `--dry-run`(`apply.md` 7장 보고까지, 커밋·push·PR 없음).
+인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 10), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음).
 
 ## 1. 준비
 
@@ -35,45 +35,42 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --wo
 - **1**: stderr를 전달하고 중단
 - **0**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-update/{YYYYMMDD-HHMM}`
 
-`work.json`은 `order[{slug, sha7, date}]`(선택 머지의 시각 순), `repos[slug]{path, branch, head, cursor, bootstrapped, commits, batches[{id, shas, bytes}], remaining}`, `skipped{slug: 사유}`를 담습니다. 묶음은 다시 나누지 않으며, `skipped`와 `remaining`은 PR 본문 `레포` 절 비고로 넘깁니다.
-
 ## 3. 추출
 
-레포별 `batches`마다 Agent 1회를 `model: sonnet`으로 한 메시지에 병렬 실행합니다. 묶음이 1개이고 머지 3건 이하면 메인이 같은 기준으로 직접 처리하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `shas`의 `commits[].diff_path`이고, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포의 `{domain}/{slug}` 목록을 JSON 그대로 넣은 것입니다.
+레포별 `batches`마다(다시 나누지 않음) Agent 1회를 `model: sonnet`으로 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `diffs`, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포 `{domain}/{slug}` 목록의 JSON입니다.
 
 ```
-머지 묶음 1개에서 위키에 남길 사실을 추출하라.
-입력: 아래 diff 파일을 순서대로 Read — {diff 목록}. 머리말에 커밋 메시지·변경 파일 목록·절단 여부가 있다.
-작업 기록: 커밋 메시지와 diff에 포함된 작업 기록(plan·feedback 같은 문서)은 코드가 드러내지 못하는 이유·버린 대안·도메인 규칙의 원천이다. 그 추가 줄을 코드 diff와 함께 후보로 보되, 미확정 계획·작업 현황은 1장대로 담지 않는다.
-기준: `sed -n '/^## 1\./,/^## 2\./p' {doc_contract_path}` — 후보 문장마다 적용한다.
-graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실이 아니라 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)를 여는 diff는 현재 responsibilities가 덮지 않으면 responsibilities add 후보다. 간선 to는 등록 레포의 `{domain}/{slug}`로 쓰고, 등록되지 않은 레포는 이름 그대로 둔다.
-금지: diff 밖 파일 열기, 사전 지식으로 채우기.
-병합: 묶음 안 같은 주장은 하나로 합치고 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남긴다.
-set: 사실이 닫힌 집합(enum·공통코드·상태·허용 채널처럼 원소가 정의된 값) 원소의 뜻을 말하면 정의 식별자(심볼 또는 공통코드 그룹 이름), 아니면 빈 문자열로 둔다. 규칙 문장이 조건·결과로 코드를 인용할 뿐이면 빈 문자열이다.
-set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가 보이는 hunk)를 보여 주면 전 원소 수, 아니면 0. 정의 전체가 보이면 원소마다 뜻을 사실로 남긴다.
+머지 1건(큰 머지는 조각 묶음)에서 위키에 남길 사실을 추출하라.
+입력: {diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다.
+대상: 변경 줄, 커밋 메시지, diff 속 작업 기록(plan·feedback)이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다.
+기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 1장으로 담을 문장을 고르고 2장으로 scope를 정한다.
+graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실 대신 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 현재 responsibilities가 덮지 않는 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)는 responsibilities add이고, 간선 to는 현재 지도의 등록 레포만 쓴다.
+병합: 같은 주장은 하나로 합쳐 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남기되, 같은 머지의 커밋 메시지·작업 기록이 변경 줄과 다르면 변경 줄 값만 남긴다.
+금지: 입력 목록 밖 파일 열기, grep·sed 발췌로 대신 읽기, 사전 지식으로 채우기.
 출력: {work}/facts/{slug}/{batch_id}.json에 Write —
-{"facts": [{"fact": "현재 상태 한 문장(업무 낱말 우선, 식별자 괄호 병기, 줄바꿈 금지)",
+{"facts": [{"fact": "현재 상태 한 문장(업무 낱말 우선, 식별자 괄호 병기, 줄바꿈 금지) — deleted면 지워지기 전 상태",
             "topic": "2~4낱말 주제",
             "code": "저장소 상대 경로 또는 경로#심볼",
-            "set": "정의 식별자, 아니면 빈 문자열",
+            "scope": "root(도메인 루트)|repo(레포 폴더) — 두 성격이면 사실을 둘로 나눔",
+            "deleted": false,
+            "set": "닫힌 집합 원소의 뜻을 말하면 정의 식별자(심볼·공통코드 그룹), 코드를 인용만 하면 빈 문자열",
             "set_total": 0,
-            "quote": "기존 동작을 바꾸는 사실이면 그 의도를 밝힌 커밋 메시지·plan·feedback 원문, 없으면 빈 문자열",
             "shas": ["근거 머지 sha7"]}],
  "graph": [{"key": "responsibilities|hosts|deps", "op": "add|remove|replace",
             "value": "책임 문장, {\"env\", \"host\"}, {\"to\", \"desc\"} 중 하나", "old": "교체·삭제면 기존 값",
             "code": "저장소 상대 경로 또는 경로#심볼", "shas": ["근거 머지 sha7"]}]}
-사실·후보가 없으면 {"facts": [], "graph": []}. 응답은 사실·후보 건수만.
+deleted는 diff가 그 동작·값·코드값을 지우면 true, set_total은 diff가 집합 정의 전체를 보이면 원소 수(원소마다 사실을 남김)이고 아니면 0이다. 사실·후보가 없으면 {"facts": [], "graph": []}. 응답은 사실·후보 건수만.
 ```
 
 ## 4. 정리
 
 메인이 `{work}/facts/**/*.json`을 모두 읽어 정리합니다.
 
-- **병합**: 묶음 사이 같은 주장은 하나로 합치고 `shas`는 합집합
-- **대체**: 같은 대상의 값이 다른 두 사실은 `order`에서 늦은 머지의 사실만 남기고 앞 사실은 `rejected`에 `대체 — {남긴 사실 id}`로 넘김, 앞 사실이 다른 주장도 담으면 충돌하는 주장만 `fact`에서 빼고 뺀 주장을 같은 사유로 넘김 — 같은 실행 안의 값 변화는 뒤 머지 diff가 변경 근거라 7장 다른 값 판정 대상이 아님
-- **번호**: 사실마다 `order`에서 가장 늦은 근거 머지의 `date`를 붙이고 그 순서로 `F1`부터 `id`를 매김 — 문서별 사실 목록도 이 순서
+- **병합**: 묶음 사이 같은 주장은 하나로 합치고 `shas`는 합집합 — `deleted`가 다르면 합치지 않음
+- **대체**: 같은 대상의 값이 다른 두 사실은 `order`에서 늦은 머지의 사실만 남기고 앞 사실(복합 사실이면 충돌하는 주장만)은 `rejected`에 `대체 — {남긴 사실 id}`로 넘김 — 뒤 머지 diff가 변경 근거라 7장 다른 값 판정 대상이 아님
+- **번호**: `order`에서 가장 늦은 근거 머지 순으로 `F1`부터 `id`를 매김 — 문서별 사실 순서도 이 순서
 
-`apply.md` 0장 형식으로 `{work}/facts.json`을 씁니다. `slug`는 묶음의 레포, `source`는 `shas`마다 `{slug}@{sha7}`, `check`는 `[{"repo_path": repos[slug].path, "rev": 가장 늦은 근거 머지 sha}]`, `input`은 빈 배열입니다. `graph`는 같은 방식으로 병합·대체하고 `G1`부터 번호를 매겨 같은 키로 `{work}/graph-candidates.json`에 씁니다. 2절 스크립트가 준비한 레포는 0장 레포 읽기에서 다시 준비하지 않습니다.
+`apply.md` 0장 형식으로 `{work}/facts.json`을 씁니다. `slug`는 묶음의 레포, `source`는 `shas`마다 `{slug}@{sha7}`, `check`는 `source`의 레포마다 `{"repo_path": repos[레포].path, "rev": 그 레포의 가장 늦은 근거 머지 sha}`, `quote`는 `source`를 쉼표로 이은 값, `input`은 빈 배열이고 나머지 키는 추출 값 그대로입니다. `graph`는 같은 방식으로 병합·대체하고 `G1`부터 번호를 매겨 `{work}/graph-candidates.json`에 씁니다. 2절 스크립트가 준비한 레포는 0장 레포 읽기에서 다시 준비하지 않습니다.
 
 ## 5. 반영
 
@@ -84,7 +81,7 @@ set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가
 `repos`의 레포마다 커서 sha를 정합니다.
 
 - **기본**: `commits`의 마지막 머지 — 사실 0건 머지도 전진함
-- **원복 있음**: 원복한 문서 사실의 그 레포 근거 머지(`source`) 중 `commits`에서 가장 앞선 머지의 직전 머지, 그것이 첫 머지면 `cursor`
+- **원복 있음**: `검토 기각`으로 넘긴 사실의 그 레포 근거 머지(`source`) 중 `commits`에서 가장 앞선 머지의 직전 머지, 그것이 첫 머지면 `cursor`
 - **부트스트랩**: `bootstrapped`이고 `commits`가 비면 `cursor`(시작 지점)
 - **불변**: 부트스트랩이 아니고 `commits`가 비면 쓰지 않음
 
@@ -92,7 +89,7 @@ set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가
 
 ## 7. 지도·커밋
 
-`apply.md` 6·7장을 실행합니다. `--dry-run`이면 7장 보고로 끝납니다. 이어서 커서를 정한 레포마다 `{tmp}/state/{slug}.json`에 `{"cursor": "{전체 sha}", "at": "YYYY-MM-DD"}`를 Write하고 커밋합니다.
+`apply.md` 6·7장을 실행합니다. `--dry-run`이 아니면 이어서 커서를 정한 레포마다 `{tmp}/state/{slug}.json`에 `{"cursor": "{전체 sha}", "at": "YYYY-MM-DD"}`를 Write하고 커밋합니다.
 
 ```
 git -C {tmp} add state/{slug}.json
@@ -101,4 +98,4 @@ git -C {tmp} commit -m "chore(update): {slug} 커서 {sha7} · 머지 N건"
 
 ## 8. 게시·보고
 
-`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 요약 집계 한 줄, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
+`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 요약 집계 한 줄, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
