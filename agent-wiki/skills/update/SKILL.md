@@ -37,14 +37,14 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --wo
 
 ## 3. 추출
 
-레포별 `batches`마다(다시 나누지 않음) Agent 1회를 `model: sonnet`으로 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `diffs`, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포 `{domain}/{slug}` 목록의 JSON입니다.
+레포별 `batches`마다(다시 나누지 않음) Agent 1회를 `model: sonnet`으로 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `diffs`, `{slug}`는 묶음의 레포입니다.
 
 ```
 머지 1건(큰 머지는 조각 묶음)에서 위키에 남길 사실을 추출하라.
-입력: {diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다.
+입력: {diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다. 현재 지도는 {tmp}/registry.json의 `domains.{domain}.repos`(이 레포는 `{slug}` 노드의 responsibilities·hosts, 키 목록이 도메인 등록 레포)와 {tmp}/deps.json의 `deps."{domain}/{slug}"` 블록이다.
 대상: 변경 줄, 커밋 메시지, diff 속 작업 기록(plan·feedback)이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다.
 기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 1장으로 담을 문장을 고르고 2장으로 scope를 정한다.
-graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실 대신 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 현재 responsibilities가 덮지 않는 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)는 responsibilities add이고, 간선 to는 현재 지도의 등록 레포만 쓴다.
+graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실 대신 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`. 현재 responsibilities가 덮지 않는 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)는 responsibilities add이고, 간선 to는 현재 지도의 등록 레포만 쓴다.
 병합: 같은 주장은 하나로 합쳐 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남기되, 같은 머지의 커밋 메시지·작업 기록이 변경 줄과 다르면 변경 줄 값만 남긴다.
 금지: 입력 목록 밖 파일 열기, grep·sed 발췌로 대신 읽기, 사전 지식으로 채우기.
 출력: {work}/facts/{slug}/{batch_id}.json에 Write —
@@ -80,12 +80,9 @@ deleted는 diff가 그 동작·값·코드값을 지우면 true, set_total은 di
 
 `repos`의 레포마다 커서 sha를 정합니다.
 
-- **기본**: `commits`의 마지막 머지 — 사실 0건 머지도 전진함
-- **원복 있음**: `검토 기각`으로 넘긴 사실의 그 레포 근거 머지(`source`) 중 `commits`에서 가장 앞선 머지의 직전 머지, 그것이 첫 머지면 `cursor`
+- **기본**: `commits`의 마지막 머지 — 사실 0건 머지와 `검토 기각` 사실의 머지도 전진함, reject는 다시 실행해도 같은 내용 판정임
 - **부트스트랩**: `bootstrapped`이고 `commits`가 비면 `cursor`(시작 지점)
 - **불변**: 부트스트랩이 아니고 `commits`가 비면 쓰지 않음
-
-커서 뒤 머지에서 나온 지도 후보는 `graph-candidates.json`에서 뺍니다 — 다음 실행이 같은 머지에서 다시 추출합니다.
 
 ## 7. 지도·커밋
 
@@ -98,4 +95,4 @@ git -C {tmp} commit -m "chore(update): {slug} 커서 {sha7} · 머지 N건"
 
 ## 8. 게시·보고
 
-`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 요약 집계 한 줄, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
+`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 집계는 레포별 처리 머지·예산 밖 이월·`skipped` 사유와 액션별 건수입니다. `--dry-run`이면 집계와 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 집계, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
