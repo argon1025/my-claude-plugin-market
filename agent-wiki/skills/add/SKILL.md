@@ -5,7 +5,7 @@ description: Use when material the user hands over or a decision settled in conv
 
 `${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `${CLAUDE_PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
-인자: `--domain {domain}`(대상 도메인), `--dry-run`(`apply.md` 7장 보고까지, 커밋·push·PR 없음). 그 밖의 인자와 대화 맥락은 2절 입력입니다.
+인자: `--domain {domain}`(대상 도메인), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음). 그 밖의 인자와 대화 맥락은 2절 입력입니다.
 
 ## 1. 준비
 
@@ -46,7 +46,7 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 응답은 사실·후보 건수만.
 ```
 
-- **update PR 행**: `제외된 사실 목록` 행 전부를 구분대로 옮김 — 건너뜀·미해결 충돌은 사실(새 값)·기존 값·출처(`{slug}@{sha7}`)를 옮기고 `check`를 출처 레포와 sha로, 위치 재배정은 사실과 문서를 옮기며 근거 줄은 `{PR 링크} {F번호}`
+- **update PR 행**: `제외된 사실 목록` 행마다 새 값을 사실로, 문서·기존 값·출처(`{slug}@{sha7}`)를 그대로 옮기고 `check`를 출처 레포와 sha로 두며 근거 줄은 `{PR 링크} {F번호}`
 
 ## 4. 목록과 질문
 
@@ -68,11 +68,11 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 
 ## 5. 반영
 
-`apply.md` 1~7장을 실행합니다. 1장 배정은 4절 답을 반영해 다시 쓰며, 위치 재배정 행은 옮긴 문서로 배정합니다.
+`apply.md` 1~7장을 실행합니다. 1장 배정은 4절 답을 반영해 다시 쓰며, update PR 행은 옮긴 문서로 배정합니다.
 
 ## 6. 게시·보고
 
-`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
+`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
 
 PR 링크, 요약 집계 한 줄, 미기록 표, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 미기록 표는 `기존 유지` 행, 자료에 없어 기록하지 못한 항목, 검토 `conflicts`(미해결 충돌), 지도 `rejected`를 담습니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
 

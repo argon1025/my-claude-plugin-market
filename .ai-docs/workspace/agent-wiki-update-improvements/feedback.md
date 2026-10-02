@@ -29,3 +29,7 @@
 - `constraint` 위키 PR 본문에서 `## 검토 방법` 절을 빼면 "squash 금지(문서별 커밋 근거 유지)" 안내가 사라지므로, 위키 원격의 머지 전략 설정으로 squash를 막는 것이 후속 작업임
 - `correction` 위키 PR 템플릿 절 이름은 add SKILL.md·README 외에 `agent-wiki/references/publish.md` 2장(60KB 초과 시 코멘트로 떼는 절)과 3장(add가 읽는 표)도 이름으로 참조하므로 계획의 publish.md 3장 첫 문장만이 아니라 그 두 곳도 고쳐야 했음 — 코멘트로 떼는 절은 `사실 목록`이고 add가 읽는 `제외된 사실 목록`은 본문에 남아 add는 본문만 읽음, 사내판 publish.md에도 같은 수정이 필요함
   - evidence: agent-wiki/references/publish.md 2·3장
+- `context` agent-wiki 프롬프트·코드를 고칠 때는 기존 줄을 유지한 채 덧붙이지 말고 줄마다 필요성을 검토해 고치거나 지우며, 더 간결한 구조가 가능하면 기존 구조를 버리고 재작성함 — 사용자 문장 "에이전트는 코드나 프롬프트 수정 시 기존것은 최대한 유지하고 줄만 추가나 수정하는 경향이 있음 / 보고 꼭 필요한지 검토후 수정, 삭제할듯 / 더 간결한 구조가 가능하다면 재작성도 권장함 / 꼭 기존 구조를 유지할 필요가 없음"
+  - source: 사용자 확인 2026-10-02
+- `why` agent-wiki update·add의 `--dry-run`은 커밋 없이 PR 본문 `{work}/pr.md`까지 쓰고 그 경로를 보고함 — 기존 드라이런 보고 항목(문서 diff·판정 집계·지도 ops)이 PR 본문과 겹치고, 드라이런으로 PR 본문 형식까지 검증할 수 있음
+  - evidence: agent-wiki/references/apply.md 7장, agent-wiki/skills/update/SKILL.md 8절

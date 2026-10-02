@@ -1,33 +1,35 @@
 # 위키 PR 본문
 
-update·add가 같은 본문을 씁니다. 행이 없는 절은 절째 생략합니다. 장 번호는 `references/apply.md` 기준입니다.
+update·add가 같은 본문을 쓰며 `--dry-run`에서도 씁니다. 행이 없는 절은 생략하고, 장 번호는 `references/apply.md` 기준이며, 재배정한 사실(4장)은 `.re` 판정을 씁니다. add에서 사용자가 `기존 유지`로 고른 사실은 싣지 않습니다.
 
 ## 채우는 법
 
 - **레포**: update만 — `work.json`의 `repos`와 `skipped` 레포마다 1행, 처리 머지는 sha7과 `subject`(여러 건이면 `N건` 뒤 마지막 1건), `skipped` 사유·`remaining`(예산 밖 이월 N건)은 비고에
-- **사실 목록**: `id` 순으로 `id` 있는 사실 전부 1행(동일 포함) — `#`은 update `F`·add `A` 번호, 문서는 반영·삭제·제외 대상 문서(`knowledge/{domain}` 기준, 없으면 —), 판정은 `{판정}` 또는 `{판정} · {사유}`(아래 표), 출처는 사실 행 `source`를 쉼표로
-- **제외된 사실 목록**: 머지 후 `/agent-wiki:add {PR 링크}`가 행 전부를 처리함
-  - **건너뜀**: 문서는 대상 문서, 기존 값은 2장 `old`, 새 값은 사실
-  - **위치 재배정**: 문서는 3장 `removed.target`, 기존 값은 —, 새 값은 `removed.fact`
-  - **미해결 충돌**: 문서는 대상 문서, 기존 값은 3장 `code_value`, 새 값은 `doc_value`
-- **문서별 적용 내역**: 편집 문서마다 `### {doc} · 신규|수정` 아래 `**추가|교체**: {summary} (번호)`, `**삭제**: {old} (번호)`, `` **원본 맞춤**: `{set}` {before} → {after} ``(3장 `fixed_sets`), `**검토 수정**: {bullet} — {reason}`(3장 `edited`), `**검토 삭제**: {bullet} — {reason} (번호)`(3장 `removed`) 순, 동일·건너뜀은 적지 않음
+- **사실 목록**: `id` 있는 사실 전부를 `id` 순으로 1행(동일 포함) — 문서는 반영·제외 대상 문서(`knowledge/{domain}` 기준, 없으면 —), 판정은 아래 판정 표, 출처는 `source`를 쉼표로
+- **제외된 사실 목록**: 아래 제외 표의 세 판정 사실마다 1행 — 머지 후 `/agent-wiki:add {PR 링크}`가 행 전부를 처리함
+- **문서별 적용 내역**: 편집 문서마다 `### {doc} · 신규|수정` 아래 `**추가|교체**: {summary} (번호)`, `**삭제**: {old} (번호)`, `` **원본 맞춤**: `{set}` {before} → {after} ``(3장 `fixed_sets`), `**검토 수정**: {bullet} — {reason}`(3장 `edited`), `**검토 삭제**: {bullet} — {reason} (번호)`(3장 `removed`) 순
 - **레포 지도**: 6장 `ops`마다 `- **{추가|삭제|교체}**: {slug} {key} {value} (G번호)`, `rejected`마다 `- **기각**: {slug} {key} {value} — {reason} (G번호)`
-- **add 기존 유지**: add에서 사용자가 `기존 유지`로 고른 사실은 PR에 싣지 않고 스킬 보고로만 남김
 
-재배정한 사실(4장)은 `.re` 파일의 판정을 씁니다.
+판정 표 (위가 먼저 적용됨)
 
-| 판정 | 원천 | 사유 칸 |
-|---|---|---|
-| 추가·동일 | 2장 `verdicts` | — |
-| 교체 | 2장 `verdicts` | 기존 `{old}` · 인용 "{사실 행 quote}" |
-| 삭제 | 2장 `verdicts` — `deleted` 사실 | — |
-| 건너뜀 | 2장 `verdicts` | 제외 목록 |
-| 검토 삭제 | 3장 `removed[].ids` — 2장 판정보다 우선, reason이 `위치 — `로 시작하는 행 제외 | `{reason}` |
-| 위치 재배정 | 4장 두 번째 검토도 위치로 삭제 | 제외 목록 |
-| 미해결 충돌 | 3장 `conflicts[].ids` | 제외 목록 |
-| 대체 | 1장 `rejected` 중 `대체 — {id}` — 같은 실행의 뒤 머지 사실이 값을 바꿈 | `{id}`로 대체 |
-| 기각 | 1장 `rejected` 중 `대체 — `로 시작하지 않는 사유 | `{reason}` |
-| 검토 기각 | 3장 `reject_reason` — 5장에서 원복한 문서의 사실 전부 | `{reject_reason}` |
+| 판정 칸 | 원천 |
+|---|---|
+| `검토 기각 · {reject_reason}` | 5장에서 원복한 문서의 사실 전부 |
+| `위치 재배정` | 4장 두 번째 검토도 위치로 삭제 |
+| `미해결 충돌` | 3장 `conflicts[].ids` |
+| `검토 삭제 · {reason}` | 3장 `removed[].ids` 중 reason이 `위치`가 아닌 행 |
+| `추가`·`동일`·`삭제`·`건너뜀` | 2장 `verdicts` |
+| `교체 · 기존 {old} · 인용 "{quote}"` | 2장 `verdicts` |
+| `대체 · {id}로 대체` | 1장 `rejected` 중 `대체 — {id}` — 같은 실행의 뒤 머지 사실이 값을 바꿈 |
+| `기각 · {reason}` | 1장 `rejected`의 그 밖 사유 |
+
+제외 표
+
+| 구분 | 문서 | 기존 값 | 새 값 |
+|---|---|---|---|
+| 건너뜀 | 대상 문서 | 2장 `old` | 사실 |
+| 위치 재배정 | 3장 `target` | — | 3장 `fact` |
+| 미해결 충돌 | 대상 문서 | 3장 `code_value` | 3장 `doc_value` |
 
 ## 본문
 
@@ -45,16 +47,15 @@ update·add가 같은 본문을 씁니다. 행이 없는 절은 절째 생략합
 | F1 | 취소 요청의 사유 코드(cancelReasonCd)는 CR 공통코드 문자열이며 미등록 코드는 요청 단계에서 거부됨 | order-cancel-reason.md | 추가 | shop-api@c61a8ab |
 | F2 | 주문 상태 DELETE는 운영자 삭제만 뜻하며 조회 API가 404를 반환함 | order-status.md | 교체 · 기존 `모든 삭제` · 인용 "…" | shop-api@c61a8ab |
 | F3 | 취소 요청 DTO는 orderId·cancelReasonCd·memo 필드를 가짐 | order-cancel-reason.md | 검토 삭제 · 코드 전사 | shop-api@c61a8ab |
-| F4 | 취소 이력 적재는 최대 5회 재시도함 | order-cancel-history.md | 건너뜀 · 제외 목록 | shop-worker@1a2b3c4 |
+| F4 | 취소 이력 적재는 최대 5회 재시도함 | order-cancel-history.md | 건너뜀 | shop-worker@1a2b3c4 |
 | F5 | 취소 사유 코드 CR09(시스템 취소)를 받음 | order-cancel-reason.md | 삭제 | shop-api@c61a8ab |
-| F6 | … | — | 기각 · 한 주제 아님 | shop-worker@3ab7c55 |
-| F7 | shop-worker 이력 적재 리스너는 새 트랜잭션에서 실행함 | shop-worker/after-commit-listener.md | 위치 재배정 · 제외 목록 | shop-worker@3ab7c55 |
+| F6 | shop-worker 이력 적재 리스너는 새 트랜잭션에서 실행함 | shop-worker/after-commit-listener.md | 위치 재배정 | shop-worker@3ab7c55 |
 
 ## 제외된 사실 목록
 | # | 구분 | 문서 | 기존 값 | 새 값 | 출처 |
 |---|---|---|---|---|---|
 | F4 | 건너뜀 | order-cancel-history.md | 최대 3회 재시도 | 취소 이력 적재는 최대 5회 재시도함 | shop-worker@1a2b3c4 |
-| F7 | 위치 재배정 | shop-worker/after-commit-listener.md | — | shop-worker 취소 이력 적재 리스너(CancelHistoryListener)는 새 트랜잭션(REQUIRES_NEW)에서 실행함 | shop-worker@3ab7c55 |
+| F6 | 위치 재배정 | shop-worker/after-commit-listener.md | — | shop-worker 취소 이력 적재 리스너(CancelHistoryListener)는 새 트랜잭션(REQUIRES_NEW)에서 실행함 | shop-worker@3ab7c55 |
 
 ## 문서별 적용 내역
 
