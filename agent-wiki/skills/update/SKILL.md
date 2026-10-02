@@ -1,6 +1,6 @@
 ---
 name: update
-description: Reflect merged code of one domain's registered repos into the wiki in time-ordered batches and open a wiki PR carrying the docs and cursors.
+description: Reflect merged code of one domain's registered repos into the wiki in time order and open a wiki PR carrying the docs and cursors.
 disable-model-invocation: true
 ---
 
@@ -40,12 +40,12 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --wo
 레포별 `batches`마다(다시 나누지 않음) Agent 1회를 `model: sonnet`으로 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `diffs`, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포 `{domain}/{slug}` 목록의 JSON입니다.
 
 ```
-머지 묶음 1개에서 위키에 남길 사실을 추출하라.
+머지 1건(큰 머지는 조각 묶음)에서 위키에 남길 사실을 추출하라.
 입력: {diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다.
 대상: 변경 줄, 커밋 메시지, diff 속 작업 기록(plan·feedback)이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다.
 기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 1장으로 담을 문장을 고르고 2장으로 scope를 정한다.
 graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실 대신 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 현재 responsibilities가 덮지 않는 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)는 responsibilities add이고, 간선 to는 현재 지도의 등록 레포만 쓴다.
-병합: 묶음 안 같은 주장은 하나로 합쳐 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남기되, 같은 머지의 커밋 메시지·작업 기록이 변경 줄과 다르면 변경 줄 값만 남긴다.
+병합: 같은 주장은 하나로 합쳐 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남기되, 같은 머지의 커밋 메시지·작업 기록이 변경 줄과 다르면 변경 줄 값만 남긴다.
 금지: 입력 목록 밖 파일 열기, grep·sed 발췌로 대신 읽기, 사전 지식으로 채우기.
 출력: {work}/facts/{slug}/{batch_id}.json에 Write —
 {"facts": [{"fact": "현재 상태 한 문장(업무 낱말 우선, 식별자 괄호 병기, 줄바꿈 금지) — deleted면 지워지기 전 상태",

@@ -9,8 +9,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.
-BATCH_MERGES = 5
+# 추출 에이전트 1회가 읽는 묶음 상한 — 머지 하나가 넘으면 조각을 나눠 여러 묶음에 둠, 바이트는 컨텍스트 예산.
 BATCH_BYTES = 200_000
 # diff 조각 상한 — 묶음 상한을 넘는 머지를 여러 묶음에 나누는 단위.
 PART_BYTES = 120_000
@@ -138,9 +137,8 @@ def extract_diff(path, slug, row, out_dir):
 
 
 def batches(rows):
-    # 머지마다 조각을 상한까지 이어 붙인 단위로 나눈다 — 상한 이하 머지는 단위 하나라 조각이 한 묶음에 들고,
-    # 상한을 넘는 머지만 여러 묶음에 걸침.
-    units = []
+    # 머지마다 묶음 하나 — 상한을 넘는 머지만 조각을 상한까지 이어 붙여 여러 묶음에 둔다.
+    result = []
     for row in rows:
         groups, size = [[]], 0
         for p in row["parts"]:
@@ -148,17 +146,8 @@ def batches(rows):
                 groups, size = groups + [[]], 0
             groups[-1].append(p)
             size += p["bytes"]
-        units += [(row["sha"][:7], g, sum(p["bytes"] for p in g)) for g in groups]
-    # 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면 새 묶음.
-    result, current, total = [], [], 0
-    for unit in units + [None]:
-        if current and (unit is None or len(current) >= BATCH_MERGES or total + unit[2] > BATCH_BYTES):
-            result.append({"id": f"b{len(result) + 1:02d}", "shas": list(dict.fromkeys(s for s, _, _ in current)),
-                           "diffs": [p["path"] for _, g, _ in current for p in g], "bytes": total})
-            current, total = [], 0
-        if unit is not None:
-            current.append(unit)
-            total += unit[2]
+        result += [{"id": f"b{len(result) + i:02d}", "shas": [row["sha"][:7]], "diffs": [p["path"] for p in g],
+                    "bytes": sum(p["bytes"] for p in g)} for i, g in enumerate(groups, 1)]
     return result
 
 
