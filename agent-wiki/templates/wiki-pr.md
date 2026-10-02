@@ -39,7 +39,7 @@ update·add가 같은 본문을 쓰며 `--dry-run`에서도 씁니다. 행이 �
 |---|---|---|---|
 | shop-api | c61a8ab 주문 취소 사유 코드 검증 | 1c7f783 → c61a8ab | — |
 | shop-admin | 0건 | 변화 없음 | 대상 ref 없음 (origin/main) |
-| shop-worker | 20건 · 마지막 3ab7c55 이력 적재 재시도 | 9d2e0f1 → 3ab7c55 | 예산 밖 이월 12건 |
+| shop-worker | 10건 · 마지막 3ab7c55 이력 적재 재시도 | 9d2e0f1 → 3ab7c55 | 예산 밖 이월 12건 |
 
 ## 사실 목록
 | # | 사실 | 문서 | 판정 | 출처 |

@@ -18,17 +18,17 @@ PART_BYTES = 120_000
 MESSAGE_MAX_COMMITS = 20
 # 생성물·잠금 파일처럼 사실이 나올 수 없는 경로만 뺀다.
 EXCLUDE_PATHSPECS = [
-    ":(exclude)**/package-lock.json",
-    ":(exclude)**/yarn.lock",
-    ":(exclude)**/pnpm-lock.yaml",
-    ":(exclude)**/poetry.lock",
-    ":(exclude)**/composer.lock",
-    ":(exclude)**/gradle.lockfile",
-    ":(exclude)**/*.min.js",
-    ":(exclude)**/*.min.css",
-    ":(exclude)**/*.svg",
-    ":(exclude)**/dist/**",
-    ":(exclude)**/node_modules/**",
+    ":(exclude,glob)**/package-lock.json",
+    ":(exclude,glob)**/yarn.lock",
+    ":(exclude,glob)**/pnpm-lock.yaml",
+    ":(exclude,glob)**/poetry.lock",
+    ":(exclude,glob)**/composer.lock",
+    ":(exclude,glob)**/gradle.lockfile",
+    ":(exclude,glob)**/*.min.js",
+    ":(exclude,glob)**/*.min.css",
+    ":(exclude,glob)**/*.svg",
+    ":(exclude,glob)**/dist/**",
+    ":(exclude,glob)**/node_modules/**",
 ]
 CANDIDATES = [("HEAD", 0), ("최근 10건 앞", 10), ("최근 30건 앞", 30)]
 
@@ -70,12 +70,12 @@ def first_parent(path, span):
     return rows
 
 
-def cut(text):
-    """PART_BYTES 이하 덩어리로 줄 경계에서 자른다 — 한 줄이 상한을 넘으면 그 줄만 한 덩어리."""
+def cut(text, limit):
+    """limit 이하 덩어리로 줄 경계에서 자른다 — 한 줄이 상한을 넘으면 그 줄만 한 덩어리."""
     chunks, current, size = [], [], 0
     for line in text.splitlines(keepends=True):
         n = len(line.encode("utf-8"))
-        if current and size + n > PART_BYTES:
+        if current and size + n > limit:
             chunks.append("".join(current))
             current, size = [], 0
         current.append(line)
@@ -84,14 +84,14 @@ def cut(text):
 
 
 def split(body, room):
-    """diff 본문을 파일 경계로 나눠 조각마다 상한까지 이어 붙인다 — 첫 조각은 머리말 몫을 뺀 room까지."""
+    """diff 본문을 파일 경계로 나눠 조각마다 머리말 몫을 뺀 room까지 이어 붙인다."""
     files = [f if i == 0 else "diff --git " + f for i, f in enumerate(body.split("\ndiff --git "))]
     for i in range(len(files) - 1):
         files[i] += "\n"
     pieces, current, size = [], "", 0
-    for chunk in (c for f in files for c in (cut(f) if len(f.encode("utf-8")) > PART_BYTES else [f])):
+    for chunk in (c for f in files for c in (cut(f, room) if len(f.encode("utf-8")) > room else [f])):
         n = len(chunk.encode("utf-8"))
-        if current and size + n > (room if not pieces else PART_BYTES):
+        if current and size + n > room:
             pieces.append(current)
             current, size = "", 0
         current += chunk
@@ -113,27 +113,27 @@ def extract_diff(path, slug, row, out_dir):
     else:
         _, message = git(path, "log", "-1", "--format=%s%n%b", row["sha"])
     _, body = git(path, *head, *span, "--", ".", *EXCLUDE_PATHSPECS)
-    sha7, title = row["sha"][:7], f"# {slug} {row['sha']} ({row['date']})\n# 제목: {row['subject']}\n"
-
-    def header(n):
-        return (
-            title
-            + f"# 변경 파일 {row['files_changed']}건 — diff 조각 {n}개\n"
-            + ("# --- 딸린 커밋 메시지 ---\n" if merge else "# --- 커밋 메시지 ---\n")
-            + "\n".join(f"# {l}" for l in message.splitlines())
-            + "\n# --- 변경 파일 목록 (제외 규칙 미적용 전체) ---\n"
-            + name_status
-            + "\n# --- diff (제외 규칙 적용) ---\n"
-        )
-
-    pieces = split(body, PART_BYTES - len(header(1).encode("utf-8")))
+    sha7 = row["sha"][:7]
+    # 조각마다 같은 머리말을 둔다 — 둘째 줄 조각 번호·줄 수는 조각을 쓸 때 채움.
+    rest = (
+        f"# 제목: {row['subject']}\n"
+        + f"# 변경 파일 {row['files_changed']}건\n"
+        + ("# --- 딸린 커밋 메시지 ---\n" if merge else "# --- 커밋 메시지 ---\n")
+        + "\n".join(f"# {l}" for l in message.splitlines())
+        + "\n# --- 변경 파일 목록 (제외 규칙 미적용 전체) ---\n"
+        + name_status
+        + "\n# --- diff (제외 규칙 적용) ---\n"
+    )
+    first = f"# {slug} {row['sha']} ({row['date']})\n"
+    pieces = split(body, PART_BYTES - len((first + "# 조각 00/00 · 000000줄\n" + rest).encode("utf-8")))
     out_dir.mkdir(parents=True, exist_ok=True)
     row["parts"] = []
     for k, piece in enumerate(pieces, 1):
         target = out_dir / (f"{sha7}.diff" if k == 1 else f"{sha7}.{k}.diff")
-        lead = header(len(pieces)) if k == 1 else (
-            title + f"# 조각 {k}/{len(pieces)} — 같은 머지 앞 조각에 이어짐\n")
-        target.write_text(lead + piece, encoding="utf-8")
+        # 끝 줄바꿈을 채워 줄 수가 wc -l과 같게 함 — 앞 두 줄(식별 줄·조각 줄)을 더한 파일 전체 줄 수.
+        text = rest + piece if (rest + piece).endswith("\n") else rest + piece + "\n"
+        lines = text.count("\n") + 2
+        target.write_text(first + f"# 조각 {k}/{len(pieces)} · {lines}줄\n" + text, encoding="utf-8")
         row["parts"].append({"path": str(target), "bytes": target.stat().st_size})
 
 
@@ -169,7 +169,7 @@ def main():
     ap.add_argument("--domain", required=True)
     ap.add_argument("--out", required=True, help="diff와 work.json을 쓸 디렉터리")
     ap.add_argument("--start", action="append", default=[], metavar="SLUG=REV", help="커서 없는 레포의 시작 지점(HEAD 또는 sha)")
-    ap.add_argument("--max-merges", type=int, default=20)
+    ap.add_argument("--max-merges", type=int, default=10)
     a = ap.parse_args()
 
     wiki, workspace, out = (Path(p).expanduser() for p in (a.wiki, a.workspace, a.out))

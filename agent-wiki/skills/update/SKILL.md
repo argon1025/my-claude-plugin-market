@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 `${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `${CLAUDE_PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
-인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 20), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음).
+인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 10), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음).
 
 ## 1. 준비
 
@@ -41,7 +41,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --wo
 
 ```
 머지 묶음 1개에서 위키에 남길 사실을 추출하라.
-입력: {diff 목록}을 목록 순서대로 한 파일씩 끝까지 Read(길면 offset으로 나눔) — 머지마다 첫 파일 머리말에 PR 제목·커밋 메시지·변경 파일 목록이 있고, {sha7}.{k}.diff는 같은 머지의 이어지는 조각이다.
+입력: {diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다.
 대상: 변경 줄, 커밋 메시지, diff 속 작업 기록(plan·feedback)이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다.
 기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 1장으로 담을 문장을 고르고 2장으로 scope를 정한다.
 graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실 대신 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 현재 responsibilities가 덮지 않는 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)는 responsibilities add이고, 간선 to는 현재 지도의 등록 레포만 쓴다.
