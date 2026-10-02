@@ -1,0 +1,29 @@
+# agent-wiki-update-improvements 작업 기록
+
+- `context` agent-wiki 0.6.1 update 스킬 개선은 onestore-cmsapp 도메인 첫 `update --dry-run`(커서 `0a4560e`, 머지 40건) 관찰 기록 `onestore-devcenter-claude-plugin-marketplace/agent-wiki-update-improvements.md`의 15개 항목을 검토해 정하며, 수정 원본은 개인판 `agent-wiki`이고 사내판 `plugins/agent-wiki`로 미러링함
+  - source: agent-wiki-update-improvements.md
+- `constraint` 위키 registry의 onestore-cmsapp-front `defaultBranch`는 `master`이지만 기능 PR은 `develop`으로 머지되고 `master` first-parent는 `Release/…`·`Hotfix/…` 묶음 머지뿐이며, 커서 `77bad80`(PR #186)은 `develop` first-parent 위에만 있음 — `cursor..origin/master --first-parent`가 커서 이전 머지(#180·#188)를 다시 내고 릴리스 머지 diff가 400KB 상한을 넘는 두 문제의 공통 원인임
+  - evidence: ~/.agent-wiki-workspace/onestore-cmsapp-front `git log --first-parent origin/master`, 위키 state/onestore-cmsapp-front.json
+- `correction` update 검토의 코드 확인 리비전 오류는 `apply.md` 3장 "뒤 사실 행의 rev" 규칙만의 문제가 아니라 update SKILL.md 4장이 `check`를 사실의 레포 1개(`repos[slug].path`)로만 정의해 레포를 넘는 병합 사실(이번 실행 208건 중 11건)의 레포별 rev 규칙이 없는 데서 생김
+  - evidence: agent-wiki/skills/update/SKILL.md 4장, {work}/facts.json F145·F161·F164
+- `constraint` agent-wiki `scripts/generate_document_list.py`는 frontmatter `description:` 뒤 문자열을 따옴표째 세션 목록에 싣으므로, YAML상 따옴표가 필요한 description(`@Async`처럼 `@`로 시작)은 세션 목록에 따옴표가 노출됨
+  - evidence: agent-wiki/scripts/generate_document_list.py, 위키 knowledge/onestore-cmsapp/onestore-cmsapp-api/async-executor.md
+- `context` agent-wiki update의 범위는 지정된 diff 범위 안 변경을 정확히 기록하는 것이며 범위 밖 현재 기본 브랜치 코드와의 정합은 보지 않고 audit 스킬로 넘김 — 사용자 문장 "작업 도중에 여러번 동일한 사실이 바뀌면 그냥 순서대로 적용하면됨", "지정된 diff 범위내 변경사항에 대해 정확히 기록, 현 시점의 메인 브랜치 코드를 보면당연히 범위내 diff 와 다를 수 있음 수정했을수도 있고.. 이것까지 다 고려하면 안될듯함", "문서에대한 이후 정합은 audit 스킬을 새로만들어서 하는거고.."
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 개선안 채택 기준은 단순한 구조와 간결한 프롬프트가 최우선이며 update의 역할은 범위 안 변경 상태의 명확한 전사로 한정함 — 사용자 문장 "제일 우선순위는 간단한 구조, 간결한 프롬프트임", "해당 update의 역할은 현 변경상태의 명확한 전사만 있으면됨 (이걸 깔끔하게 완성하는것은 다른 audit 의 역할..)"
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update의 위키 기존 문장 대비 판정은 신규는 바로 추가, diff가 지운 대상을 말하는 문장은 근거 없이 삭제, 값이 다른 수정은 PR 제목(머지 커밋 제목)·딸린 커밋 메시지·diff 속 plan·feedback에서 의도를 확인할 때만 교체하고 없으면 건너뜀으로 함 — 사용자 문장 "신규/삭제는 그냥 추가 및 삭제 하면되고, 수정인경우는 의도를 확인해야함 (해당 경우엔 잘못 수정한 케이스도 있을 수 있기 때문.. PR 이던 커밋이던 확인되어야함)"이며 PR 본문 수집은 호스트 조회가 늘어 두지 않음
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 지도 확인은 간선 대상 레포를 현행대로 `origin/{defaultBranch}`에서 실재 확인함 — 같은 도메인 레포는 수집 스크립트가 이미 fetch해 조회 절감이 작고 규약 9장 예외 문장이 늘며 잘못된 대상 간선을 거르지 못하게 되기 때문임
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki `apply.md` 4장 위치 재배정 루프는 유지하고, 검토 출력 `removed`에 위치 사유일 때 단독으로 읽히는 `fact`와 `target` 문서 경로를 두어 4장이 그 값으로 배정하며 재배정에서도 1장 신규 문서 규칙을 적용함 — 루프를 없애 PR 행으로 넘기는 안은 위치 오판 사실이 그 PR에 반영되지 않아 기각함
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 추출은 묶음 크기와 무관하게 모두 sonnet 서브에이전트로 실행하고 메인 직접 처리 분기를 없앰 — 추출 경로를 하나로 두며 그 분기는 이전 실제 레포 검증에서 한 번도 검증되지 않았음
+  - source: 사용자 확인 2026-10-02
+- `context` 위키 PR 본문(`agent-wiki/templates/wiki-pr.md`)은 `## 레포`·`## 사실 목록`·`## 제외된 사실 목록`·`## 문서별 적용 내역`·`## 레포 지도`만 두고 `## 요약`·`## 검토 방법`은 삭제함 — 사용자 문장 "pr 템플릿도 간결하게 수정하면 좋을듯 # 사실 목록 # 제외된 사실 목록 (수정에서 근거없어서 제외된 항목) # 문서별 적용 내역"이며 레포·지도 절은 리뷰어가 커서·지도 변경을 알아야 해서 유지함
+  - source: 사용자 확인 2026-10-02
+- `context` 위키 PR `## 제외된 사실 목록`은 머지 후 add가 처리할 건너뜀·위치 재배정·미해결 충돌 행을 모두 담고 add는 그 절의 행을 고르지 않고 전부 처리함 — 사용자 문장 "이것때문에 add 처리 대상을 판단해야한다면 제외, 아니라면 함께 넣어도됨"
+  - source: 사용자 확인 2026-10-02
+- `context` onestore-cmsapp-front의 위키 registry `defaultBranch`는 사용자가 `develop`으로 전환 완료했으며, 사내판 `plugins/agent-wiki` 미러링은 개인판 변경 뒤 마지막 커밋으로 같은 계획에 포함함
+  - source: 사용자 확인 2026-10-02
+- `constraint` 위키 PR 본문에서 `## 검토 방법` 절을 빼면 "squash 금지(문서별 커밋 근거 유지)" 안내가 사라지므로, 위키 원격의 머지 전략 설정으로 squash를 막는 것이 후속 작업임
