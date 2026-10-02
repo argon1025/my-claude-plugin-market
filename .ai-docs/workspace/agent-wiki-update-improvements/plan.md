@@ -160,3 +160,98 @@
 - **wiki-pr.md**: 채우는 법과 판정 표 중복을 판정 표(우선순위 순) 하나로, 제외 목록 열 규칙을 제외 표로
 - **add 제외 행**: 구분별 분기 대신 모든 행을 "새 값을 사실로, 문서·기존 값·출처 그대로, `check`는 출처 레포·sha"로 처리하고 옮긴 문서로 배정
 - **검증 변경**: 커밋 8 ⑤는 `review/*.json`의 reason `위치` 항목이 모두 `fact`·`target`을 가짐으로 읽음
+
+## Re-plan 2026-10-02 — 0.7.0 드라이런 결과 반영: 근거 없는 교체 허용, diff 분할, 절차 결함 4건
+
+### 의도
+
+- **왜**: 0.7.0 드라이런(onestore-cmsapp 머지 40건)에서 앞 절 개선은 동작했으나, 반영 판정 파일 누락, 재배정된 사실 때문에 커서가 물러나는 원복 규칙, 추출 프롬프트의 치환 변수 충돌, 같은 머지 안 커밋 메시지·코드 값 불일치, 큰 diff 미독(agent `f415b06` 2964줄, front #203 400KB 절단)이 남았고, 의도 근거가 없는 교체를 막는 규칙은 범위 안 전사와 맞지 않음
+- **누가**: 위키 운영자가 `/agent-wiki:update`를 실행하고 PR을 리뷰하며, 정합 보정은 이후 audit 스킬이 맡음
+- **완료**: update가 범위 안 diff 값을 근거 없이 교체하고, 120KB를 넘는 diff를 조각으로 나눠 끝까지 읽히게 하며, 위 절차 결함 4건이 문장 단위로 고쳐진 agent-wiki 0.7.0이 개인판에 커밋되고 사내판에 미러링된 상태
+
+### 배경
+
+- **드라이런 산출물**: 위키 clone `/var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.DIrf5H7FTA`, 추출·판정 `/var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.zqwbzHDCu0`(work.json, facts.json, applied/, review/, graph/, pr.md) — 재부팅 시 사라질 수 있음
+- **판정 파일 누락**: 반영 에이전트 2개가 출력 경로의 `tmp.zqwbzHDCu0` 단계를 빠뜨리고 `$TMPDIR/applied/`에 썼고, `apply.md` 2·3·6장에는 출력 파일 존재 확인 규칙이 없음(update `SKILL.md` 3장 추출에만 있음)
+- **원복 커서**: 검토가 `onestore-cmsapp-api/binary-signing-fingerprint.md`의 유일한 불릿(F60)을 위치 사유로 옮겨 문서를 reject했고, F60은 4장 재배정으로 `google-developer-verification.md`에 반영됨 — `apply.md` 5장은 원복 문서 사실 전부를 `검토 기각`으로 넘기고, `SKILL.md` 6장 원복 규칙과 `wiki-pr.md` 판정 표(`검토 기각`이 최우선)가 그 사실을 따라 커서를 150727c 앞으로 물림
+- **치환 충돌**: `SKILL.md` 3장 추출 프롬프트 graph 줄의 `` 간선 to는 등록 레포 `{domain}/{slug}`만 쓴다 ``는 형식 표기인데 `{slug}`가 같은 프롬프트의 치환 변수라 "`{domain}/onestore-cmsapp-client`만"으로 바뀜, add `SKILL.md` 3장 graph 줄도 같은 표기
+- **같은 머지 불일치**: 추출 병합 규칙 "값이 다른 두 사실은 둘 다 남긴다" 때문에 api `150727c`의 재조회 API 경로가 코드(`POST /googlePackageRegistration/save/v1`)와 커밋 메시지(`.../check/v1`) 두 사실로 나왔고 정리 규칙이 없어 메인이 기각함
+- **diff 크기**: `collect_update_merges.py`는 diff 한 건을 파일 하나로 쓰고 `DIFF_MAX_BYTES` 400KB에서 자르며, `batches()`가 커밋 행 단위로 `BATCH_BYTES` 200KB까지 묶음 — `{sha7}.diff` 하나가 177KB면 에이전트가 앞 410줄 남짓만 읽음
+- **quote 사용처**: update `SKILL.md` 3장 추출 출력의 `quote`, `apply.md` 0장 quote 설명과 2장 판정(빈 quote면 건너뜀), 규약 7장 `**다른 값**`, `wiki-pr.md` 판정 표 `교체 · 기존 {old} · 인용 "{quote}"`와 예시 F2 행 — add는 `quote`를 `사용자 확인 YYYY-MM-DD 새 값 선택`으로 채워 계속 씀
+
+### 확정 결정 (사용자 확인 2026-10-02)
+
+- 폐기: `## 확정 결정`의 `**다른 값(A)**` 중 "값이 다른 수정은 … 의도를 확인할 때만 교체하고 없으면 건너뜀" — update는 범위 안 머지 diff 값으로 근거 없이 교체함, 사용자 문장 "그냥 근거없는 교체도 허용하자 나중에 감사 스킬에서 수정하면 되니까"
+- 폐기: `## 확정 결정`의 `**기각 항목**` 중 "10의 … diff 분할" — 120KB를 넘는 diff를 파일 경계 조각으로 나눔
+- **quote**: update 추출 출력에서 `quote`를 빼고 정리 단계가 `source`(근거 머지 `{slug}@{sha7}` 목록)로 채움 — update에서는 건너뜀이 생기지 않으며 PR 교체 사유는 근거 sha로 표시함
+- **diff 분할**: 수집 스크립트가 120KB 넘는 diff를 `diff --git` 경계 조각으로 나누고, 조각마다 묶음 단위가 되며 400KB 절단을 없앰
+- **결함 4건**: 출력 파일 확인, 재배정 사실을 원복에서 제외, 치환 변수 충돌 제거, 같은 머지 안 커밋 메시지·작업 기록과 변경 줄이 다르면 변경 줄 값만 남김
+- **버전**: 아직 머지 전이므로 agent-wiki 0.7.0·개인판 마켓플레이스 4.1.0을 유지하고, 사내판 미러링(앞 절 커밋 9)은 이 절의 마지막 커밋으로 옮김
+
+### 작업
+
+| 파일 | 변경 | 사다리 |
+|---|---|---|
+| `agent-wiki/scripts/collect_update_merges.py` | diff 조각 분할, 절단 상한 제거, 묶음을 조각 단위로 | 기존 파일 수정 |
+| `agent-wiki/skills/update/SKILL.md` | 3장 `{diff 목록}` 출처·quote 삭제·병합 문장·graph 줄, 4장 quote 출처, 6장 원복 | 기존 파일 수정 |
+| `agent-wiki/references/apply.md` | 서두 출력 확인, 0장 quote, 5장 재배정 사실 제외 | 기존 파일 수정 |
+| `agent-wiki/references/doc-contract.md` | 7장 `**다른 값**` update 근거 | 기존 파일 수정 |
+| `agent-wiki/templates/wiki-pr.md` | 교체 사유 `근거`, 검토 기각 원천 | 기존 파일 수정 |
+| `agent-wiki/skills/add/SKILL.md` | 3장 graph 줄 치환 충돌 | 기존 파일 수정 |
+| 사내판 `plugins/agent-wiki/**`, `.claude-plugin/marketplace.json` | 앞 절 `### 사내판 미러링`과 같은 방식 | 기존 파일 수정 |
+
+#### agent-wiki/scripts/collect_update_merges.py
+
+- **상수**: `DIFF_MAX_BYTES = 400_000` 삭제, `BATCH_BYTES = 200_000` → `120_000`이며 조각 상한과 묶음 상한을 같은 값으로 씀 — 주석 `# 추출 에이전트 1회가 끝까지 읽는 분량 — 건수는 사실 병합 품질, 바이트는 Read 반복 횟수.`
+- **분할**: `extract_diff()`가 본문을 `\ndiff --git ` 경계로 파일 단위로 자르고 `BATCH_BYTES`를 넘지 않게 이어 붙여 조각을 만듦 — 파일 하나가 상한을 넘으면 그 파일만 줄 경계로 상한마다 자름
+- **파일명·머리말**: 첫 조각은 `{sha7}.diff`에 지금 머리말 전체를, 둘째부터는 `{sha7}.{k}.diff`에 `# {slug} {sha} ({date})`, `# 제목: {subject}`, `# 조각 {k}/{n} — 커밋 메시지·변경 파일 목록은 {sha7}.diff` 세 줄만 둠, 첫 조각 머리말의 절단 문구 줄은 `# 변경 파일 {N}건 — diff 조각 {n}개` 로 바꿈
+- **행 필드**: `row["truncated"]`·`row["diff_path"]`·`row["bytes"]`를 `row["parts"] = [{"path", "bytes"}]`로 바꿈
+- **묶음**: `batches()`가 커밋 행 대신 조각을 순서대로 묶어 `{"id", "shas", "diffs", "bytes"}`를 냄 — `shas`는 묶음에 든 조각의 sha7 중복 제거, `diffs`는 조각 경로, 건수 상한 `BATCH_MERGES`는 조각 수에 적용
+- **머리 주석**: 첫 줄의 "diff를 파일로 꺼내 묶음으로 자른다"를 "diff를 조각 파일로 꺼내 묶음으로 자른다"로
+
+#### agent-wiki/skills/update/SKILL.md
+
+- **3장 서두**: `` `{diff 목록}`은 그 묶음 `shas`의 `commits[].diff_path` `` → `` `{diff 목록}`은 그 묶음 `diffs` ``, `(다시 나누지 않음)` 유지
+- **3장 프롬프트 입력 줄**: `머리말에 PR 제목·커밋 메시지·변경 파일 목록·절단 여부가 있다` → `머리말에 PR 제목·커밋 메시지·변경 파일 목록이 있고, 조각 파일은 첫 조각의 머리말을 가리킨다`
+- **3장 graph 줄**: `` 간선 to는 등록 레포 `{domain}/{slug}`만 쓴다 `` → `간선 to는 {지도}의 등록 레포 키만 쓴다`
+- **3장 병합 줄**: `병합: 묶음 안 같은 주장은 하나로 합쳐 shas에 모두 적고, 값이 다른 두 사실은 둘 다 남긴다.` → `병합: 묶음 안 같은 주장은 하나로 합쳐 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남기되, 같은 머지의 커밋 메시지·작업 기록이 변경 줄과 다르면 변경 줄 값만 남긴다.`
+- **3장 출력 형식**: `"quote": …` 줄 삭제
+- **4장 facts.json 문장**: `` `input`은 빈 배열이고 나머지 키는 추출 값 그대로 `` → `` `quote`는 `source`를 쉼표로 이은 값, `input`은 빈 배열이고 나머지 키는 추출 값 그대로 ``
+- **6장 원복 있음**: `원복한 문서 사실의 그 레포 근거 머지(`source`) 중` → `` `검토 기각`으로 넘긴 사실의 그 레포 근거 머지(`source`) 중 ``
+
+#### agent-wiki/references/apply.md
+
+- **서두**: `어느 서브에이전트도 커밋하지 않습니다.` 뒤에 `서브에이전트의 출력 파일이 정해진 경로에 없으면 다음 장 전에 그 에이전트를 다시 실행합니다.` 추가
+- **0장 quote**: `규약 7장 다른 값의 변경 근거 원문 — add는 …` → `규약 7장 다른 값의 변경 근거 — update는 근거 머지 목록, add는 `사용자 확인 YYYY-MM-DD 새 값 선택`, 없으면 빈 문자열`
+- **5장**: `그 사실을 `검토 기각`으로 넘깁니다` → `` 그 사실을 `검토 기각`으로 넘깁니다 — 4장에서 다른 문서로 재배정한 사실은 그 문서의 판정을 따름 ``
+
+#### agent-wiki/references/doc-contract.md
+
+- **7장 다른 값**: `변경 의도를 밝힌 근거(커밋 메시지·PR 본문·작업 기록 또는 사용자 확인)가 있을 때만 고치고` → `변경 의도를 밝힌 근거(커밋 메시지·PR 본문·작업 기록 또는 사용자 확인, update는 반영 범위 안 머지 diff 자체)가 있을 때만 고치고`
+
+#### agent-wiki/templates/wiki-pr.md
+
+- **판정 표**: `` `교체 · 기존 {old} · 인용 "{quote}"` `` → `` `교체 · 기존 {old} · 근거 {quote}` ``, `` `검토 기각 · {reject_reason}` `` 원천 `5장에서 원복한 문서의 사실 전부` → `5장 `검토 기각` 사실`
+- **예시 F2 행**: `교체 · 기존 \`모든 삭제\` · 인용 "…"` → `교체 · 기존 \`모든 삭제\` · 근거 shop-api@c61a8ab`
+
+#### agent-wiki/skills/add/SKILL.md
+
+- **3장 graph 줄**: `` slug와 간선 to는 등록 레포의 `{domain}/{slug}` 기준으로 쓰고, `` → `slug와 간선 to는 {지도}의 등록 레포 키로 쓰고,`
+
+### 커밋 분해
+
+개인판 `feat/agent-wiki-update-improvements` 브랜치에서 이어 작업함. `{fx}`는 검증용 임시 폴더, `{ws}`는 `~/.agent-wiki-workspace`, `{T}`는 드라이런 위키 clone `/var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.DIrf5H7FTA`.
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 1 | `collect_update_merges.py` 분할 | `python3 -m py_compile agent-wiki/scripts/collect_update_merges.py` 통과. `{T}`(registry·state만 읽음)를 `--wiki`로 `python3 agent-wiki/scripts/collect_update_merges.py --wiki {T} --workspace {ws} --domain onestore-cmsapp --out {fx}/out --max-merges 40` 실행 시 종료 코드 0, `{fx}/out/onestore-cmsapp-agent/f415b06.2.diff` 존재, `find {fx}/out -name '*.diff' -size +125k` 0행, `{fx}/out/onestore-cmsapp-front/934d282*.diff` 조각 합이 400KB 초과, `work.json`의 모든 `batches[]`에 `diffs` 키가 있고 `grep -c '"diff_path"\|"truncated"' {fx}/out/work.json` 0 |
+| 2 | update `SKILL.md`·`apply.md`·`doc-contract.md`·`wiki-pr.md`·add `SKILL.md` 문장 | `grep -c '"quote"' agent-wiki/skills/update/SKILL.md` 0, `grep -rn '{domain}/{slug}\`만\|{domain}/{slug}\` 기준' agent-wiki/skills` 0행, `grep -c 'diff_path' agent-wiki/skills/update/SKILL.md` 0, `grep -n '다시 실행합니다' agent-wiki/references/apply.md` 1행(서두), `grep -n '재배정한 사실은' agent-wiki/references/apply.md` 1행, `grep -n 'update는 반영 범위 안 머지 diff' agent-wiki/references/doc-contract.md` 1행, `grep -c '인용 "' agent-wiki/templates/wiki-pr.md` 0, `grep -n '검토 기각.*사실' agent-wiki/skills/update/SKILL.md` 1행(6장) |
+| 3 | 사내판 미러링 | 앞 절 커밋 9 검증과 같음 — 사내판에서 `diff -rq plugins/agent-wiki {개인판}/agent-wiki` 결과가 `config.json`·`references/publish.md`·`README.md` 3행뿐, `grep -rn '건너뜀·위치 재배정 행\|`건너뜀`·`위치 재배정` 행' plugins/agent-wiki` 0행, `python3 -m json.tool .claude-plugin/marketplace.json` 통과 |
+
+### 특이 사항
+
+- **전체 드라이런 생략**: 이 절은 스크립트 실행과 문장 grep으로만 검증하며, 근거 없는 교체·조각 묶음의 실제 추출 품질 확인은 다음 실제 update 실행 결과로 봄
+- **교체 오판 한계**: 근거 없는 교체는 추출이 값을 잘못 읽으면 맞는 문장을 덮어씀 — 검토의 근거 머지 시점 코드 확인과 PR `교체` 행의 기존·새 값, 이후 audit이 보정 경로임
+- **조각과 병합**: 한 머지가 여러 묶음으로 나뉘면 묶음 안 병합이 아니라 4장 정리 병합에 기대며, 둘째 조각부터는 커밋 메시지가 없어 작업 기록 근거 사실은 첫 조각에서만 나옴
+- **긴 경로 오기**: 판정 파일 누락의 원인인 긴 `mktemp` 경로 오기는 출력 확인으로 재실행할 뿐 막지는 않음 — 반복되면 `{work}`를 짧은 고정 접두 경로로 바꿈
+- **범위 밖**: 재검토가 첫 반영 줄을 `ids` 없이 지우는 경우(adhub-product-meta-sync 4건)와 같은 이름 집합 충돌(`AdhubResultCode`)은 그대로 둠

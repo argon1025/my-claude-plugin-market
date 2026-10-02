@@ -33,3 +33,14 @@
   - source: 사용자 확인 2026-10-02
 - `why` agent-wiki update·add의 `--dry-run`은 커밋 없이 PR 본문 `{work}/pr.md`까지 쓰고 그 경로를 보고함 — 기존 드라이런 보고 항목(문서 diff·판정 집계·지도 ops)이 PR 본문과 겹치고, 드라이런으로 PR 본문 형식까지 검증할 수 있음
   - evidence: agent-wiki/references/apply.md 7장, agent-wiki/skills/update/SKILL.md 8절
+- `constraint` agent-wiki 0.7.0 update 드라이런(2026-10-02, onestore-cmsapp 머지 40건)에서 반영 에이전트 2개가 출력 경로의 `mktemp -d` 폴더 단계를 빠뜨려 `$TMPDIR/applied/`에 판정 파일을 썼고, 같은 폴더에 이전 실행의 파일이 남아 있었음 — `apply.md` 2·3장은 추출(SKILL.md 3장)과 달리 출력 파일 존재를 확인하는 규칙이 없어 판정이 조용히 빠질 수 있음
+  - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/applied/
+- `constraint` agent-wiki 0.7.0 update 드라이런에서 sonnet 반영 에이전트가 `quote`가 빈 사실(F24, 상품유형별 Crypto·확률형 아이템 설정 범위)을 두 문서에서 `교체`로 판정함 — 규약 7장 다른 값 규칙(의도 근거 없으면 건너뜀)이 반영 프롬프트에서 지켜지지 않는 경우가 있음
+- `constraint` agent-wiki update `SKILL.md` 6장 원복 커서 규칙은 원복 문서의 사실이 4장 재배정으로 다른 문서에 반영된 경우를 구분하지 않아, 0.7.0 드라이런처럼 검토가 유일한 불릿을 위치로 옮기고 문서를 reject하면(onestore-cmsapp-api/binary-signing-fingerprint.md, F60) 이미 반영된 사실 때문에 커서가 그 머지 앞으로 물러남
+- `constraint` agent-wiki update 3장 추출 프롬프트의 `` 간선 to는 등록 레포 `{domain}/{slug}`만 `` 은 형식 표기인데 같은 프롬프트의 `{slug}` 치환 변수와 이름이 겹쳐, 그대로 치환하면 "등록 레포 `{domain}/onestore-cmsapp-client`만"처럼 뜻이 바뀜
+- `constraint` onestore-cmsapp-front는 `develop` 기본 브랜치에서도 `Feature/{날짜}` 통합 브랜치 머지(PR #203, diff 414KB 절단)와 비머지 직접 커밋이 first-parent에 섞여, 기본 브랜치 전환만으로 큰 묶음 머지가 사라지지 않음
+  - evidence: ~/.agent-wiki-workspace/onestore-cmsapp-front `git log --first-parent origin/develop`
+- `correction` agent-wiki update의 다른 값(위키 기존 문장과 값이 다른 수정)은 의도 근거 없이도 범위 안 머지 diff 값으로 교체함 — 앞선 결정 "수정인경우는 의도를 확인해야함"을 바꾼 것이며, 사용자 문장 "그냥 근거없는 교체도 허용하자 나중에 감사 스킬에서 수정하면 되니까"
+  - source: 사용자 확인 2026-10-02
+- `context` agent-wiki update 추출 출력에서 `quote`(의도 원문)를 빼고 정리 단계가 근거 머지 `source`로 채우며, 수집 스크립트는 120KB를 넘는 diff를 `diff --git` 경계 조각으로 나눠 조각마다 묶음 단위로 삼고 400KB 절단을 없앰 — 0.7.0 드라이런에서 177KB diff(agent f415b06)가 offset 지시에도 끝까지 읽히지 않았고 front #203이 400KB에서 잘렸기 때문이며, 앞서 기각한 diff 분할을 되살린 결정임
+  - source: 사용자 확인 2026-10-02
