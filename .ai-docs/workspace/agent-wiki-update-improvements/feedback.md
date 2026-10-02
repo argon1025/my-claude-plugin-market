@@ -52,3 +52,5 @@
 - `constraint` agent-wiki update 반영 에이전트는 근거 없는 교체가 허용돼도 사실의 표현이 기존 문장과 다르면 `추가`로 판정해 기존 문장을 남김 — 변경 검증 드라이런에서 director-cut F39·F42가 추가되며 "5180 검증 없음"·"N에서 Y 설정은 서버 검증이 막음" 문장이 그대로 남아 문서가 자기모순이 됐고, 검토는 이번 변경 줄만 고쳐 이를 바로잡지 않음
 - `correction` agent-wiki update 추출의 미독 원인은 묶음 총량이 아니라 Read 1회에 담기지 않는 diff 파일 하나의 크기였음 — 변경 검증 드라이런에서 sonnet 추출 에이전트가 120KB 이하 조각 4개(444KB, 6287줄)를 모두 마지막 줄까지 읽었으므로, 조각은 Read 크기 맞춤(`PART_BYTES`)으로만 쓰고 묶음은 머지 단위(같은 머지 조각은 한 묶음)로 둠
   - source: 사용자 확인 2026-10-02
+- `constraint` agent-wiki 반영 판정 줄에 "추가·교체한 사실 때문에 거짓이 되는 기존 문장은 같은 편집에서 고치거나 지우고 교체로" 규칙을 둬도, sonnet 반영 에이전트는 같은 식별자를 말하는 기존 문장의 조건 표현이 다르면 별개로 보고 남김 — director-cut 재현에서 F42는 "화면·서버 검증 양쪽에서 막힘"을 "화면에서 막힘"으로 교체했으나, F39(CMS_APP_5180 = DC Y 게임의 앱 카테고리 변경 검증요청)를 `## 코드값`에 추가하면서 `## 결정`의 "Director's Cut 필수값 검증(CMS_APP_5180)은 두지 않음"은 "조건이 달라" 그대로 둠
+  - evidence: /var/folders/xk/xzrxhwr93z5gg36cm50kl2v00000gn/T/tmp.jhm0TXsSzc/knowledge/onestore-cmsapp/director-cut.md 99행
