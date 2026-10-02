@@ -9,10 +9,11 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# 추출 에이전트 1회가 끝까지 읽는 분량 — 건수는 사실 병합 품질, 바이트는 Read 반복 횟수.
-# diff 조각 상한도 같은 바이트를 쓴다.
+# 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.
 BATCH_MERGES = 5
-BATCH_BYTES = 120_000
+BATCH_BYTES = 200_000
+# diff 조각 상한 — Read 1회가 끝까지 담는 크기.
+PART_BYTES = 120_000
 # 머리말에 싣는 딸린 커밋 수 상한 — 대형 머지에서 머리말이 diff를 밀어내지 않게 함.
 MESSAGE_MAX_COMMITS = 20
 # 생성물·잠금 파일처럼 사실이 나올 수 없는 경로만 뺀다.
@@ -70,11 +71,11 @@ def first_parent(path, span):
 
 
 def cut(text):
-    """BATCH_BYTES 이하 덩어리로 줄 경계에서 자른다 — 한 줄이 상한을 넘으면 그 줄만 한 덩어리."""
+    """PART_BYTES 이하 덩어리로 줄 경계에서 자른다 — 한 줄이 상한을 넘으면 그 줄만 한 덩어리."""
     chunks, current, size = [], [], 0
     for line in text.splitlines(keepends=True):
         n = len(line.encode("utf-8"))
-        if current and size + n > BATCH_BYTES:
+        if current and size + n > PART_BYTES:
             chunks.append("".join(current))
             current, size = [], 0
         current.append(line)
@@ -88,9 +89,9 @@ def split(body, room):
     for i in range(len(files) - 1):
         files[i] += "\n"
     pieces, current, size = [], "", 0
-    for chunk in (c for f in files for c in (cut(f) if len(f.encode("utf-8")) > BATCH_BYTES else [f])):
+    for chunk in (c for f in files for c in (cut(f) if len(f.encode("utf-8")) > PART_BYTES else [f])):
         n = len(chunk.encode("utf-8"))
-        if current and size + n > (room if not pieces else BATCH_BYTES):
+        if current and size + n > (room if not pieces else PART_BYTES):
             pieces.append(current)
             current, size = "", 0
         current += chunk
@@ -125,30 +126,30 @@ def extract_diff(path, slug, row, out_dir):
             + "\n# --- diff (제외 규칙 적용) ---\n"
         )
 
-    pieces = split(body, BATCH_BYTES - len(header(1).encode("utf-8")))
+    pieces = split(body, PART_BYTES - len(header(1).encode("utf-8")))
     out_dir.mkdir(parents=True, exist_ok=True)
     row["parts"] = []
     for k, piece in enumerate(pieces, 1):
         target = out_dir / (f"{sha7}.diff" if k == 1 else f"{sha7}.{k}.diff")
         lead = header(len(pieces)) if k == 1 else (
-            title + f"# 조각 {k}/{len(pieces)} — 커밋 메시지·변경 파일 목록은 {sha7}.diff\n")
+            title + f"# 조각 {k}/{len(pieces)} — 같은 머지 앞 조각에 이어짐\n")
         target.write_text(lead + piece, encoding="utf-8")
         row["parts"].append({"path": str(target), "bytes": target.stat().st_size})
 
 
 def batches(rows):
-    # 조각을 순서대로 묶되 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면 새 묶음.
-    parts = [(r["sha"][:7], p) for r in rows for p in r["parts"]]
+    # 머지 단위로 묶어 같은 머지의 조각은 한 묶음에 둔다 — 건수 상한에 닿았거나 바이트 합계가 상한을 넘게 되면
+    # 새 묶음이고, 단독으로 상한을 넘는 머지도 묶음 하나를 차지.
     result, current, total = [], [], 0
-    for item in parts + [None]:
-        if current and (item is None or len(current) >= BATCH_MERGES or total + item[1]["bytes"] > BATCH_BYTES):
-            shas = list(dict.fromkeys(sha7 for sha7, _ in current))
-            result.append({"id": f"b{len(result) + 1:02d}", "shas": shas,
-                           "diffs": [p["path"] for _, p in current], "bytes": total})
+    for row in rows + [None]:
+        size = sum(p["bytes"] for p in row["parts"]) if row else 0
+        if current and (row is None or len(current) >= BATCH_MERGES or total + size > BATCH_BYTES):
+            result.append({"id": f"b{len(result) + 1:02d}", "shas": [r["sha"][:7] for r in current],
+                           "diffs": [p["path"] for r in current for p in r["parts"]], "bytes": total})
             current, total = [], 0
-        if item is not None:
-            current.append(item)
-            total += item[1]["bytes"]
+        if row is not None:
+            current.append(row)
+            total += size
     return result
 
 
