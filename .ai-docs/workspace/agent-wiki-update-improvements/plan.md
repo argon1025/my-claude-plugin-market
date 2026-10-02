@@ -341,3 +341,71 @@
 - **PART_BYTES 주석**: `# diff 조각 상한 — Read 1회가 끝까지 담는 크기.`는 진단으로 틀렸으므로 `# diff 조각 상한 — 묶음 상한을 넘는 머지를 여러 묶음에 나누는 단위.`로 바꿈, 값 120KB는 유지
 - **update SKILL.md 3장 금지 줄**: `금지: 입력 목록 밖 파일 열기, 사전 지식으로 채우기.` → `금지: 입력 목록 밖 파일 열기, grep·sed 발췌로 대신 읽기, 사전 지식으로 채우기.`
 - **커밋 분해**: `fix(agent-wiki)` 커밋 하나(검증: py_compile, 앞 절 커밋 1 명령 재실행 종료 코드 0, 934d282 조각 4개가 묶음 `diffs`에 정확히 한 번씩 나오고 둘 이상 묶음에 걸친 sha는 조각 합이 `BATCH_BYTES` 초과인 머지뿐, 모든 묶음 `bytes`가 `BATCH_BYTES` 이하이거나 조각 하나뿐, `grep -n 'grep·sed 발췌로 대신 읽기' agent-wiki/skills/update/SKILL.md` 1행) 뒤 앞 절 커밋 4를 934d282 조각이 든 묶음마다 sonnet 에이전트 1개로 다시 실행함 — 통과 조건: 각 에이전트가 목록 파일을 Read 호출로 마지막 줄까지 읽고(호출 기록으로 확인) 발췌 대체·목록 밖 파일 열기가 없으며 출력 JSON이 파싱됨, 다시 실패하면 멈춰 보고함
+
+## Re-plan 2026-10-02 — PR #35 통합: glob 제외·조각 머리말·예산 10 채택, 추출 단위는 실추출 비교로 선정
+
+### 의도
+
+- **왜**: 열린 PR #35(`feat/agent-wiki-update-improve`)가 같은 agent-wiki 0.7.0·마켓플레이스 4.1.0으로 수집 스크립트·update 추출을 따로 고쳤고, 이 브랜치가 #35를 대체하므로 #35의 검증된 개선을 이 브랜치에 합쳐야 함 — 사용자 문장 "기존 35에서 적용한 부분도 검토해서 함께 적용하는건 어때"
+- **누가**: 위키 운영자가 `/agent-wiki:update`를 실행하고, #35는 이 PR 생성 뒤 사용자가 닫음
+- **완료**: 아래 채택 항목이 커밋되고, 추출 단위(현행 묶음 B·머지 1건 M)가 onestore-cmsapp 실추출 비교 결과로 정해져 반영되며, 사내판 미러링이 갱신된 상태
+
+### 배경
+
+- **#35 내용**: 제외 규칙 `:(exclude,glob)`(루트 잠금 파일 미제외 버그, PR #3 diff 2,472KB → 1,952KB), 머지 1건 단위 추출(150KB 초과는 조각마다 1회, `batches()` 삭제), 조각마다 머리말 전체와 `# 조각 {i}/{n} · {N}줄`, 입력 줄 "머리말의 줄 수까지 Read", `--max-merges` 기본 10(머지당 PR 본문 약 5,600자 실측), 미열람 응답과 SendMessage 이어 읽기, README·description의 "묶음" 낱말 삭제
+- **#35 기록**: `.ai-docs/workspace/agent-wiki-update-improve/`에 구조 비교(S·M·I·W, 머지 7건, 모범 답안 145건) 실측이 있고 main에는 없음 — 앞부분 9축 결정(재배정 루프·원복 커서 삭제 등)은 #35도 구현 범위 밖으로 두었고 이 브랜치의 확정 결정과 다름
+- **현재 묶음**: 이 브랜치는 머지 5건·200KB까지 묶고 상한 초과 머지만 조각을 여러 묶음에 나눔 — onestore-cmsapp에서 api 7건은 묶음 2개(148KB·80KB), client 5건은 묶음 1개(12KB)
+
+### 확정 결정 (사용자 확인 2026-10-02)
+
+- **채택**: glob 제외 규칙, 조각 머리말·줄 수, #35 기록 폴더 이관, `--max-merges` 기본 10
+- **불채택**: 이어 읽기(#35 기록상 50회 중 7회가 미열람을 `없음`으로 답함, 이 브랜치는 발췌 금지로 끝까지 읽힘 확인), #35 기록의 9축 결정
+- **추출 단위**: 사용자 문장 "어떤게 더 나을지 드라이런으로 실 추출 비교검증 후 채택하자" — 현행 묶음 B와 머지 1건 M을 같은 입력으로 실추출 비교해 정함
+
+### 작업
+
+| 파일 | 변경 | 사다리 |
+|---|---|---|
+| `agent-wiki/scripts/collect_update_merges.py` | 제외 규칙 glob, 조각마다 머리말 전체·조각 줄, `--max-merges` 10, (M 선정 시) 묶음 단위를 머지로 | 기존 파일 수정 |
+| `agent-wiki/skills/update/SKILL.md` | 인자 기본 10, 3장 입력 줄, (M 선정 시) 3장 실행 문단·프롬프트 첫 줄·병합 줄, 4장 낱말, description | 기존 파일 수정 |
+| `agent-wiki/templates/wiki-pr.md` | `레포` 표 예시 `20건` → `10건` | 기존 파일 수정 |
+| `agent-wiki/README.md` | (M 선정 시) "시간 순 묶음으로" → "시간 순으로" | 기존 파일 수정 |
+| `.ai-docs/workspace/agent-wiki-update-improve/` | #35 브랜치 폴더 그대로 이관 | 기존 기록 복사 |
+
+#### collect_update_merges.py
+
+- **제외 규칙**: `EXCLUDE_PATHSPECS` 11개를 `:(exclude,glob)`로, 패턴은 유지
+- **머리말**: `header()`가 모든 조각에 같은 머리말 전체를 두고, 첫 줄 다음 줄을 `# 조각 {k}/{n} · {N}줄`로 함(N은 그 파일 전체 줄 수, 끝 줄바꿈 보정) — 둘째 조각 3줄 머리말과 `# 변경 파일 {N}건 — diff 조각 {n}개` 줄의 조각 수 문구는 지우고 `# 변경 파일 {N}건`만 남김, 머리말이 조각마다 실리므로 `split()`의 첫 조각 `room`은 모든 조각에 적용
+- **인자**: `--max-merges` 기본 10
+- **M 선정 시 `batches()`**: 둘째 묶음 루프를 지우고 머지마다 조각을 `BATCH_BYTES`까지 이은 단위를 그대로 묶음으로 냄(`shas`는 그 머지 하나), `BATCH_MERGES` 상수와 주석 삭제
+
+#### update SKILL.md
+
+- **인자**: `기본 20` → `기본 10`
+- **3장 입력 줄**: `{diff 목록}을 목록 순서대로 한 파일씩 끝까지 Read(길면 offset으로 나눔) — 머지마다 첫 파일 머리말에 PR 제목·커밋 메시지·변경 파일 목록이 있고, {sha7}.{k}.diff는 같은 머지의 이어지는 조각이다.` → `{diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다.`
+- **M 선정 시**: 3장 서두 `레포별 \`batches\`마다(다시 나누지 않음)`는 유지(묶음이 머지 또는 대형 머지 조각 묶음이 됨), 프롬프트 첫 줄 `머지 묶음 1개에서` → `머지 1건(큰 머지는 조각 묶음)에서`, 병합 줄 `묶음 안 같은 주장은` → `같은 주장은`, description `in time-ordered batches` → `in time order`
+
+#### 추출 단위 비교 (커밋 없음)
+
+- **입력**: `{T2}`·`{ws}`로 채택 항목 커밋 뒤 스크립트를 `--max-merges 40`으로 실행한 산출물의 onestore-cmsapp-api(머지 7건)·onestore-cmsapp-client(머지 5건) — B는 그 `batches` 그대로, M은 같은 diff 파일을 머지마다 묶음 하나로
+- **실행**: B·M 각 2회, 3장 프롬프트(M은 위 첫 줄·병합 줄 변경본)를 sonnet 에이전트로 실행 — B 묶음 3개×2, M 머지 12건×2, 출력 `{fx}/cmp/{B|M}{회차}/{slug}/`
+- **채점**: 레포마다 Agent 1회(메인 모델)가 네 벌(B1·B2·M1·M2)의 사실을 함께 받아 같은 주장끼리 묶고, 묶음마다 규약 1장 유효 여부와 어느 벌에 있는지를 `{fx}/cmp/score/{slug}.json`에 씀 — 재현율은 벌마다 유효 묶음 중 잡은 비율
+- **부수 측정**: 벌마다 에이전트 수, 토큰 합계, 소요 시간, 호출 기록의 미열람 파일 수, 벌 안 중복 사실 수(4장 병합 전)
+- **선정**: 네 벌 모두 미열람 0건을 전제로 M 평균 재현율이 B 평균 재현율 − 5%p 이상이면 구조가 단순한 M, 아니면 B — 미열람이 있으면 멈춰 보고함
+
+### 커밋 분해
+
+| # | 범위 | 검증 |
+|---|---|---|
+| 1 | `collect_update_merges.py`·update `SKILL.md`·`wiki-pr.md` — glob 제외, 조각 머리말·줄 수, 예산 10 | `py_compile` 통과, `{T2}`로 `--max-merges 40` 실행 종료 코드 0, `find {fx}/out -name '*.diff' -size +125k` 0행, 934d282 조각 4개 모두 `# 조각 k/4 · N줄`의 N이 `wc -l`과 같고 둘째 조각부터도 `# --- 딸린 커밋 메시지 ---` 줄을 가짐, `git -C {ws}/{slug} diff` 기준 루트 `package-lock.json`이 어느 diff에도 없음(`grep -l '^diff --git a/package-lock.json' -r {fx}/out` 0행), 인자 없이 실행 시 처리 머지 합계 10건 이하, `grep -c '기본 10' agent-wiki/skills/update/SKILL.md` 1 |
+| 2 | `.ai-docs/workspace/agent-wiki-update-improve/` 이관 | `git diff --stat origin/feat/agent-wiki-update-improve -- .ai-docs/workspace/agent-wiki-update-improve` 0행 |
+| 3 | 추출 단위 비교 결과 `feedback.md` | 점수표(벌별 재현율·미열람·에이전트 수·토큰·시간·중복)와 선정 결과를 `why`로 기록 — 미열람이 있으면 멈춰 보고 |
+| 4 | (M 선정 시만) 묶음 단위 머지로 | `{T2}` 실행 결과 모든 묶음의 `shas`가 1개이고 200KB 초과 머지만 묶음이 여럿, `grep -c 'BATCH_MERGES' agent-wiki/scripts/collect_update_merges.py` 0, `grep -rn '묶음으로\|time-ordered batches' agent-wiki/README.md agent-wiki/skills/update/SKILL.md` 0행 |
+| 5 | 사내판 미러링 | 사내판 같은 브랜치에 바뀐 파일 복사 커밋 — `diff -rq plugins/agent-wiki {개인판}/agent-wiki` 결과가 `config.json`·`references/publish.md`·`README.md` 3행뿐(M 선정으로 README가 바뀌면 사내 README의 같은 문구만 맞춤) |
+| 6 | PR 생성 | `/pr-workflow:create` — 본문에 #35 대체 명시, 승인 후 push·생성 |
+
+### 특이 사항
+
+- **비교 비용**: 추출 에이전트 30회와 채점 2회
+- **표본 한계**: #35 기록에서 회차 사이 재현율 편차가 안 사이 편차와 같은 크기였으므로, 5%p 안쪽 차이는 우열이 아니라 단순한 구조를 고르는 기준으로만 씀
+- **머리말 반복 비용**: 조각마다 딸린 커밋 메시지 최대 20건이 반복되며, 대형 머지에서 조각 수만큼 머리말 바이트가 늘어 조각 본문 상한이 그만큼 줄어듦
