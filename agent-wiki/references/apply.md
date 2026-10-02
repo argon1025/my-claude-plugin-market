@@ -1,6 +1,6 @@
 # 위키 반영 절차
 
-update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입니다. 스킬이 `{work}/facts.json`·`{work}/graph-candidates.json`을 넘기면 1장부터 실행합니다. `{tmp}`는 위키 clone, `{work}`는 추출 산출물 폴더, `{doc_contract_path}`는 규약(`${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`)의 절대 경로입니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 서브에이전트는 한 메시지에 최대 15개씩 병렬 실행하고 남으면 앞 에이전트가 끝나는 대로 다음 메시지로 띄우며, 어느 서브에이전트도 커밋하지 않습니다.
+update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입니다. 스킬이 `{work}/facts.json`·`{work}/graph-candidates.json`을 넘기면 1장부터 실행합니다. `{tmp}`는 위키 clone, `{work}`는 추출 산출물 폴더, `{doc_contract_path}`는 규약(`${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`)의 절대 경로입니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 서브에이전트는 한 메시지에 최대 15개씩 병렬 실행하고 남으면 앞 에이전트가 끝나는 대로 다음 메시지로 띄우며, 어느 서브에이전트도 커밋하지 않습니다. 서브에이전트의 출력 파일이 정해진 경로에 없으면 다음 장 전에 그 에이전트를 다시 실행합니다.
 
 ## 0. 입력 형식
 
@@ -11,7 +11,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
   - **source**: 규약 8장 근거 줄 목록
   - **check**: 코드 확인 대상 `[{"repo_path", "rev"}]` — update는 근거 레포마다 그 레포의 가장 늦은 근거 머지 sha, add는 `origin/{defaultBranch}`(등록 레포 파일 근거면 그 sha), 확인할 레포가 없으면 빈 배열
   - **input**: 자료 원문 파일 경로 목록 — update는 빈 배열
-  - **quote**: 규약 7장 다른 값의 변경 근거 원문 — add는 `사용자 확인 YYYY-MM-DD 새 값 선택`, 없으면 빈 문자열
+  - **quote**: 규약 7장 다른 값의 변경 근거 — update는 근거 머지 목록, add는 `사용자 확인 YYYY-MM-DD 새 값 선택`, 없으면 빈 문자열
 - **graph-candidates.json**: `{"candidates": [{"id": "G1~", "slug", "key": "responsibilities|hosts|deps", "op": "add|remove|replace", "value", "old", "code", "source", "check"}]}` — `value`·`old`는 책임 문장, `{"env", "host"}`, `{"to", "desc"}` 중 하나이고 `old`는 교체·삭제일 때만
 - **레포 읽기**: `check`와 간선 후보 `to`가 가리키는 레포 중 스킬이 준비하지 않은 레포마다 `{workspace.root}/{slug}`가 없으면 `git clone {remote} {workspace.root}/{slug}`, 있으면 `git -C {workspace.root}/{slug} fetch origin {defaultBranch}` — 작업 트리는 건드리지 않고 `rev`만 `git grep`·`git show`로 읽으며, 실패한 레포는 코드 확인 없이 진행하고 보고에 남김
 
@@ -78,7 +78,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 5. 원복
 
-`reject`가 true인 문서와 검토로 본문이 빈 신규 문서는 원복하고(`git -C {tmp} checkout -- {경로}`, 신규는 삭제) 그 사실을 `검토 기각`으로 넘깁니다.
+`reject`가 true인 문서와 검토로 본문이 빈 신규 문서는 원복하고(`git -C {tmp} checkout -- {경로}`, 신규는 삭제) 그 사실을 `검토 기각`으로 넘깁니다 — 4장에서 다른 문서로 재배정한 사실은 그 문서의 판정을 따름.
 
 ## 6. 지도 갱신
 

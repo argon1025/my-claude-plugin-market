@@ -44,3 +44,7 @@
   - source: 사용자 확인 2026-10-02
 - `context` agent-wiki update 추출 출력에서 `quote`(의도 원문)를 빼고 정리 단계가 근거 머지 `source`로 채우며, 수집 스크립트는 120KB를 넘는 diff를 `diff --git` 경계 조각으로 나눠 조각마다 묶음 단위로 삼고 400KB 절단을 없앰 — 0.7.0 드라이런에서 177KB diff(agent f415b06)가 offset 지시에도 끝까지 읽히지 않았고 front #203이 400KB에서 잘렸기 때문이며, 앞서 기각한 diff 분할을 되살린 결정임
   - source: 사용자 확인 2026-10-02
+- `why` agent-wiki update·add 추출 프롬프트의 graph 줄은 간선 대상을 `{지도}` 같은 치환 변수로 다시 가리키지 않고 "현재 지도의 등록 레포"라는 낱말로 가리킴 — 프롬프트 안 중괄호는 모두 메인이 치환하므로 문장 속에 변수를 다시 쓰면 지도 JSON이 두 번 실리거나 `{slug}`처럼 다른 값으로 바뀜
+  - evidence: agent-wiki/skills/update/SKILL.md 3장, agent-wiki/skills/add/SKILL.md 3장
+- `constraint` agent-wiki `collect_update_merges.py`의 diff 조각은 본문 기준 120KB(`BATCH_BYTES`)이고 첫 조각은 머리말 몫을 빼며 둘째부터는 3줄 머리말이 더해져 파일 크기가 상한을 수백 바이트 넘을 수 있음 — onestore-cmsapp front #203(934d282)은 조각 4개 합 444KB로, 이전 400KB 절단에서 잘리던 뒤 파일까지 묶음에 들어감
+  - evidence: agent-wiki/scripts/collect_update_merges.py split()

@@ -14,12 +14,12 @@ update·add가 같은 본문을 쓰며 `--dry-run`에서도 씁니다. 행이 �
 
 | 판정 칸 | 원천 |
 |---|---|
-| `검토 기각 · {reject_reason}` | 5장에서 원복한 문서의 사실 전부 |
+| `검토 기각 · {reject_reason}` | 5장 `검토 기각` 사실 |
 | `위치 재배정` | 4장 두 번째 검토도 위치로 삭제 |
 | `미해결 충돌` | 3장 `conflicts[].ids` |
 | `검토 삭제 · {reason}` | 3장 `removed[].ids` 중 reason이 `위치`가 아닌 행 |
 | `추가`·`동일`·`삭제`·`건너뜀` | 2장 `verdicts` |
-| `교체 · 기존 {old} · 인용 "{quote}"` | 2장 `verdicts` |
+| `교체 · 기존 {old} · 근거 {quote}` | 2장 `verdicts` |
 | `대체 · {id}로 대체` | 1장 `rejected` 중 `대체 — {id}` — 같은 실행의 뒤 머지 사실이 값을 바꿈 |
 | `기각 · {reason}` | 1장 `rejected`의 그 밖 사유 |
 
@@ -45,7 +45,7 @@ update·add가 같은 본문을 쓰며 `--dry-run`에서도 씁니다. 행이 �
 | # | 사실 | 문서 | 판정 | 출처 |
 |---|---|---|---|---|
 | F1 | 취소 요청의 사유 코드(cancelReasonCd)는 CR 공통코드 문자열이며 미등록 코드는 요청 단계에서 거부됨 | order-cancel-reason.md | 추가 | shop-api@c61a8ab |
-| F2 | 주문 상태 DELETE는 운영자 삭제만 뜻하며 조회 API가 404를 반환함 | order-status.md | 교체 · 기존 `모든 삭제` · 인용 "…" | shop-api@c61a8ab |
+| F2 | 주문 상태 DELETE는 운영자 삭제만 뜻하며 조회 API가 404를 반환함 | order-status.md | 교체 · 기존 `모든 삭제` · 근거 shop-api@c61a8ab | shop-api@c61a8ab |
 | F3 | 취소 요청 DTO는 orderId·cancelReasonCd·memo 필드를 가짐 | order-cancel-reason.md | 검토 삭제 · 코드 전사 | shop-api@c61a8ab |
 | F4 | 취소 이력 적재는 최대 5회 재시도함 | order-cancel-history.md | 건너뜀 | shop-worker@1a2b3c4 |
 | F5 | 취소 사유 코드 CR09(시스템 취소)를 받음 | order-cancel-reason.md | 삭제 | shop-api@c61a8ab |
