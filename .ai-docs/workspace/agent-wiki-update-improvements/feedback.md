@@ -64,3 +64,7 @@
   - source: 사용자 확인 2026-10-02
 - `context` 이 브랜치는 열린 PR #35(`feat/agent-wiki-update-improve`, 같은 agent-wiki 0.7.0)를 대체하며 #35의 glob 제외 규칙·조각마다 머리말 전체와 줄 수·`--max-merges` 기본 10·기록 폴더를 가져오고, 이어 읽기와 #35 기록의 9축 결정은 가져오지 않음 — 추출 단위(머지 5건 묶음 대 머지 1건)는 사용자 문장 "어떤게 더 나을지 드라이런으로 실 추출 비교검증 후 채택하자"대로 실추출 비교로 정하며, #35 닫기는 PR 생성 뒤 사용자가 함
   - source: 사용자 확인 2026-10-02
+- `why` agent-wiki update 추출 단위는 머지 1건(200KB 초과 머지는 조각 묶음)으로 정함 — onestore-cmsapp api 7건·client 5건을 현행 묶음 B(머지 5건·200KB)와 머지 1건 M으로 2회씩 실추출해 채점 에이전트가 같은 주장 묶음으로 대조한 결과 유효 사실 50건 기준 재현율 B 0.84·0.86(평균 0.85), M 0.90·0.84(평균 0.87)로 계획의 선정 규칙(M ≥ B − 5%p면 단순한 M)을 충족함, 대가는 토큰 합계 B 약 26만 대 M 약 59만(약 2.3배, 머지마다 규약·프롬프트 고정 읽기 약 3.9만 토큰 반복)이며 병렬이라 회당 소요는 M이 짧음(최장 에이전트 B 약 99초, M 약 36초)
+  - evidence: scratchpad fx/cmp/score/onestore-cmsapp-api.json, fx/cmp/score/onestore-cmsapp-client.json
+- `constraint` agent-wiki update 머지 1건 단위 추출에서도 sonnet 에이전트가 작은 diff(api 3721cba 807줄, 약 6만 토큰)의 테스트 파일 변경분 460줄 이후를 스스로 건너뛰고 응답에 그 사실을 적은 경우가 30회 중 1회 있었음 — 읽기 총량이 아니라 테스트 파일을 사실 없음으로 보는 판단이며 같은 머지를 담은 148KB 묶음은 두 회차 모두 끝까지 읽음, 사용자 지시로 이 1건을 포함해 채점함
+- `constraint` agent-wiki update 추출의 graph 후보는 같은 입력에서도 회차마다 달라짐 — api b01 간선 후보 B1 1건·B2 3건, client 837eb7d 책임 추가 M1 0건·M2 1건이라, graph는 6장 지도 확인 판정에 기대야 함
