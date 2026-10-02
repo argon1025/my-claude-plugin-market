@@ -27,3 +27,5 @@
 - `context` onestore-cmsapp-front의 위키 registry `defaultBranch`는 사용자가 `develop`으로 전환 완료했으며, 사내판 `plugins/agent-wiki` 미러링은 개인판 변경 뒤 마지막 커밋으로 같은 계획에 포함함
   - source: 사용자 확인 2026-10-02
 - `constraint` 위키 PR 본문에서 `## 검토 방법` 절을 빼면 "squash 금지(문서별 커밋 근거 유지)" 안내가 사라지므로, 위키 원격의 머지 전략 설정으로 squash를 막는 것이 후속 작업임
+- `correction` 위키 PR 템플릿 절 이름은 add SKILL.md·README 외에 `agent-wiki/references/publish.md` 2장(60KB 초과 시 코멘트로 떼는 절)과 3장(add가 읽는 표)도 이름으로 참조하므로 계획의 publish.md 3장 첫 문장만이 아니라 그 두 곳도 고쳐야 했음 — 코멘트로 떼는 절은 `사실 목록`이고 add가 읽는 `제외된 사실 목록`은 본문에 남아 add는 본문만 읽음, 사내판 publish.md에도 같은 수정이 필요함
+  - evidence: agent-wiki/references/publish.md 2·3장
