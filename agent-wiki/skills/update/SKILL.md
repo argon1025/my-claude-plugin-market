@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 `${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `${CLAUDE_PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
-인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 40), `--dry-run`(`apply.md` 7장 보고까지, 커밋·push·PR 없음).
+인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 20), `--dry-run`(`apply.md` 7장 보고까지, 커밋·push·PR 없음).
 
 ## 1. 준비
 
@@ -39,16 +39,19 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --wo
 
 ## 3. 추출
 
-레포별 `batches`마다 Agent 1회를 `model: sonnet`으로 한 메시지에 병렬 실행합니다. 묶음이 1개이고 머지 3건 이하면 메인이 같은 기준으로 직접 처리하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `shas`의 `commits[].diff_path`이고, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포의 `{domain}/{slug}` 목록을 JSON 그대로 넣은 것입니다.
+레포별 `batches`마다 Agent 1회를 `model: sonnet`으로 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `shas`의 `commits[].diff_path`이고, `{지도}`는 그 레포 registry 노드의 `responsibilities`·`hosts`, `deps.{domain}/{slug}` 블록, 도메인 등록 레포의 `{domain}/{slug}` 목록을 JSON 그대로 넣은 것입니다.
 
 ```
 머지 묶음 1개에서 위키에 남길 사실을 추출하라.
-입력: 아래 diff 파일을 순서대로 Read — {diff 목록}. 머리말에 커밋 메시지·변경 파일 목록·절단 여부가 있다.
+입력: 아래 diff 파일을 순서대로 Read — {diff 목록}. 머리말에 커밋 메시지·변경 파일 목록·절단 여부가 있다. 파일이 길면 offset으로 나눠 끝까지 Read한다.
+대상: diff의 변경 줄, 커밋 메시지(PR 제목 포함), 작업 기록이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다.
 작업 기록: 커밋 메시지와 diff에 포함된 작업 기록(plan·feedback 같은 문서)은 코드가 드러내지 못하는 이유·버린 대안·도메인 규칙의 원천이다. 그 추가 줄을 코드 diff와 함께 후보로 보되, 미확정 계획·작업 현황은 1장대로 담지 않는다.
-기준: `sed -n '/^## 1\./,/^## 2\./p' {doc_contract_path}` — 후보 문장마다 적용한다.
-graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실이 아니라 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)를 여는 diff는 현재 responsibilities가 덮지 않으면 responsibilities add 후보다. 간선 to는 등록 레포의 `{domain}/{slug}`로 쓰고, 등록되지 않은 레포는 이름 그대로 둔다.
+기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 후보 문장마다 1장을 적용하고 2장으로 위치를 정한다.
+graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실이 아니라 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`, 현재 지도 {지도}. 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)를 여는 diff는 현재 responsibilities가 덮지 않으면 responsibilities add 후보다. 간선 to는 등록 레포의 `{domain}/{slug}`만 쓰고, 등록되지 않은 대상은 후보로 내지 않는다.
 금지: diff 밖 파일 열기, 사전 지식으로 채우기.
 병합: 묶음 안 같은 주장은 하나로 합치고 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남긴다.
+scope: 2장 위치로 root(도메인 루트) 또는 repo(레포 폴더) — 한 사실이 두 성격이면 2장 분리대로 둘로 나눈다.
+deleted: diff가 기존 동작·값·코드값을 지우면 true로 두고 fact는 지워진 대상을 지우기 전 상태 한 문장으로 쓴다.
 set: 사실이 닫힌 집합(enum·공통코드·상태·허용 채널처럼 원소가 정의된 값) 원소의 뜻을 말하면 정의 식별자(심볼 또는 공통코드 그룹 이름), 아니면 빈 문자열로 둔다. 규칙 문장이 조건·결과로 코드를 인용할 뿐이면 빈 문자열이다.
 set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가 보이는 hunk)를 보여 주면 전 원소 수, 아니면 0. 정의 전체가 보이면 원소마다 뜻을 사실로 남긴다.
 출력: {work}/facts/{slug}/{batch_id}.json에 Write —
@@ -57,7 +60,9 @@ set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가
             "code": "저장소 상대 경로 또는 경로#심볼",
             "set": "정의 식별자, 아니면 빈 문자열",
             "set_total": 0,
-            "quote": "기존 동작을 바꾸는 사실이면 그 의도를 밝힌 커밋 메시지·plan·feedback 원문, 없으면 빈 문자열",
+            "scope": "root|repo",
+            "deleted": false,
+            "quote": "기존 동작을 바꾸는 사실이면 그 의도를 밝힌 PR 제목·커밋 메시지·plan·feedback 원문, 없으면 빈 문자열",
             "shas": ["근거 머지 sha7"]}],
  "graph": [{"key": "responsibilities|hosts|deps", "op": "add|remove|replace",
             "value": "책임 문장, {\"env\", \"host\"}, {\"to\", \"desc\"} 중 하나", "old": "교체·삭제면 기존 값",
@@ -69,11 +74,11 @@ set_total: set이 있고 diff가 정의 전체(새 enum 파일, 선언 전체가
 
 메인이 `{work}/facts/**/*.json`을 모두 읽어 정리합니다.
 
-- **병합**: 묶음 사이 같은 주장은 하나로 합치고 `shas`는 합집합
+- **병합**: 묶음 사이 같은 주장은 하나로 합치고 `shas`는 합집합 — `deleted`가 다른 두 사실은 병합하지 않음
 - **대체**: 같은 대상의 값이 다른 두 사실은 `order`에서 늦은 머지의 사실만 남기고 앞 사실은 `rejected`에 `대체 — {남긴 사실 id}`로 넘김, 앞 사실이 다른 주장도 담으면 충돌하는 주장만 `fact`에서 빼고 뺀 주장을 같은 사유로 넘김 — 같은 실행 안의 값 변화는 뒤 머지 diff가 변경 근거라 7장 다른 값 판정 대상이 아님
 - **번호**: 사실마다 `order`에서 가장 늦은 근거 머지의 `date`를 붙이고 그 순서로 `F1`부터 `id`를 매김 — 문서별 사실 목록도 이 순서
 
-`apply.md` 0장 형식으로 `{work}/facts.json`을 씁니다. `slug`는 묶음의 레포, `source`는 `shas`마다 `{slug}@{sha7}`, `check`는 `[{"repo_path": repos[slug].path, "rev": 가장 늦은 근거 머지 sha}]`, `input`은 빈 배열입니다. `graph`는 같은 방식으로 병합·대체하고 `G1`부터 번호를 매겨 같은 키로 `{work}/graph-candidates.json`에 씁니다. 2절 스크립트가 준비한 레포는 0장 레포 읽기에서 다시 준비하지 않습니다.
+`apply.md` 0장 형식으로 `{work}/facts.json`을 씁니다. `slug`는 묶음의 레포, `source`는 `shas`마다 `{slug}@{sha7}`, `check`는 `source`의 레포마다 `{"repo_path": repos[레포].path, "rev": 그 레포의 가장 늦은 근거 머지 sha}`, `scope`·`deleted`는 추출 값 그대로, `input`은 빈 배열입니다. `graph`는 같은 방식으로 병합·대체하고 `G1`부터 번호를 매겨 같은 키로 `{work}/graph-candidates.json`에 씁니다. 2절 스크립트가 준비한 레포는 0장 레포 읽기에서 다시 준비하지 않습니다.
 
 ## 5. 반영
 
