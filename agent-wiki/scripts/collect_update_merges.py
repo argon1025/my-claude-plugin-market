@@ -12,7 +12,7 @@ from pathlib import Path
 DIFF_MAX_BYTES = 400_000
 # 추출 에이전트 1회가 읽는 묶음 상한 — 건수는 사실 병합 품질, 바이트는 컨텍스트 예산.
 BATCH_MERGES = 5
-BATCH_BYTES = 500_000
+BATCH_BYTES = 200_000
 # 머리말에 싣는 딸린 커밋 수 상한 — 대형 머지에서 머리말이 diff를 밀어내지 않게 함.
 MESSAGE_MAX_COMMITS = 20
 # 생성물·잠금 파일처럼 사실이 나올 수 없는 경로만 뺀다.
@@ -64,7 +64,8 @@ def first_parent(path, span):
         parts = line.split("\t", 3)
         if len(parts) == 4:
             sha, parents, when, subject = parts
-            rows.append({"sha": sha, "parents": len(parents.split()), "date": when, "subject": subject})
+            rows.append({"sha": sha, "parents": len(parents.split()), "date": when, "subject": subject,
+                         "_parent": parents.split()[0] if parents else ""})
     return rows
 
 
@@ -124,7 +125,7 @@ def main():
     ap.add_argument("--domain", required=True)
     ap.add_argument("--out", required=True, help="diff와 work.json을 쓸 디렉터리")
     ap.add_argument("--start", action="append", default=[], metavar="SLUG=REV", help="커서 없는 레포의 시작 지점(HEAD 또는 sha)")
-    ap.add_argument("--max-merges", type=int, default=40)
+    ap.add_argument("--max-merges", type=int, default=20)
     a = ap.parse_args()
 
     wiki, workspace, out = (Path(p).expanduser() for p in (a.wiki, a.workspace, a.out))
@@ -181,6 +182,10 @@ def main():
             continue
 
         rows = first_parent(path, f"{cursor}..{head}")
+        # 커서가 first-parent 위에 있으면 범위 첫 행의 첫 부모가 커서이고, 행이 없으면 커서가 head임.
+        if rows and rows[0]["_parent"] != cursor:
+            work["skipped"][slug] = f"커서 {cursor[:7]}가 origin/{branch} first-parent 밖 — registry defaultBranch 확인"
+            continue
         # 정렬 키는 레포 안 누적 최대 시각 — committer date가 first-parent 순서와 어긋나도 레포 안 선택이
         # 앞부분이 되어 커서가 선택되지 않은 머지를 넘지 않음, 타임존이 달라 epoch로 비교.
         latest = 0.0
@@ -208,7 +213,7 @@ def main():
     picked = {id(r) for r in chosen}
     for slug, rows in spans.items():
         entry = work["repos"][slug]
-        entry["commits"] = [{k: v for k, v in r.items() if k != "_key"} for r in rows if id(r) in picked]
+        entry["commits"] = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows if id(r) in picked]
         entry["remaining"] = len(rows) - len(entry["commits"])
         entry["batches"] = batches(entry["commits"])
     work_path.write_text(json.dumps(work, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
