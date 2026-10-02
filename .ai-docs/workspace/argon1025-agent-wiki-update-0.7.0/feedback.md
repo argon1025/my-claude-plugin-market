@@ -1,0 +1,30 @@
+# argon1025-agent-wiki-update-0.7.0 작업 기록
+
+- `context` 이슈 #37(agent-wiki 0.7.0 update 사내 실행분 개선 후보 9건)은 담당 에이전트가 비판 검토하고 모의 실행으로 확인해 수용 여부를 정하며, 축별 판정은 루트 `agent-wiki-update-issue-37-review.md`에 두고 구현은 사용자 검토 뒤 축 단위로 진행함 — 사용자 문장 "스킬 개선 이슈 검토 진행", "무조건 신뢰하지말고 비판검토, 모의 실행으로 확인하여 수용여부 판단할것"
+  - source: 사용자 확인 2026-10-03
+- `why` agent-wiki update `SKILL.md` 6장 `원복 있음` 커서 규칙은 llm-wiki update의 `--check` 형식 검사 실패 원복(다시 실행하면 통과할 수 있음)을 승계한 것이고, agent-wiki의 원복 원천인 검토 reject는 검토가 고칠 수 없다고 본 내용 판정이라 재실행으로 풀리지 않음 — 모의 실행에서 코드 전사 단일 사실 신규 문서는 검토 2회 모두 reject, 같은 머지 재추출 2회 모두 같은 사실을 다시 냄
+  - evidence: git show e22c253^:llm-wiki/skills/update/SKILL.md 6장, agent-wiki/skills/update/SKILL.md 6장
+- `constraint` agent-wiki `collect_update_merges.py`는 diff를 경로 순으로 조각내므로 `.ai-docs`·`.devcenter` 같은 점으로 시작하는 작업 기록 경로는 첫 조각에만 들어가고, 조각마다 같은 머리말(딸린 커밋 메시지 최대 20건)을 반복함 — 대형 머지 조각 사이 중복 사실은 작업 기록이 아니라 반복 머리말과 같은 동작을 다시 말하는 테스트 파일에서 나옴(pigeon-trade f8fc090 둘째 조각 사실 16건 중 11건이 첫 조각과 같은 주장)
+  - evidence: agent-wiki/scripts/collect_update_merges.py extract_diff
+- `constraint` agent-wiki `apply.md` 3장 검토 에이전트는 병렬로 돌면서 다른 문서를 작업 트리에서 읽어, 다른 검토가 아직 판정하지 않은 이번 실행 불릿을 근거로 자기 불릿을 6장 겹침으로 지움 — 모의 실행 2회 모두 "도메인 루트 문서가 이번 반영에서 이미 소유"를 근거로 삭제했고, 겹침 근거를 `git show HEAD:` 실행 전 내용으로 한정하자 2회 모두 겹침 대신 위치 삭제(4장 재배정으로 추적됨)로 바뀜
+  - evidence: agent-wiki/references/apply.md 3장
+- `constraint` agent-wiki update 검토는 현행 프롬프트만으로 같은 머지의 후속 커밋이 폐기한 작업 기록 설계(pigeon-trade f8fc090 plan.md의 단일 aggregate(stockId) 핸들러·후방 구간 재집계)를 rev 코드 불일치로 지움 — rev 코드 대조 줄을 더한 프롬프트와 결과가 같아 작업 기록 사실 정확도는 검토 프롬프트 변경 없이 유지됨
+  - evidence: agent-wiki/references/apply.md 3장 코드 확인
+- `constraint` 위키 원격이 Bitbucket인 사내판의 PR 게시 절차는 사내 고유 파일 `plugins/agent-wiki/references/publish.md`에 있고 이 저장소 `agent-wiki/references/publish.md`는 `gh pr create --body-file` 기준이라, 이슈 #37의 Bitbucket REST·curl 게시 경로는 사내판에서만 고침
+  - evidence: agent-wiki/references/publish.md 2장
+- `context` 이슈 #37 모의 실행은 사내 레포가 이 머신에 없어 같은 front↔api 구조의 personal-stock-trading(pigeon-trade·pigeon-trade-dashboard)으로 했으며, 추출 사실 73건의 scope 오분류는 1건으로 이슈 실행의 위치 삭제 17/64를 재현하지 못해 scope 예시 보강은 다음 사내 실행 수치로 다시 판단함
+- `context` 이슈 #37 판정은 사용자 확인으로 확정됨 — 원복 커서 규칙 전체 삭제, 신규 문서 사전 필터 기각, 겹침 판정 근거를 이번 실행 전 내용으로 한정, 작업 기록 source_kind·correction 우선 규칙 기각, 같은 머지 상충 사실 대체 규칙 현행 유지, 특이 사항 4건 기각, scope 예시 보강 기각, 조각 중복 기각, 지도를 위키 clone 파일 경로로 전달하며, 구현 뒤 모의 드라이런으로 확인함 — 사용자 문장 "동의, 다 하고 수정된 방안으로 문제 수정 후 모의 드라이런 테스트 진행"
+  - source: 사용자 확인 2026-10-03
+- `context` 위키 PR 본문(`agent-wiki/templates/wiki-pr.md`)은 추출 사실 표 하나로 줄이고 행마다 반영 문서와 액션을 적음 — 사용자 문장 "Pr내 내용을 추출된 사실 표 하나만 제공하고 표행마다 어떤파일에 반영 했는지만 적는게 어떨까함 액션이랑(수정, 추가, 삭제)"이며, add가 처리할 건너뜀·미해결 충돌 행에 필요한 기존 값 칸, 반영되지 않은 사실의 사유 액션, 지도 후보 G행을 같은 표에 두는 보완안으로 확정해 레포·제외된 사실 목록·문서별 적용 내역·레포 지도 절을 없앰
+  - source: 사용자 확인 2026-10-03
+- `why` 위키 PR 사실 표의 액션 칸은 사실이 거친 판정을 장 순서대로 ` → `로 잇고 우선순위로 하나를 고르지 않음 — 메인은 사실 하나가 불릿 몇 개로 반영됐는지 알 수 없어 검토가 일부만 지웠는지 가를 근거가 없고, 우선순위 선택은 부분 삭제 사실의 반영(이슈 #37 F12)과 재배정 사실의 원 문서 교체(F9)를 가림
+- `context` 위키 원격 호스트별 게시 수행 방안(Bitbucket REST·curl 등)은 `publish.md`에 따로 안내하지 않고 현행을 유지함 — 사용자 문장 "일단 현행유지, 에이전트에는 목표만 제시하고 해당 수행방안에 대해서는 별도 가이드 안해도될듯"
+  - source: 사용자 확인 2026-10-03
+- `context` 추출 위치 판정 예시 보강은 기각하되, 다음 사내 update 실행에서도 검토 위치 삭제가 사실의 20%를 넘으면 위치 판정을 추출(sonnet)에서 배정 단계 메인으로 옮기는 안을 비교함 — 그때 위치 삭제를 반대 분류와 두 성격 미분리로 나눠 기록함
+  - source: 사용자 확인 2026-10-03
+- `correction` 이슈 #37의 Bitbucket REST·curl 게시 절차는 사내판 `plugins/agent-wiki/references/publish.md`에도 따로 기록하지 않음 — 호스트별 수행 방안을 안내하지 않고 현행을 유지하기로 한 사용자 결정에 따름
+  - source: 사용자 확인 2026-10-03
+- `constraint` agent-wiki update 4장 재배정 반영은 같은 실행에서 다른 사실이 만든 불릿을 교체할 수 있어, PR 사실 표에서 원래 사실 행은 `추가`로 남고 그 불릿을 바꾼 재배정 사실 행만 `수정`으로 보임 — 0.8.0 모의 드라이런에서 F29가 `market-calendar-api.md`의 F21 휴장 판정 문장을 교체함
+  - evidence: agent-wiki/references/apply.md 4장, agent-wiki/templates/wiki-pr.md
+- `constraint` agent-wiki update 반영 에이전트는 사실 하나를 불릿 여러 개로 나눠 반영하므로 검토 `removed`의 `ids`만으로는 사실이 일부만 지워졌는지 알 수 없음 — 0.8.0 모의 드라이런에서 F10·F11이 불릿 2개씩으로 나뉘어 모두 검토 삭제됨
+  - evidence: agent-wiki/references/apply.md 2·3장

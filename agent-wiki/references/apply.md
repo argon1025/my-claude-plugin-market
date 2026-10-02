@@ -61,6 +61,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 자료 대조: `input`이 있는 사실은 원문 파일과 대조해 원문에 없는 값·식별자를 지우고 `removed`에 `자료에 없음`으로 적는다. 원문에 있는 값이 check 시점 코드와 다르면 7장 시간 순으로 판정한다 — 그 코드를 바꾼 커밋(`git -C {repo_path} log -S'{식별자}' {rev}`)의 메시지·작업 기록이 변경 의도를 밝히면 불릿을 코드 값으로 고치고 `edited`에 `시간 순 — {sha7}`로 적는다. 의도를 찾지 못하거나 코드가 잘못 작성된 것으로 보이면 불릿을 지우고 `conflicts`에 두 값을 적는다.
 범위: 이번 변경 줄, description, 이번에 손댄 코드값 표만 고친다. 예외로 `전 N종` 표의 원소가 원본 정의와 다르면 원본에 맞추고, 도메인 루트 문서에 없는 `## 적용 대상`은 문서에 이미 있는 사실의 레포·모듈로만 채운다.
 위치: 2장 위치에 맞지 않는 불릿은 삭제하고 removed에 reason `위치`, fact(원 사실의 조건·식별자를 담아 단독으로 읽히는 한 문장), target(옮길 문서의 knowledge/{domain} 기준 경로, 맞는 문서가 없으면 2장 파일명으로 정한 새 경로)을 적는다.
+겹침: 6장 한 곳 소유와 위치 판정에서 다른 문서가 같은 사실을 가졌는지는 이번 실행 전 내용(`git -C {tmp} show HEAD:knowledge/{domain}/{경로}`)으로만 판단한다 — 다른 문서의 이번 실행 변경은 병렬로 도는 다른 검토가 지우고 있을 수 있다.
 고칠 수 없는 문서(한 주제가 서지 않음, 남길 불릿이 없음 등)는 reject를 true로 두고 사유를 적는다.
 금지: 새 사실 추가, 이 문서 밖 편집.
 출력: {work}/review/{doc_slug}.json에 Write —
@@ -74,7 +75,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 4. 재배정
 
-검토가 reason `위치`로 삭제한 항목마다 `fact`는 그 항목 값으로, 나머지 키는 `ids`의 사실 행 그대로 둔 행을 `target` 문서에 배정해(없는 문서는 1장 신규 문서 규칙) `{work}/assign-re.json`에 쓰고, 그 문서에만 2·3장을 다시 실행합니다. 입력은 `{work}/assign-re.json`, 출력은 `{work}/applied/{doc_slug}.re.json`·`{work}/review/{doc_slug}.re.json`이며, 재배정한 사실은 `.re` 판정이 앞 판정보다 우선합니다. 두 번째 검토도 위치로 삭제한 사실은 `위치 재배정`으로 넘깁니다.
+검토가 reason `위치`로 삭제한 항목마다 `fact`는 그 항목 값으로, 나머지 키는 `ids`의 사실 행 그대로 둔 행을 `target` 문서에 배정해(없는 문서는 1장 신규 문서 규칙) `{work}/assign-re.json`에 쓰고, 그 문서에만 2·3장을 다시 실행합니다. 입력은 `{work}/assign-re.json`, 출력은 `{work}/applied/{doc_slug}.re.json`·`{work}/review/{doc_slug}.re.json`입니다. 두 번째 검토도 위치로 삭제한 사실은 `위치 재배정`으로 넘깁니다.
 
 ## 5. 원복
 
@@ -86,7 +87,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ```
 레포 {slug}의 지도 변경 후보를 코드로 확인해 적용할 변경만 남겨라.
-입력: {work}/graph-candidates.json 중 slug가 "{slug}"인 행, 현재 노드 {registry 노드 JSON}, 현재 간선 {deps 블록 JSON}, 등록 레포 {domain/slug·remote·defaultBranch·hosts 목록}.
+입력: {work}/graph-candidates.json 중 slug가 "{slug}"인 행, 현재 지도 {tmp}/registry.json의 `domains.{domain}.repos`(현재 노드는 `{slug}`, 키 목록이 등록 레포와 그 remote·defaultBranch·hosts)와 {tmp}/deps.json의 `deps."{domain}/{slug}"` 블록(현재 간선).
 기준: `sed -n '/^## 9\./,$p' {doc_contract_path}`
 코드 확인: 현재 레포는 후보 check의 rev를 `git -C {repo_path} grep|show {rev}`로, 간선 대상은 준비된 `{workspace.root}/{target}`의 `origin/{defaultBranch}`를 읽는다.
 판정: 후보마다 동일·추가·삭제·교체·기각 — 9장 변경 근거·교체를 적용하고 확인하지 못하면 기각 `코드 미확인`, 대상이 등록 레포가 아니면 기각 `상대 미등록`. 현재 간선에 같은 to가 있으면 add가 아니라 그 간선 desc에 사용처를 더한 replace로 둔다.
