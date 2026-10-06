@@ -15,3 +15,5 @@
   - evidence: onestore-devcenter-claude-plugin-marketplace/plugins/devcenter-pr/skills/review/SKILL.md
 - `context` 개인판 공통 파일 `agent-wiki/skills/add/SKILL.md` 24행 예시에 사내 경로 `.devcenter/workspace/progress/*/feedback.md`가 남아 있으나, 이번 범위에서는 agent-wiki를 바꾸지 않고 후속 작업으로 남김
   - evidence: agent-wiki/skills/add/SKILL.md
+- `constraint` plan-workflow·devcenter-flow 세션 시작 훅은 플러그인 루트의 `config.json`(`workspace.root`)이나 `.claude-plugin/plugin.json`(`name`)을 읽지 못하면 python 예외를 `2>/dev/null || exit 0`으로 삼켜 작업 기록 규약을 전혀 주입하지 않으므로, 두 파일은 rsync 제외 대상이라도 각 판에 반드시 있어야 함
+  - evidence: plan-workflow/hooks/session_start.sh

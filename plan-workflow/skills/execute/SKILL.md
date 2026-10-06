@@ -1,14 +1,14 @@
 ---
 name: execute
-description: Use when implementing an approved plan snapshot saved at .ai-docs/workspace/{slug}/plan.md, typically in a fresh session after planning ("계획 실행", "플랜 실행", "execute the plan") — reads the plan first, one task → verification → one commit, stops and re-plans on deviation, appends feedback.md as facts surface. NOT for writing a plan (that is /plan-workflow:planning's job).
+description: Use when implementing an approved plan snapshot saved as plan.md in the session's workspace folder, typically in a fresh session after planning ("계획 실행", "플랜 실행", "execute the plan") — reads the plan first, one task → verification → one commit, stops and re-plans on deviation, appends feedback.md as facts surface. NOT for writing a plan (that is this plugin's planning skill's job).
 ---
 
 승인된 계획이 계약이며, 계획에서 벗어나는 결정은 사용자에게 되돌립니다. 기록 규칙은 세션에 주입된 작업 기록 규약을 따릅니다.
 
 ## 1. 사전 확인
 
-- **위치**: 세션 `## 현재 워크스페이스` 블록의 slug와 주입된 `feedback.md`를 확인하고, `.ai-docs/workspace/{slug}/plan.md` 전문을 `## 의도`부터 읽음
-- **선행 읽기**: `plan.md`에 `## 선행 읽기` 절이 있으면 그 문서를 코드보다 먼저 읽음
+- **위치**: 세션 `## 현재 워크스페이스` 블록의 slug·기록 폴더와 주입된 `feedback.md`를 확인하고, 기록 폴더의 `plan.md` 전문을 `## 의도`부터 읽음
+- **선행 읽기**: `plan.md`의 `## 선행 읽기` 문서와, 세션에 주입된 위키 카탈로그에서 손대는 파일을 다루는 문서(관례·스타일 문서 포함)를 코드보다 먼저 읽음. 카탈로그가 컨텍스트에 없으면 그렇다고 말하고 선행 읽기 경로만 읽음
 - **부재 시 정지**: `plan.md`가 없으면 즉석에서 계획을 만들지 않고 멈춰서 물음
 - **실행 대상 판정**: 절이 여럿이면 앞에서부터 각 절의 커밋 분해가 git log와 코드에 이미 반영됐는지 대조해 미실행 절만 실행하고, 폐기 선언된 절과 항목은 건너뛰며, 완료 여부가 갈리면 멈춰 물음
 - **관례**: 손댈 파일 주변 코드가 세운 관례를 따름
