@@ -1,11 +1,11 @@
 # plan-workflow
 
-계획 스냅샷과 작업 중 알게 된 사실을 저장소 안 `.ai-docs/workspace/{slug}/`에 남기는 규약을 세션에 주입하고, 계획 수립·실행 스킬 2종을 제공하는 플러그인입니다.
+계획 스냅샷과 작업 중 알게 된 사실을 저장소 안 `.ai-docs/workspace/{slug}/`(상위 경로는 `config.json`의 `workspace.root`)에 남기는 규약을 세션에 주입하고, 계획 수립·실행 스킬 2종을 제공하는 플러그인입니다.
 
 | 스킬 | 트리거 예 | 역할 |
 | --- | --- | --- |
 | `/plan-workflow:planning` | "계획 세워줘", "플랜 모드", "기능 설계" | 의도 확인, 요청 분해, 확인 축, 최소 코드 사다리, 정해진 필수 절을 갖춘 계획, 승인 시 `plan.md` 스냅샷 커밋 후 세션 종료(기존 계획이 있으면 `## 추가 계획` 절로 덧붙임) |
-| `/plan-workflow:execute` | "계획 실행", "플랜 실행" | 새 세션에서 `plan.md`와 `## 선행 읽기` 문서를 읽어 미실행 절만 태스크 → 검증 → 커밋 단위로 실행, 어긋나면 정지 후 `## Re-plan` |
+| `/plan-workflow:execute` | "계획 실행", "플랜 실행" | 새 세션에서 `plan.md`와 `## 선행 읽기`·위키 카탈로그 문서를 읽어 미실행 절만 태스크 → 검증 → 커밋 단위로 실행, 어긋나면 정지 후 `## Re-plan` |
 
 ## 설치
 
@@ -19,12 +19,19 @@
 ## 동작 방식
 
 - **SessionStart**: `rules/agent-guide.md`(약 1.7KB)와 `## 현재 워크스페이스` 블록을 주입하며, matcher가 없어 startup·resume·clear·compact 모두에서 다시 실행됨
-- **slug 계산**: 현재 브랜치명의 `/`를 `-`로 바꾼 값을 훅이 계산해 값으로 주입하며, `main`·`master`·`develop`이나 detached HEAD면 미확정으로 표시해 첫 기록 시 작업 주제로 폴더를 정하게 함
+- **slug 계산**: 현재 브랜치명의 `/`를 `-`로 바꾼 값을 훅이 계산해 값으로 주입하며, `main`·`master`·`develop`이나 detached HEAD면 미확정으로 표시해 첫 기록 시 이슈 키 또는 작업 주제로 폴더를 정하게 함
 - **기록 자동 로드**: 현재 slug 폴더에 `feedback.md`가 있으면 전문을 함께 주입하고(4,000바이트 초과 시 최근 항목만), `plan.md`가 있으면 구현은 `/plan-workflow:execute`, 추가 계획은 `/plan-workflow:planning`으로 가도록 안내함
 - **PostToolUse(ExitPlanMode)**: 계획 승인 직후 하네스의 구현 시작 지시와 같은 시점에 핸드오프 규칙 한 줄을 주입해, 승인한 세션이 그대로 구현으로 넘어가지 않고 스냅샷 커밋과 `/plan-workflow:execute` 안내에서 끝나게 함
+- **위키 연동**: planning은 권장안을 세션에 주입된 위키 카탈로그·팀 결정과 대조하고 `## 선행 읽기`에 카탈로그 문서를 적으며, execute는 손대는 파일을 다루는 카탈로그 문서를 코드보다 먼저 읽음
 - **형식 지연 로드**: `feedback.md` 항목 형식은 `references/record-format.md`에, `plan.md` 필수·선택 절과 순서는 `references/plan-format.md`에 두고 각각 첫 기록 전·계획 최종화 전에 읽게 하여 상시 주입에서 제외함
 
 규약 준수 여부는 검사하지 않습니다. 끄려면 `/plugin`에서 플러그인을 비활성화합니다.
+
+## 설정
+
+| 키 | 기본값 | 의미 |
+| --- | --- | --- |
+| `workspace.root` | `.ai-docs/workspace` | 기록 폴더의 상위 경로(저장소 루트 기준), 규약·워크스페이스 블록의 경로가 이 값으로 치환됨 |
 
 ## 산출물
 

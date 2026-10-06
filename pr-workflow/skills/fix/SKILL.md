@@ -1,29 +1,30 @@
 ---
 name: fix
-description: Use when applying review comments on a pull request as the PR author ("리뷰 반영", "코멘트 반영", "리뷰 코멘트 처리", right after a /pr-workflow:review report) — triages every unresolved comment (AI + human) into 수용/기각/이미 해결 with evidence, gets that triage approved, fixes accepted items as commits, then after one more approval pushes and replies to each thread. NOT for reviewing a PR (that is /pr-workflow:review's job). Requires running inside the target repo's checkout.
+description: Use when applying review comments on a pull request as the PR author ("리뷰 반영", "코멘트 반영", "리뷰 코멘트 처리", right after this plugin's review report) — triages every unresolved comment (AI + human) into 수용/기각/이미 해결 with evidence, gets that triage approved, fixes accepted items as commits, then after one more approval pushes and replies to each thread. NOT for reviewing a PR (that is this plugin's review skill's job). Requires running inside the target repo's checkout.
 ---
 
 ## 계약 로드
 
 - `${CLAUDE_PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 금지 행동
 - `${CLAUDE_PLUGIN_ROOT}/references/review-comment.md` — 어떤 스레드를 집고 어떤 접두사로 답하는지
+- `${CLAUDE_PLUGIN_ROOT}/references/host.md` — 코멘트 조회, push 리모트, 답글 방식
 
 ## 가드레일
 
 - **force-push 금지**: 어떤 경우에도 하지 않음
 - **검증 실패**: push하지 않고 중단해 보고함. 재시도 루프도 우회도 없음
-- **신규 발견 금지**: 리뷰는 `/pr-workflow:review`의 일이며, 수정 중 발견한 문제는 코멘트가 아니라 보고로 남김
+- **신규 발견 금지**: 리뷰는 이 플러그인의 `review` 스킬의 일이며, 수정 중 발견한 문제는 코멘트가 아니라 보고로 남김
 - **승인 2회 고정**: 판정 세트 승인과 외부 쓰기 묶음 승인. 항목별로 묻지 않음
 - **무단 생략 금지**: 기각·보류·미실행 검증을 전부 보고함
 - **동일 저장소**: 다른 저장소의 PR은 거절하고 그 체크아웃을 안내함
 
 ## 1. PR 확정·소스 브랜치 체크아웃
 
-`pr-protocol.md`로 좌표와 PR 번호를 확정합니다. 현재 브랜치가 PR의 소스 브랜치가 아니면 체크아웃하고, 작업 트리가 dirty면 중단해 보고합니다. push 대상은 소스 브랜치를 보유한 리모트(fork면 `origin`)입니다.
+`pr-protocol.md`로 좌표와 PR 번호를 확정합니다. 현재 브랜치가 PR의 소스 브랜치가 아니면 체크아웃하고, 작업 트리가 dirty면 중단해 보고합니다. push 대상은 `host.md` 6장의 push 리모트입니다.
 
 ## 2. 미해결 스레드 수집
 
-호스트 도구로 인라인·최상위 코멘트를 AI·사람 구분 없이 가져오고, 아래를 제외합니다.
+`host.md` 3장으로 인라인·최상위 코멘트를 AI·사람 구분 없이 가져오고, 아래를 제외합니다.
 
 - **resolved 스레드**
 - **`[AI 반영` 답글이 달린 스레드**
@@ -44,11 +45,11 @@ description: Use when applying review comments on a pull request as the PR autho
 
 "푸시 + 답글 게시 진행?"을 한 번 묻습니다.
 
-- **승인 시**: push 후 `review-comment.md`의 `[AI 반영]` 양식으로 스레드별 답글을 붙임
+- **승인 시**: push 후 `review-comment.md`의 `[AI 반영]` 양식으로 스레드별 답글을 `host.md` 7장의 답글 방식으로 원 코멘트에 붙임
 - **거절 시**: 아무것도 밖으로 나가지 않으며 로컬 커밋 상태를 보고함
 
 ## 6. 핸드오프
 
-- **재검증**: 마지막 한 줄 `재검증: /pr-workflow:review 재실행`
+- **재검증**: 마지막 한 줄 `재검증: /<플러그인>:review 재실행`. `<플러그인>`은 이 스킬을 부른 이름의 콜론 앞부분임
 - **종료 조건**: 재리뷰가 Blocker·Bug 0건을 보고하고 이전 발견이 전부 해결이거나 기각이 수용되면 루프가 끝남
 - **교착**: 3회차에도 갈리는 항목은 4회차 대신 사용자에게 넘김

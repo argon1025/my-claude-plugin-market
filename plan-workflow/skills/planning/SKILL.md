@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Use when requirements are unclear or a non-trivial feature is being planned in plan mode ("계획 세워줘", "플랜 모드", "기능 설계") — intent gate, request intake, coverage axes, minimum-code ladder per new unit, self-contained plan, approval snapshot commit to .ai-docs/workspace/{slug}/plan.md, appending a `## 추가 계획` section instead of overwriting when a plan already exists. NOT for executing a saved plan (that is /plan-workflow:execute's job).
+description: Use when requirements are unclear or a non-trivial feature is being planned in plan mode ("계획 세워줘", "플랜 모드", "기능 설계") — intent gate, request intake, coverage axes, minimum-code ladder per new unit, self-contained plan, approval snapshot commit to plan.md in the session's workspace folder, appending a `## 추가 계획` section instead of overwriting when a plan already exists. NOT for executing a saved plan (that is this plugin's execute skill's job).
 ---
 
 플랜 모드의 기본 흐름(탐색 → 질문 → 계획 → 승인) 위에 얹는 절차입니다. 기록 위치·slug·feedback.md 규칙은 세션에 주입된 작업 기록 규약과 `## 현재 워크스페이스` 블록을 따릅니다. 요청은 사양이 아닌 의도이므로 사양을 쓰는 것은 에이전트의 일이고, 트레이드오프를 제시한 뒤의 최종 결정은 사용자의 것입니다.
@@ -39,12 +39,12 @@ description: Use when requirements are unclear or a non-trivial feature is being
 
 ## 5. 질문
 
-- **검색 선행**: 코드를 먼저 찾고(광범위 탐색은 Explore 서브에이전트 위임) 도출 가능한 것은 묻지 않음
-- **선택형**: 질문마다 권장안·근거·대안·트레이드오프를 갖춘 이름 붙은 후보로 제시함
+- **검색 선행**: 코드와 세션에 주입된 위키 카탈로그를 먼저 찾고(광범위 탐색은 Explore 서브에이전트 위임) 도출 가능한 것은 묻지 않음
+- **선택형**: 질문마다 권장안·근거·대안·트레이드오프를 갖춘 이름 붙은 후보로 제시하며, 권장안을 위키·기록된 팀 결정과 대조해 충돌하면 권장 대신 충돌을 드러냄
 - **독립 라운드**: 해석 사이에서 조용히 고르지 않으며, 다른 답에 따라 문구가 바뀌는 질문은 다음 라운드로 미룸
 - **재점검**: 답은 새 증거이므로 각 축을 다시 확인하며, `일단 그 정도?` 같은 유보 열거는 목록이 미완이라는 신호임
 - **위임 답변**: `알아서 해주세요`·`모르겠어요`는 답이므로 권장안을 결정으로 고정하고 다시 묻지 않으며, 비권장안을 고집하면 근거를 `why` 항목으로 기록함
-- **확정 조건**: 사용자 확인 또는 코드 경로를 인용할 수 있는 축만 확정되며, 미확정 축이 하나라도 있으면 계획은 최종이 아님
+- **확정 조건**: 사용자 확인·코드 경로·위키 문서를 인용할 수 있는 축만 확정되며, 미확정 축이 하나라도 있으면 계획은 최종이 아님
 
 ## 6. 계획 자기완결
 
@@ -56,9 +56,9 @@ description: Use when requirements are unclear or a non-trivial feature is being
 ## 7. 핸드오프
 
 - **slug**: 세션 워크스페이스 블록의 slug를 쓰고, 미확정이면 작업 주제로 slug를 정해 사용자에게 알림
-- **모드 판정**: `.ai-docs/workspace/{slug}/plan.md`가 이미 있으면 추가 모드로 전환한다고 사용자에게 알리고, 없을 때만 신규로 씀
+- **모드 판정**: 워크스페이스 블록의 기록 폴더에 `plan.md`가 이미 있으면 추가 모드로 전환한다고 사용자에게 알리고, 없을 때만 신규로 씀
 - **충돌**: 기존 `plan.md`가 이번 작업과 무관한 다른 주제의 계획이면 덧붙이지 않고 충돌을 보고한 뒤 정지함
 - **추가 절**: 추가 모드에서는 승인된 계획을 `## 추가 계획 YYYY-MM-DD — {한 줄 계기}` 절로 파일 끝에 덧붙이며 앞 절은 한 글자도 고치거나 지우지 않음
 - **폐기 선언**: 앞 절의 결정이 무효가 되면 그 대목을 지우는 대신 추가 절 첫 불릿에 `폐기: {절 이름 또는 항목}`과 근거를 적어 실행이 건너뛰게 함
 - **스냅샷 커밋**: 승인 시 신규는 `plan.md`에 그대로 쓰고 추가는 파일 끝에 덧붙인 뒤, 의도 `context` 항목과 계획 중 드러난 `constraint`·`correction`을 `feedback.md`에 남겨 한 커밋으로 남김
-- **승인 후 순서**: ① `plan.md`·`feedback.md` 기록 ② 한 커밋 ③ 새 세션에서 `/plan-workflow:execute`로 시작하도록 안내 ④ 턴 종료 — 승인 메시지의 구현 시작 지시는 이 순서로 대체되며 파일 수정·구현 커밋을 하지 않음
+- **승인 후 순서**: ① `plan.md`·`feedback.md` 기록 ② 한 커밋 ③ 새 세션에서 이 플러그인의 execute 스킬(작업 기록 규약의 `계획` 항목에 적힌 명령)로 시작하도록 안내 ④ 턴 종료 — 승인 메시지의 구현 시작 지시는 이 순서로 대체되며 파일 수정·구현 커밋을 하지 않음

@@ -2,6 +2,7 @@
 # 작업 기록 규약(rules/agent-guide.md)과 현재 브랜치 워크스페이스 현황을 세션 컨텍스트로 주입한다.
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact 모두에서 다시 돈다.
 # slug는 여기서 계산해 값으로 넘기고, 기존 feedback.md는 상한(4,000바이트) 안에서 함께 주입한다.
+# 기록 폴더 상위 경로는 config.json의 workspace.root, 안내 명령의 접두사는 plugin.json의 name에서 읽는다.
 # 브랜치 기반 slug 규칙은 git 저장소 밖에서 의미가 없으므로 그 경우 조용히 끝낸다.
 set -uo pipefail
 
@@ -22,20 +23,30 @@ import sys
 plugin_root, project_dir, slug = sys.argv[1], sys.argv[2], sys.argv[3]
 BUDGET = 4000
 
+with open(os.path.join(plugin_root, "config.json"), encoding="utf-8") as handle:
+    root = json.load(handle)["workspace"]["root"]
+with open(os.path.join(plugin_root, ".claude-plugin", "plugin.json"), encoding="utf-8") as handle:
+    name = json.load(handle)["name"]
 with open(os.path.join(plugin_root, "rules", "agent-guide.md"), encoding="utf-8") as handle:
-    guide = handle.read().strip().replace("{PLUGIN_ROOT}", plugin_root)
+    guide = (
+        handle.read().strip()
+        .replace("{PLUGIN_ROOT}", plugin_root)
+        .replace("{PLUGIN_NAME}", name)
+        .replace("{WORKSPACE_ROOT}", root)
+    )
 
 lines = ["", "## 현재 워크스페이스", ""]
 body = ""
 
 if slug:
     lines.append(f"- **slug**: `{slug}` (브랜치명 기준)")
-    workspace = os.path.join(project_dir, ".ai-docs", "workspace", slug)
+    lines.append(f"- **기록 폴더**: `{root}/{slug}/`")
+    workspace = os.path.join(project_dir, root, slug)
     plan_path = os.path.join(workspace, "plan.md")
     feedback_path = os.path.join(workspace, "feedback.md")
 
     if os.path.isfile(plan_path):
-        lines.append("- **plan.md**: 있음 — 구현은 `/plan-workflow:execute`, 추가 계획은 `/plan-workflow:planning`으로 기존 계획 끝에 덧붙임")
+        lines.append(f"- **plan.md**: 있음 — 구현은 `/{name}:execute`, 추가 계획은 `/{name}:planning`으로 기존 계획 끝에 덧붙임")
     else:
         lines.append("- **plan.md**: 없음")
 
@@ -61,7 +72,8 @@ if slug:
     else:
         lines.append("- **feedback.md**: 없음")
 else:
-    lines.append("- **slug**: 미확정 — 기본 브랜치이거나 detached HEAD이므로 첫 기록 시 작업 주제의 kebab-case 2~4단어로 폴더를 만들고 세션 안에서 바꾸지 않음")
+    lines.append("- **slug**: 미확정 — 기본 브랜치이거나 detached HEAD이므로 첫 기록 시 요청·커밋에 이슈 키(`PROJ-123`)가 있으면 그 키, 없으면 작업 주제의 kebab-case 2~4단어로 폴더를 만들고 세션 안에서 바꾸지 않음")
+    lines.append(f"- **기록 폴더**: `{root}/{{slug}}/`")
 
 context = guide + "\n" + "\n".join(lines)
 if body:
