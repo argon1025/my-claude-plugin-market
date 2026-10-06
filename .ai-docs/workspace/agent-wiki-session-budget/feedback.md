@@ -19,3 +19,9 @@
 - `constraint` 이 레포는 PUBLIC이므로 세션 주입 벤치마크의 하네스·과제·정답표·실행 기록은 레포 밖 `~/.agent-wiki-bench/session-injection/`에만 두고, 레포 기록에는 사내 레포명·문서명·API 경로·오류 코드를 쓰지 않음
 - `constraint` `claude -p` 벤치마크에서 비교 주입만 남기려면 `--settings`의 `enabledPlugins`로 위키 계열 플러그인(개인판·사내판 agent-wiki와 이전 세대 위키 플러그인)을 끄고 같은 파일의 `hooks.SessionStart`로 주입 JSON을 `cat`해야 하며, 사용자 기본 권한 모드가 `auto`라 `--permission-mode default`와 `--disallowedTools Edit Write NotebookEdit`를 명시해야 읽기 전용으로 돎
   - evidence: ~/.agent-wiki-bench/session-injection/run.py, make_variants.py
+- `why` agent-wiki 세션 색인은 훅이 세션 시작(startup·resume·clear·compact)마다 로컬 위키 사본의 `.local/index/{domain}/{slug}.md`에 한 파일로 생성하고 커밋하지 않음 — update 스킬 시점에 생성해 위키에 커밋하는 안은 update·add PR이 동시에 열리면 같은 생성 파일이 충돌하고, 스킬 밖 편집(직접 커밋·PR 리뷰 중 수정) 뒤에는 다음 스킬 실행까지 색인이 문서와 어긋나며, 생성 비용이 수 ms라 얻는 것이 없어 기각함
+  - source: 사용자 확인 2026-10-06
+- `context` agent-wiki 세션 주입의 도메인 공유 문서 목록 제목은 "(description은 색인)" 축약 대신 경로 줄 뒤에 "문서별 용도(description)는 색인 파일에 있음"으로 풀어 씀 — 사용자 문장 "description은 색인 이라는게 무슨 의미임 근데?"
+  - source: 사용자 확인 2026-10-06
+- `context` 채택 조합안 구현은 개인판 agent-wiki 0.9.0과 사내판 마켓플레이스 미러링까지 한 계획으로 진행하며, 색인은 한 파일로 두고(두 파일 분리는 미실측), 사내 마켓플레이스 push는 실행 시점에 따로 확인받음
+  - source: 사용자 확인 2026-10-06
