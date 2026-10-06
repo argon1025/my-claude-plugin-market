@@ -13,3 +13,5 @@
 - `constraint` 사내판 마켓플레이스의 marketplace.json은 플러그인별 version 항목이 있어 devcenter-flow 버전을 plugin.json과 marketplace 항목 두 곳에서 올리고 최상위 version도 올려야 하며, 개인판 marketplace.json에는 플러그인별 version이 없어 plugin.json과 metadata.version만 올림
   - evidence: onestore-devcenter-claude-plugin-marketplace/.claude-plugin/marketplace.json
 - `context` plan-workflow 구조 질문 개선의 검증은 문구·순서·버전의 정적 확인까지이며, 실제 효과는 후속으로 이후 계획 파일의 Re-plan·추가 계획 계기 중 구조 재편·불필요 코드 제거 비율(개선 전 51절 중 17절)이 줄었는지로 확인함
+- `constraint` 개인판 plan-workflow에서 사내판 devcenter-flow로 미러링할 때 `rsync -a -n -i` dry-run은 내용이 같아도 수정 시각만 다른 파일을 `>f..t....`로 함께 출력하므로, 내용이 바뀌는 파일만 확인하려면 `-c`를 더해 `>fc`로 표시되는 줄만 보아야 함
+  - evidence: onestore-devcenter-claude-plugin-marketplace/plugins/devcenter-flow/
