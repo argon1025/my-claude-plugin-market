@@ -24,7 +24,7 @@ PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종을 제공하는 플러그�
 
 - **승인 게이트**: 스킬당 한 라운드의 외부 쓰기(push·PR 생성·코멘트 게시)를 한 묶음으로 모아 한 번만 승인받으며, 승인 전에는 `git fetch`만 허용함. fix만 판정 세트 승인이 하나 더 있음
 - **배경 게이트**: create는 diff에서 도출할 수 없는 배경을 창작하지 않고 후보를 제시해 묻고, 얻지 못하면 PR을 만들지 않음
-- **리뷰 룰 2층**: Layer 1은 스택을 감지해 고른 `references/checklists/`의 공통·TypeScript/React·NestJS·Java/Spring 체크리스트, Layer 2는 `agent-wiki`가 세션에 주입한 문서 목록에서 고른 위키 문서임. 둘 다 절대 경로로 서브에이전트에 전달하고 충돌 시 Layer 2가 이기며, 목록이 없으면 한 번 알리고 Layer 1만 씀
+- **리뷰 룰 2층**: Layer 1은 스택을 감지해 고른 `references/checklists/`의 공통·TypeScript/React·NestJS·Java/Spring 체크리스트, Layer 2는 세션에 주입된 사전 정보(위키·문서 목록)에서 PR과 관련해 고른 프로젝트 문서임. 둘 다 절대 경로로 서브에이전트에 전달하고 충돌 시 Layer 2가 이기며, 관련 문서가 없으면 Layer 1만 씀
 - **상태 저장**: review와 fix 사이의 상태는 `[AI 리뷰]`·`[AI 코드리뷰]`·`[AI 반영]` 접두사의 PR 코멘트에만 두며, 재리뷰는 직전 요약의 스냅샷 SHA로 변경 파일만 다시 봄
 - **금지 행동**: PR approve·decline·merge 호출, force-push, 검증 실패 후 push
 - **호스트 절차**: 도구·원본 저장소 좌표·diff 조달·리뷰어·push·코멘트 게시처럼 PR 호스트에 묶인 절차는 `references/host.md`에 장 단위로 두고, 스킬과 공통 규약은 장 번호로 참조함
