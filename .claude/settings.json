@@ -1,0 +1,8 @@
+{
+  "enabledPlugins": {
+    "agent-wiki@my-claude-plugin-market": true,
+    "better-communication@my-claude-plugin-market": true,
+    "plan-workflow@my-claude-plugin-market": true,
+    "pr-workflow@my-claude-plugin-market": true
+  }
+}
