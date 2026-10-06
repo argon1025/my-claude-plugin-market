@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, session-injected wiki docs, and a falsify pass, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job). Run inside the target repo's checkout.
+description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, project docs found from the session context, and a falsify pass, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job). Run inside the target repo's checkout.
 ---
 
 ## 계약 로드
@@ -28,7 +28,7 @@ description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", 
 
 ## 2. 범위 결정
 
-- **스킵**: 바이너리·이미지·폰트, lockfile, 순수 삭제·개명, 요청 없는 `*.md`, 작업 기록 문서(세션 기록 폴더 아래)와 `host.md` 5장의 리뷰 제외 경로, 변경 1,500라인 초과 파일(스킵 후 경고)을 사유와 함께 스킵 표에 적음. 테스트 파일은 리뷰함
+- **스킵**: 바이너리·이미지·폰트, lockfile, 순수 삭제·개명, 요청 없는 `*.md`, 작업 기록 문서(세션 컨텍스트가 알려 준 기록 위치 아래)와 `host.md` 5장의 리뷰 제외 경로, 변경 1,500라인 초과 파일(스킵 후 경고)을 사유와 함께 스킵 표에 적음. 테스트 파일은 리뷰함
 - **30파일 초과**: 범위를 먼저 물음
 - **델타 스코핑**: 직전 `[AI 코드리뷰]` 요약의 `리뷰 스냅샷: <SHA>`가 있으면 `git diff --name-only <그 SHA> $REVIEW_SHA`의 파일만 팬아웃하고 나머지는 "직전 리뷰 이후 변경 없음"으로 보고함. 요약이 없거나 SHA에 도달할 수 없으면 전체를 리뷰함
 - **KNOWN_ISSUES**: AI·사람을 불문하고 코멘트가 있는 파일·주제를 `{KNOWN_ISSUES}`로 묶어 서브에이전트에 전달함
@@ -37,11 +37,8 @@ description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", 
 
 - **Layer 1 스택 감지**: 저장소당 1회. 모든 파일에 `checklists/common.md`를 적용하고, `.ts/.tsx/.js/.jsx`는 가장 가까운 `package.json` deps에 react·next가 있으면 `typescript-react.md`, `@nestjs/core`가 있으면 `nestjs.md`를, `.java/.kt`는 `java-spring.md`를 더함
 - **절대 경로**: `${CLAUDE_PLUGIN_ROOT}/references/checklists/<name>.md`를 절대 경로로 1회 확장해 `{CHECKLIST_PATHS}`로 전달함
-- **Layer 2 위키**: 세션에 주입된 agent-wiki 문서 목록(레포 전용·도메인 공유 문서)에서 이 PR이 만지는 문서를 고름. 고른 문서는 절대 경로로 `{MATCHED_DOCS}`에 담음(서브에이전트는 세션 주입 컨텍스트를 물려받지 못함). 변경 파일 하나를 다루는 문서는 그 파일의 서브에이전트에, PR 의도를 다루는 문서는 전체에 전달함
+- **Layer 2 프로젝트 문서**: 세션에 주입된 사전 정보(위키·문서 목록)에서 이 PR이 만지는 코드·규칙을 다루는 문서를 찾아 읽고 고름. 서브에이전트는 세션 컨텍스트를 물려받지 못하므로 고른 문서를 절대 경로로 `{MATCHED_DOCS}`에 담고, 변경 파일 하나를 다루는 문서는 그 파일의 서브에이전트에, PR 의도를 다루는 문서는 전체에 전달함. 고를 문서가 없으면 Layer 1만 씀
 - **우선순위**: 충돌 시 Layer 2가 Layer 1을 이김
-- **카탈로그 부재**: `agent-wiki` 미설치이거나 미등록 레포라 위키 문서 목록이 주입되지 않았음을 1회 알리고 Layer 1만으로 진행함
-- **구 룰 파일**: `.claude/pr-review-rules.md`는 읽지 않음. 있으면 `/agent-wiki:add`로 위키에 옮기라고 1회 안내하고 진행함
-- **보고**: "적용 룰 소스" 헤더에 감지한 스택과 적용 체크리스트·위키 문서를 항상 기재함
 
 ## 4. 리뷰
 
@@ -69,7 +66,7 @@ diff 밖에는 앵커하지 않습니다.
 
 파일·라인 ±2·주제가 기존 코멘트(AI·사람)와 일치하는 발견은 "기존 코멘트와 중복"으로 표시하고 제외합니다.
 
-- **적용 룰 소스**: 감지 스택, Layer 1 체크리스트, Layer 2 위키 문서
+- **적용 룰 소스**: 감지 스택, Layer 1 체크리스트, Layer 2 문서(없으면 `없음`)
 - **등급 절**: Blocker · Bug · 개선. 건별로 `<등급 이모지> **<title>** — `파일:라인` [구분/등급] 규칙·출처` 다음에 제안 1줄과 상세 근거
 - **표·건수**: 요약표(파일 | 건수 | 구분 | 최고 등급), 스킵 표, 반증 N건, 중복 N건, 재리뷰 판정
 - **권장**: `권장:` 머지 가부 1줄. 의견이며 승인 버튼은 누르지 않음
