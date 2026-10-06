@@ -51,11 +51,11 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 3. 검토
 
-`docs`의 문서마다 Agent 1회를 메인 모델로 실행합니다. 검토가 쓰기 스킬의 유일한 품질 게이트이므로 형식 검사 스크립트로 대신하지 않습니다. `{check}`는 사실 id별 `check`, `{input}`은 사실 행 `input`의 합집합입니다.
+`docs`의 문서마다 Agent 1회를 메인 모델로 실행합니다. 검토가 쓰기 스킬의 유일한 품질 게이트이므로 형식 검사 스크립트로 대신하지 않습니다.
 
 ```
 방금 사실을 반영한 위키 문서 한 장을 끝까지 읽고 규약 위반을 고쳐라.
-입력: 문서 {tmp}/knowledge/{domain}/{doc}, 이번 반영 사실 {id·fact 목록}, 이번 변경 `git -C {tmp} diff -- knowledge/{domain}/{doc}`(신규 문서는 파일 전체), 사실별 코드 확인 대상 {check}, 자료 원문 {input}, 다른 문서 목록 `grep -H '^description:' {tmp}/knowledge/{domain}/*.md {tmp}/knowledge/{domain}/*/*.md`.
+입력: {work}/assign.json `docs`에서 `doc`이 "{doc}"인 항목의 사실 행(id·fact, 코드 확인 대상 check, 자료 원문 input), 문서 {tmp}/knowledge/{domain}/{doc}, 이번 변경 `git -C {tmp} diff -- knowledge/{domain}/{doc}`(신규 문서는 파일 전체), 다른 문서 목록 `grep -H '^description:' {tmp}/knowledge/{domain}/*.md {tmp}/knowledge/{domain}/*/*.md`.
 기준: `sed -n '/^## 1\./,/^## 8\./p' {doc_contract_path}` — 1~7장을 의미(1장 판정, 5장 문장, 6장 겹침)와 형식(2장 위치·파일명, 3장 description, 4장 절 이름·순서, `## 코드값` 표마다 `원본:` 줄, `전 N종`이면 표 행 수 N) 모두 판정한다.
 코드 확인: 1장 판정, 식별자, `전 N종` 원소 수는 사실마다 그 사실의 rev를 `git -C {repo_path} grep {패턴} {rev}`·`git -C {repo_path} show {rev}:{경로}`로 읽어 확인한다. `— 일부` 표는 원소를 채우지 않는다.
 자료 대조: `input`이 있는 사실은 원문 파일과 대조해 원문에 없는 값·식별자를 지우고 `removed`에 `자료에 없음`으로 적는다. 원문에 있는 값이 check 시점 코드와 다르면 7장 시간 순으로 판정한다 — 그 코드를 바꾼 커밋(`git -C {repo_path} log -S'{식별자}' {rev}`)의 메시지·작업 기록이 변경 의도를 밝히면 불릿을 코드 값으로 고치고 `edited`에 `시간 순 — {sha7}`로 적는다. 의도를 찾지 못하거나 코드가 잘못 작성된 것으로 보이면 불릿을 지우고 `conflicts`에 두 값을 적는다.

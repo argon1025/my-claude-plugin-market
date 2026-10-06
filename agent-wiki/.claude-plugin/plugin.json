@@ -1,7 +1,7 @@
 {
   "name": "agent-wiki",
   "description": "에이전트 위키",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": { "name": "argon1025", "email": "argon1025@gmail.com" },
   "keywords": ["wiki", "knowledge", "git", "위키", "에이전트 위키"]
 }

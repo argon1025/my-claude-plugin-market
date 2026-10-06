@@ -86,11 +86,11 @@ deleted는 diff가 그 동작·값·코드값을 지우면 true, set_total은 di
 
 ## 7. 지도·커밋
 
-`apply.md` 6·7장을 실행합니다. `--dry-run`이 아니면 이어서 커서를 정한 레포마다 `{tmp}/state/{slug}.json`에 `{"cursor": "{전체 sha}", "at": "YYYY-MM-DD"}`를 Write하고 커밋합니다.
+`apply.md` 6·7장을 실행합니다. `--dry-run`이 아니면 이어서 커서를 정한 레포마다 `{tmp}/state/{slug}.json`에 `{"cursor": "{전체 sha}", "at": "YYYY-MM-DD"}`를 Write하고, 모두 쓴 뒤 커밋 한 개로 남깁니다. 본문은 레포마다 `{slug} {sha7}` 한 줄입니다.
 
 ```
-git -C {tmp} add state/{slug}.json
-git -C {tmp} commit -m "chore(update): {slug} 커서 {sha7} · 머지 N건"
+git -C {tmp} add state
+git -C {tmp} commit -m "chore(update): 커서 {N}개 레포 · 머지 {M}건" -m "{본문}"
 ```
 
 ## 8. 게시·보고
