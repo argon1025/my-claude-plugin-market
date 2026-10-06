@@ -21,3 +21,7 @@
   - evidence: pr-workflow/skills/fix/SKILL.md
 - `correction` plan.md의 subagent-prompts `rule` 필드 예시 `"L2:{위키 문서 이름}"`은 템플릿의 `{...}`가 오케스트레이터가 채우는 플레이스홀더라는 규칙과 충돌하므로, 실제 본문은 기존 `<규칙명>` 표기와 같은 `"L2:<위키 문서 이름>"`을 씀
   - evidence: pr-workflow/references/subagent-prompts.md
+- `why` 사내판 devcenter-pr `references/host.md` 5장의 리뷰 제외 경로에 `.devcenter/knowledge/**`와 함께 `.devcenter/workspace/**`를 두는 이유는, 공통 review 스킬의 "작업 기록 문서(세션 기록 폴더 아래)" 스킵이 devcenter-flow가 켜진 세션에서만 경로를 알 수 있어 미러링 전 사내판의 스킵 범위를 그대로 지키기 위함임
+  - evidence: onestore-devcenter-claude-plugin-marketplace/plugins/devcenter-pr/references/host.md
+- `context` 미러링 구조가 머지되면 위키 `internal-plugin-mirror` 문서(현재 agent-wiki만 다룸)를 pr-workflow·plan-workflow·better-communication의 사내 고유 파일 목록(`references/host.md`·`config.json`·`NOTICE`와 각 `plugin.json`·`README.md`)까지 넓히고 `plugin-authoring` 문서의 적용 대상도 보강하도록 `/agent-wiki:add`로 반영하는 것이 후속 작업임
+  - source: 사용자 확인 2026-10-06
