@@ -33,12 +33,12 @@
 
 | 대상 | 정책 |
 | --- | --- |
-| 위키 사본(`wiki.baseRoot`) | 읽기 전용이며 세션 시작(`startup`·`resume`·`clear`)과 `/agent-wiki:init` 때 원격 `baseBranch`로 초기화, 위키 기록은 스킬이 임시 clone에서 커밋·push |
+| 위키 사본(`wiki.baseRoot`) | 읽기 전용이며 세션 시작(`startup`·`resume`·`clear`)과 `/agent-wiki:init` 때 원격 `baseBranch`로 초기화, 위키 기록은 스킬이 임시 clone에서 커밋·push, 단, 훅이 세션마다 `.local/index/`에 색인을 생성 |
 | 워크스페이스(`workspace.root`) | 사용 자유, register가 분석 대상 레포를 원격 기본 브랜치로 강제 정리하므로 변경 사항은 사라질 수 있음, update·add는 clone·fetch만 하고 작업 트리는 건드리지 않음 |
 
 ## 세션 주입
 
-등록 레포에서 세션을 열면 위키 규칙, 같은 도메인 레포 지도(책임과 의존 표식), 도메인 공유·레포 전용 문서 목록, 다른 도메인 목록이 주입됩니다. 세션 시작·재개·`/clear` 때는 로컬 위키를 먼저 최신화하며 최대 3초 기다립니다. 위키가 없거나 미등록 레포면 안내 한 줄만 주입하고, git 원격이 없는 폴더에는 주입하지 않습니다.
+등록 레포에서 세션을 열면 위키 규칙, 같은 도메인 레포 지도(summary와 의존 표식), 레포 전용 문서 `이름 — description`, 도메인 공유 문서 이름, 다른 도메인 목록이 주입됩니다. 레포별 책임 전체와 문서 description은 훅이 세션마다 `{baseRoot}/.local/index/{domain}/{slug}.md`에 쓰는 색인에 있고, 주입에는 그 경로만 넣습니다. 세션 시작·재개·`/clear` 때는 로컬 위키를 먼저 최신화하며 최대 3초 기다립니다. 위키가 없거나 미등록 레포면 안내 한 줄만 주입하고, git 원격이 없는 폴더에는 주입하지 않습니다.
 
 ## 위키 구조
 
@@ -48,5 +48,6 @@
 ├── deps.json        # 의존 간선(to·desc)
 ├── knowledge/       # 문서, 레포마다 {domain}/{slug}/
 ├── state/           # update 커서, 레포마다 {slug}.json(cursor·at)
+├── .local/index/    # 세션 색인, 훅이 {domain}/{slug}.md 생성
 └── .gitignore       # .local/
 ```
