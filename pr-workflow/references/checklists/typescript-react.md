@@ -1,6 +1,7 @@
-# PR 리뷰 체크리스트 — TypeScript/React (Next.js 포함)
+# PR 리뷰 Layer 1 체크리스트 — TypeScript/React (Next.js 포함)
 
 - **적용 범위**: common.md에 더해 적용함
+- **우선순위**: Layer 2(프로젝트 문서)가 같은 주제를 다루면 Layer 2 우선
 - **보고 요건**: 전 항목 공통으로 보고 조건 충족 AND 미보고 조건 미해당일 때만 보고함
 
 ## 결함

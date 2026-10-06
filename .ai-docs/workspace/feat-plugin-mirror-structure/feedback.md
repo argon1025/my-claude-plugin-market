@@ -17,3 +17,7 @@
   - evidence: agent-wiki/skills/add/SKILL.md
 - `constraint` plan-workflow·devcenter-flow 세션 시작 훅은 플러그인 루트의 `config.json`(`workspace.root`)이나 `.claude-plugin/plugin.json`(`name`)을 읽지 못하면 python 예외를 `2>/dev/null || exit 0`으로 삼켜 작업 기록 규약을 전혀 주입하지 않으므로, 두 파일은 rsync 제외 대상이라도 각 판에 반드시 있어야 함
   - evidence: plan-workflow/hooks/session_start.sh
+- `correction` 사내판 devcenter-pr fix 1절의 push 대상 "소스 브랜치를 보유한 리모트(fork면 `origin`)"는 create가 원본 저장소(`upstream`)에 소스 브랜치를 푸시해 만든 same-repo PR을 갱신하지 못하므로, 공통 본문의 fix는 push 리모트를 `host.md` 6장에서 읽음 — 개인판 6장은 소스 브랜치 보유 리모트, 사내판 6장은 `upstream`
+  - evidence: pr-workflow/skills/fix/SKILL.md
+- `correction` plan.md의 subagent-prompts `rule` 필드 예시 `"L2:{위키 문서 이름}"`은 템플릿의 `{...}`가 오케스트레이터가 채우는 플레이스홀더라는 규칙과 충돌하므로, 실제 본문은 기존 `<규칙명>` 표기와 같은 `"L2:<위키 문서 이름>"`을 씀
+  - evidence: pr-workflow/references/subagent-prompts.md

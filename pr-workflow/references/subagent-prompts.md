@@ -1,6 +1,6 @@
 # review 서브에이전트 프롬프트 템플릿
 
-오케스트레이터가 모든 `{...}` 플레이스홀더를 채운 뒤 general-purpose 서브에이전트에 전달합니다. `{CHECKLIST_PATHS}`는 절대 경로여야 합니다. 서브에이전트는 `${CLAUDE_PLUGIN_ROOT}`를 확장하지 못하므로 미확장 경로는 Read가 조용히 실패해 룰 없이 리뷰가 돌아갑니다.
+오케스트레이터가 모든 `{...}` 플레이스홀더를 채운 뒤 general-purpose 서브에이전트에 전달합니다. `{CHECKLIST_PATHS}`와 `{MATCHED_DOCS}`는 절대 경로여야 합니다. 서브에이전트는 `${CLAUDE_PLUGIN_ROOT}`를 확장하지 못하고 세션에 주입된 위키 문서 목록도 물려받지 못하므로, 미확장 경로는 Read가 조용히 실패해 룰 없이 리뷰가 돌아갑니다.
 
 ## ① 파일 리뷰
 
@@ -11,8 +11,9 @@ File: {FILE_PATH}
 PR intent: {PR_INTENT}
 Review snapshot: commit {REVIEW_SHA} — review this snapshot, NOT the working tree.
 
-First read these checklists:
-{CHECKLIST_PATHS}
+First read these rule sources in order; on conflict, 위키 docs (Layer 2) override the checklists:
+1. {CHECKLIST_PATHS} (Layer 1 — stack-matched checklists)
+2. {MATCHED_DOCS} (Layer 2 — 위키 문서)
 
 Already commented — do not report a finding on any of these:
 {KNOWN_ISSUES}
@@ -40,7 +41,7 @@ Grade every finding by these questions (판정 질문):
 - "개선": 결함 아님 — 설계·컨벤션·성능 제안.
 
 Output: exactly one fenced json block containing an array (no findings = []). Fields:
-[{"file","existing_code" (1–3 added lines copied VERBATIM from the diff),"line_hint" (line number in the new file),"category" ("버그"|"사이드이펙트"|"보안"|"성능"|"컨벤션"|"테스트"),"grade" ("Blocker"|"Bug"|"개선"),"rule" ("<규칙명> · <체크리스트 파일명>"),"title" (결론 1문장 — 무엇이 왜 문제인지, 코멘트 헤드라인용),"impact" (1 line — what breaks or what changes on deploy),"fix" (1 line — fix direction),"verified_by" (1 line — what you confirmed with which tool, e.g. "Grep으로 소비처 3곳 확인: src/a.ts:12, …"; nothing confirmed → ""),"detail" (full reasoning — report only),"suggestion_code" (optional — report only, never posted as a comment)}]
+[{"file","existing_code" (1–3 added lines copied VERBATIM from the diff),"line_hint" (line number in the new file),"category" ("버그"|"사이드이펙트"|"보안"|"성능"|"컨벤션"|"테스트"),"grade" ("Blocker"|"Bug"|"개선"),"rule" (rule name · source, prefixed by layer — "L1:common.md" / "L2:<위키 문서 이름>"),"title" (결론 1문장 — 무엇이 왜 문제인지, 코멘트 헤드라인용),"impact" (1 line — what breaks or what changes on deploy),"fix" (1 line — fix direction),"verified_by" (1 line — what you confirmed with which tool, e.g. "Grep으로 소비처 3곳 확인: src/a.ts:12, …"; nothing confirmed → ""),"detail" (full reasoning — report only),"suggestion_code" (optional — report only; it is never posted as a comment because some hosts cannot edit or delete a posted comment, and wrong code in a thread costs more to undo than wrong prose)}]
 ```
 
 ## ② 반증 필터
