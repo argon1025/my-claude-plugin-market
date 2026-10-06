@@ -1,0 +1,29 @@
+# agent-wiki-session-budget 작업 기록
+
+- `context` 도메인 내 여러 프로젝트를 넘나들면서 하나의 개발처럼 처리하고싶음 (각 의존성이 있는 코드를 확인하고 개발을 한번에 진행 등...), 기획검토, 개발 계획 수립, 개발 진행 등 여러 상황에서 참고할 수 있는 문서 제공 (하기전에 꼭 해당하는거 읽고 진행), 쓰는 입장에서 기존 암묵지 등 다양한 컨텍스트 제공 — agent-wiki 세션 주입의 목적이며, 훅 토큰 한도 때문에 주입량을 줄이는 개선의 기준임
+  - source: 사용자 확인 2026-10-06
+- `context` 먼저 고치더라도 내가 의도한 행동 (수정이 필요한 부분 파악, 리뷰 시 의존성 있는 부분 파악 과같은 다양한 참조 use case)에서 잘 참조 하는지 실측이 우선되어야함 — agent-wiki 세션 주입 구성 변경은 use case별 실측 결과로 정함
+  - source: 사용자 확인 2026-10-06
+- `constraint` Claude Code 훅의 `additionalContext`는 훅마다 10,000자 한도이며, 넘으면 원문을 세션 폴더 파일로 저장하고 컨텍스트에는 앞 2,000자 미리보기와 경로만 남기므로, agent-wiki 세션 주입이 한도를 넘으면 규칙 뒤의 레포 지도 일부와 문서 목록 전체가 빠짐
+  - source: https://code.claude.com/docs/en/hooks
+- `constraint` agent-wiki 0.8.1 세션 주입은 사내 위키 대형 도메인(레포 16개·도메인 공유 문서 92개)에서 17~18K자, 중형 도메인에서 11K자로 한도를 넘음. 사내 도메인 레포 실세션 78건 중 82%가 파일로 빠졌고, 그중 64%는 에이전트가 두 번째 도구 호출 즈음 원문 파일을 다시 읽어 회당 8.4~9.5K 토큰을 더 썼음
+  - evidence: ~/.claude/projects/*/{session}.jsonl의 `<persisted-output>` 첨부와 additionalContext.txt 읽기 호출
+- `why` agent-wiki 세션 주입은 지침 현행 문구, `slug (표식) — summary` 레포 목록, 레포 전용 문서 description과 도메인 공유 문서 이름만 인라인하고, 레포별 책임 전체와 문서 description 전체는 세션마다 생성하는 색인 파일로 옮기는 조합을 채택함 — 사내 대형 도메인 6과제 실측에서 현행 대비 문서 재현율(1.00)·레포 재현율(0.75)은 같고 블라인드 사실 정확도는 0.83에서 0.90, 평균 위키 오버헤드는 20.4K자에서 11.8K자(−42%), 무관 과제 오버헤드는 19.8K자에서 6.0K자, 주입은 17.9K자에서 5.7K자로 줄었음
+  - source: 사용자 확인 2026-10-06
+- `why` agent-wiki 세션 주입 지침은 현행 문구를 유지함 — "기획 검토·계획 수립·구현·리뷰 전에 확인"으로 강화한 문구는 실세션 재현 과제의 문서 재현율과 무관 과제 오버헤드 어느 쪽도 바꾸지 못했음
+- `why` agent-wiki 세션 주입과 색인에 간선 desc를 넣지 않음 — 간선을 색인이나 인라인에 넣어도 리뷰 영향 파악·크로스 레포 순서 과제의 레포 재현율은 1.00으로 같았고(에이전트가 코드 grep으로 소비 레포를 찾음), 간선을 언급하면 색인을 통째로 읽어 오버헤드가 14.4K자에서 26.1~28.8K자로 늘었음
+- `why` agent-wiki 문서 목록을 키워드 조회 스크립트로 대신하는 안은 기각함 — 문서 목록 비교에서 유일하게 정답 문서를 놓쳤고(레포 전용 문서), 매 과제 스크립트를 실행해 오버헤드가 이름 인라인과 같은 수준이며 사실 정확도는 0.67로 가장 낮았고, 실사용에서는 `python3` 실행 권한 확인도 뜸
+- `why` agent-wiki 문서 목록을 색인 경로만 주입하는 안은 매 과제 색인 전체를 읽어 오버헤드가 23.0K자로 현행보다 커서 기각하고, description 전체 인라인 안은 주입이 9.4K자로 한도 여유가 없고 기획 검토 과제에서 2회 연속 최대 턴(30)에 걸려 답을 내지 못해 기각함
+- `context` 채택 조합안의 한계는 칸당 1회 실행·단일 대형 도메인·`claude -p` 단발 실행이며, 문서 재현율이 거의 모든 구성에서 1.00이라 구성 간 판정은 오버헤드와 비용에 기댐. 도메인 공유 문서가 2배가 되어도 이름 목록은 약 2.3K자만 늘어 주입은 약 8K자로 한도 안에 머묾
+- `context` 후속 구현은 이 slug의 `## 추가 계획`으로 진행하며 범위는 생성기·훅·색인 파일 생성, doc-contract·README 문구, 버전, 사내판 미러링, 위키 세션 훅 문서 갱신임. 의존 과제에서 색인 17K자를 통째로 읽는 비용을 줄이는 색인 분리(레포 책임·문서 description 두 파일)는 실측하지 않은 후보로 남김
+- `constraint` 이 레포는 PUBLIC이므로 세션 주입 벤치마크의 하네스·과제·정답표·실행 기록은 레포 밖 `~/.agent-wiki-bench/session-injection/`에만 두고, 레포 기록에는 사내 레포명·문서명·API 경로·오류 코드를 쓰지 않음
+- `constraint` `claude -p` 벤치마크에서 비교 주입만 남기려면 `--settings`의 `enabledPlugins`로 위키 계열 플러그인(개인판·사내판 agent-wiki와 이전 세대 위키 플러그인)을 끄고 같은 파일의 `hooks.SessionStart`로 주입 JSON을 `cat`해야 하며, 사용자 기본 권한 모드가 `auto`라 `--permission-mode default`와 `--disallowedTools Edit Write NotebookEdit`를 명시해야 읽기 전용으로 돎
+  - evidence: ~/.agent-wiki-bench/session-injection/run.py, make_variants.py
+- `why` agent-wiki 세션 색인은 훅이 세션 시작(startup·resume·clear·compact)마다 로컬 위키 사본의 `.local/index/{domain}/{slug}.md`에 한 파일로 생성하고 커밋하지 않음 — update 스킬 시점에 생성해 위키에 커밋하는 안은 update·add PR이 동시에 열리면 같은 생성 파일이 충돌하고, 스킬 밖 편집(직접 커밋·PR 리뷰 중 수정) 뒤에는 다음 스킬 실행까지 색인이 문서와 어긋나며, 생성 비용이 수 ms라 얻는 것이 없어 기각함
+  - source: 사용자 확인 2026-10-06
+- `context` agent-wiki 세션 주입의 도메인 공유 문서 목록 제목은 "(description은 색인)" 축약 대신 경로 줄 뒤에 "문서별 용도(description)는 색인 파일에 있음"으로 풀어 씀 — 사용자 문장 "description은 색인 이라는게 무슨 의미임 근데?"
+  - source: 사용자 확인 2026-10-06
+- `context` 채택 조합안 구현은 개인판 agent-wiki 0.9.0과 사내판 마켓플레이스 미러링까지 한 계획으로 진행하며, 색인은 한 파일로 두고(두 파일 분리는 미실측), 사내 마켓플레이스 push는 실행 시점에 따로 확인받음
+  - source: 사용자 확인 2026-10-06
+- `constraint` agent-wiki doc-contract 7장 대조의 "목록"은 apply 절차가 임시 clone의 frontmatter `description`으로 직접 만드는 목록이며 세션 주입과 무관하므로, 세션 주입에서 도메인 공유 문서 description을 빼도 update·add의 같은 주제 문서 대조는 그대로 동작함
+  - evidence: agent-wiki/references/apply.md
