@@ -25,3 +25,5 @@
   - source: 사용자 확인 2026-10-06
 - `context` 채택 조합안 구현은 개인판 agent-wiki 0.9.0과 사내판 마켓플레이스 미러링까지 한 계획으로 진행하며, 색인은 한 파일로 두고(두 파일 분리는 미실측), 사내 마켓플레이스 push는 실행 시점에 따로 확인받음
   - source: 사용자 확인 2026-10-06
+- `constraint` agent-wiki doc-contract 7장 대조의 "목록"은 apply 절차가 임시 clone의 frontmatter `description`으로 직접 만드는 목록이며 세션 주입과 무관하므로, 세션 주입에서 도메인 공유 문서 description을 빼도 update·add의 같은 주제 문서 대조는 그대로 동작함
+  - evidence: agent-wiki/references/apply.md
