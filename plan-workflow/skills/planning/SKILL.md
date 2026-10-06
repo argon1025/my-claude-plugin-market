@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Use when requirements are unclear or a non-trivial feature is being planned in plan mode ("계획 세워줘", "플랜 모드", "기능 설계") — intent gate, request intake, coverage axes, minimum-code ladder per new unit, self-contained plan, approval snapshot commit to plan.md in the session's workspace folder, appending a `## 추가 계획` section instead of overwriting when a plan already exists. NOT for executing a saved plan (that is this plugin's execute skill's job).
+description: Use when requirements are unclear or a non-trivial feature is being planned in plan mode ("계획 세워줘", "플랜 모드", "기능 설계") — intent gate, request intake, coverage axes, minimum-code ladder for new and touched code, self-contained plan, approval snapshot commit to plan.md in the session's workspace folder, appending a `## 추가 계획` section instead of overwriting when a plan already exists. NOT for executing a saved plan (that is this plugin's execute skill's job).
 ---
 
 플랜 모드의 기본 흐름(탐색 → 질문 → 계획 → 승인) 위에 얹는 절차입니다. 기록 위치·slug·feedback.md 규칙은 세션에 주입된 작업 기록 규약과 `## 현재 워크스페이스` 블록을 따릅니다. 요청은 사양이 아닌 의도이므로 사양을 쓰는 것은 에이전트의 일이고, 트레이드오프를 제시한 뒤의 최종 결정은 사용자의 것입니다.
@@ -21,6 +21,7 @@ description: Use when requirements are unclear or a non-trivial feature is being
 
 요청·코드로 이미 답이 있는 축만 생략합니다.
 
+- **구조**: 새 코드의 폴더·모듈 배치와 손대는 기존 구조의 유지·재편 여부를 정하며, 기존 코드의 형태는 현재 상태일 뿐 유지 근거가 아니므로 코드로 답이 있다고 보지 않음
 - **범위**: 포함과 제외를 명시함
 - **용어**: 사용자 용어가 코드 어휘와 충돌하면 드러내고 표준 용어를 합의함
 - **도메인 모델**: 객체·상태·허용값을 확정하며, 열거 가능한 항목(페이로드 필드, 사용자 노출 문구, 설정 키)은 전부 확보하고 창작하지 않음
@@ -33,6 +34,7 @@ description: Use when requirements are unclear or a non-trivial feature is being
 
 - **첫 성립 단**: 새 코드 단위마다 아래 순서에서 첫 번째로 성립하는 단에서 멈춤 — ① 만들 필요 없음 ② 코드베이스에 이미 있음 ③ 표준 라이브러리 ④ 플랫폼 기본 기능 ⑤ 설치된 의존성 ⑥ 한 줄 ⑦ 동작하는 최소 코드
 - **신규 근거**: ⑦로 판정한 단위는 하위 단이 성립하지 않는 이유를 한 문장으로 계획에 적음
+- **기존 코드**: 손대는 기존 코드에도 같은 원칙을 적용해 살려서 고치는 안과 재편·삭제하는 안을 변경 후 유지할 코드 양으로 비교하고, 재편 쪽이 적으면 지울 범위와 함께 후보로 올림
 - **금지**: 요청 없는 추상화(구현 하나뿐인 인터페이스, 값이 바뀌지 않는 설정), 피할 수 있는 새 의존성, 요청 없는 보일러플레이트
 - **안전선**: 신뢰 경계의 입력 검증, 데이터 손실을 막는 오류 처리, 보안, 명시적으로 요청된 것은 축소 대상이 아님
 - **의도적 단순화**: 알려진 한계를 가진 지름길은 한계와 업그레이드 조건을 계획에 적고 `feedback.md`의 `context` 항목으로 남김
@@ -40,8 +42,8 @@ description: Use when requirements are unclear or a non-trivial feature is being
 ## 5. 질문
 
 - **확인 선행**: 질문 전에 세션에 주입된 사전 정보(위키·문서 목록·작업 기록)에서 관련 문서를 찾아 읽고 코드로 직접 확인하며(광범위 탐색은 Explore 서브에이전트 위임), 그렇게 도출되는 것은 묻지 않음
-- **선택형**: 질문마다 권장안·근거·대안·트레이드오프를 갖춘 이름 붙은 후보로 제시하며, 권장안이 문서나 작업 기록에 남은 팀 결정과 충돌하면 권장 대신 충돌을 드러냄
-- **독립 라운드**: 해석 사이에서 조용히 고르지 않으며, 다른 답에 따라 문구가 바뀌는 질문은 다음 라운드로 미룸
+- **선택형**: 질문마다 현재 상태를 밝히고 권장안·근거·대안·트레이드오프를 갖춘 이름 붙은 후보로 제시하되 후보마다 바뀌는 파일·위치와 변경 후 형태(폴더 트리·시그니처 등, AskUserQuestion은 preview)를 보이며, 권장안이 문서나 작업 기록에 남은 팀 결정과 충돌하면 권장 대신 충돌을 드러냄
+- **독립 라운드**: 구조처럼 설계를 가르는 질문을 먼저 묻고 다른 답에 따라 필요 여부나 선택지가 바뀌는 질문은 다음 라운드로 미루며, 해석 사이에서 조용히 고르지 않음
 - **재점검**: 답은 새 증거이므로 각 축을 다시 확인하며, `일단 그 정도?` 같은 유보 열거는 목록이 미완이라는 신호임
 - **위임 답변**: `알아서 해주세요`·`모르겠어요`는 답이므로 권장안을 결정으로 고정하고 다시 묻지 않으며, 비권장안을 고집하면 근거를 `why` 항목으로 기록함
 - **확정 조건**: 사용자 확인·코드 경로·문서를 인용할 수 있는 축만 확정되며, 미확정 축이 하나라도 있으면 계획은 최종이 아님
