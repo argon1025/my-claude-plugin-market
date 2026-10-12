@@ -1,0 +1,27 @@
+# wiki-load-status 작업 기록
+
+- `context` 세션 시작 시 위키 로드 여부를 사용자에게 알리는 기능을 검토함 — 사용자 문장 "말을 하는데 위키가 로드된 여부도 되게 중요하게 작용하는듯 함", "사용자는 위키가 로드되었는지 안되었는지 알지못해서 그냥 그대로 작업을 진행하는 경우가 있음", "사용자 세션 시작 시 위키가 로드 되었는지 알려주고싶음", 표시 수단 후보는 "작업전에 말을 해줘도 좋고 클로드 cli 하단에 상태표시로 보여줘도 좋을것같은데"
+  - source: 사용자 확인 2026-10-12
+- `constraint` agent-wiki 세션 시작 훅은 정상 로드·미등록 레포·위키 없음을 모두 `additionalContext`로만 내보내 사용자에게 보이지 않고, 예외·생성기 타임아웃은 출력 없이 끝나며, 위키 동기화(sync_wiki.py) 결과는 stdout을 버려 훅도 원격 최신화 실패를 알지 못함
+  - evidence: agent-wiki/hooks/session_start.py
+- `constraint` Claude Code 플러그인은 메인 statusLine을 설정할 수 없음 — 플러그인 settings.json은 `agent`·`subagentStatusLine` 두 키만 적용되므로 상태표시줄 표시는 사용자가 자기 statusLine 설정에 스크립트를 직접 연결해야 함
+  - source: https://code.claude.com/docs/en/plugins/components.md
+- `constraint` claude-hud 0.8.0의 `--extra-cmd`는 하위 명령에 stdin(`session_id`)을 넘기지 않고 `CLAUDE_HUD_ALLOW_EXTRA_CMD=1` 환경 변수가 있어야 실행되므로, claude-hud에 위키 상태를 붙이면 세션별이 아니라 작업 폴더(cwd) 기준으로만 조회할 수 있음
+  - evidence: ~/.claude/plugins/cache/claude-hud/claude-hud/0.8.0/src/extra-cmd.ts
+- `constraint` Claude Code 훅 JSON의 `systemMessage`는 사용자에게 보이는 경고로 문서화되어 있으나 인터랙티브 CLI에서의 표시 형태와 같은 출력의 `additionalContext`와 함께 처리되는지는 문서에 없어 실제 세션에서 확인해야 하며, `systemMessage`도 `additionalContext`와 별도로 10,000자 한도를 가짐
+  - source: https://code.claude.com/docs/en/hooks.md
+- `correction` Claude Code 2.1.296에서 SessionStart 훅이 한 JSON에 `systemMessage`와 `hookSpecificOutput.additionalContext`를 함께 내보내면 둘 다 처리되며, `additionalContext`는 모델 컨텍스트에 들어가고 `systemMessage`는 모델 컨텍스트에 들어가지 않음(`claude -p --plugin-dir` 임시 플러그인 실험), 인터랙티브 CLI에서의 표시 형태만 미확인으로 남음
+- `context` agent-wiki 위키 로드 상태 표시는 세션 시작 알림(`systemMessage`)만 넣고 상태표시줄 연동과 에이전트 고지는 하지 않음 — 사용자 문장 "세션 시작 알림만 넣는 걸로 계획 모드 진행"
+  - source: 사용자 확인 2026-10-12
+- `why` 위키 로드 상태를 에이전트가 작업 전에 말하게 하는 안은 기각함 — 모델의 지시 준수에 기대어 매 세션 토큰을 쓰고, 훅이 실패해 주입이 없으면 고지 지시도 함께 사라져 알려야 할 경우를 놓치며, 앞선 세션 주입 벤치마크에서 지침 문구 강화가 행동을 바꾸지 못했음
+- `context` agent-wiki 로드 알림은 정상 로드를 포함한 전 상태를 훅이 도는 모든 시점(startup·resume·clear·compact)에 고정 템플릿으로 표시하며, 첫 줄은 상태별 고정 문장이고 그 아래 해당 경고만 `- ` 줄로 붙임 — 사용자 문장 "{'알수없는'|{domain}/{slug}} 프로젝트 … {위키 최신화 실패 : ...}- {위키 세션훅 주입 한도 초과 상태 문서를 정리하세요}- {위키 작동 실패 : ...}이런식으로 고정 템플릿 가지는건 어떨까함", 확정 문구 전부는 같은 폴더 `plan.md`의 `## 외부 계약` 절에 있음
+  - source: 사용자 확인 2026-10-12
+- `context` agent-wiki 로드 알림의 미등록·위키 없음 문구는 실제 동작과 다른 "위키 플러그인을 비활성화합니다" 대신 "위키를 적용하지 않습니다"를 쓰고, 위키 없음은 "위키 초기 구성을 진행하지 않았습니다 먼저 /agent-wiki:init 를 쳐서 위키 초기 세팅을 진행하세요"처럼 안내하며, 원격 최신화 3초 초과는 별도 지연 경고 없이 "위키 최신화 실패 : 3초 초과, 이전 사본으로 로드함"으로 통합하고, 동기화 일시는 `10월 12일 10:11` 형식으로 씀
+  - source: 사용자 확인 2026-10-12
+- `constraint` 위키 사본의 `.git/FETCH_HEAD` 수정 시각은 `git fetch`가 성공할 때마다 새 커밋이 없어도 갱신되며 `git clone` 직후에는 파일이 없을 수 있으므로, agent-wiki 로드 알림의 위키 동기화 일시는 이 시각을 쓰고 없으면 "위키 동기화 기록 없음"으로 표시함
+  - evidence: ~/.agent-wiki/.git/FETCH_HEAD
+- `context` agent-wiki 로드 알림의 동기화 일시를 별도 상태 파일 없이 FETCH_HEAD 수정 시각으로 쓰는 것은 의도적 단순화임 — 위키 사본에서 누군가 직접 `git fetch`하면 그 시각이 표시되는 한계가 있고, 별도 기록이 필요해지면 `sync_wiki.py`가 성공 시각을 `.local/`에 쓰는 방식으로 올림
+- `correction` Claude Code 2.1.296 인터랙티브 CLI는 SessionStart 훅 `systemMessage`의 줄바꿈(`\n`)을 줄 단위로 렌더링하므로, agent-wiki 로드 알림은 경고 줄을 `\n- `로 이어 붙이고 ` · ` 대체 구분자는 쓰지 않음
+  - source: 사용자 확인 2026-10-12
+- `why` agent-wiki 세션 시작 훅은 위키 동기화(sync_wiki.py)가 3초를 넘기면 자식 프로세스를 죽이지 않고 결과를 "3초 초과"로 처리함 — 죽이면 git checkout·clean이 중간에 끊겨 위키 사본이 반쯤 바뀐 채 남고, 놔두면 자식의 마지막 결과 출력만 닫힌 파이프에 쓰여 실패하며 git 작업은 이미 끝난 뒤임
+  - evidence: agent-wiki/hooks/session_start.py
