@@ -21,3 +21,7 @@
 - `constraint` 위키 사본의 `.git/FETCH_HEAD` 수정 시각은 `git fetch`가 성공할 때마다 새 커밋이 없어도 갱신되며 `git clone` 직후에는 파일이 없을 수 있으므로, agent-wiki 로드 알림의 위키 동기화 일시는 이 시각을 쓰고 없으면 "위키 동기화 기록 없음"으로 표시함
   - evidence: ~/.agent-wiki/.git/FETCH_HEAD
 - `context` agent-wiki 로드 알림의 동기화 일시를 별도 상태 파일 없이 FETCH_HEAD 수정 시각으로 쓰는 것은 의도적 단순화임 — 위키 사본에서 누군가 직접 `git fetch`하면 그 시각이 표시되는 한계가 있고, 별도 기록이 필요해지면 `sync_wiki.py`가 성공 시각을 `.local/`에 쓰는 방식으로 올림
+- `correction` Claude Code 2.1.296 인터랙티브 CLI는 SessionStart 훅 `systemMessage`의 줄바꿈(`\n`)을 줄 단위로 렌더링하므로, agent-wiki 로드 알림은 경고 줄을 `\n- `로 이어 붙이고 ` · ` 대체 구분자는 쓰지 않음
+  - source: 사용자 확인 2026-10-12
+- `why` agent-wiki 세션 시작 훅은 위키 동기화(sync_wiki.py)가 3초를 넘기면 자식 프로세스를 죽이지 않고 결과를 "3초 초과"로 처리함 — 죽이면 git checkout·clean이 중간에 끊겨 위키 사본이 반쯤 바뀐 채 남고, 놔두면 자식의 마지막 결과 출력만 닫힌 파이프에 쓰여 실패하며 git 작업은 이미 끝난 뒤임
+  - evidence: agent-wiki/hooks/session_start.py
