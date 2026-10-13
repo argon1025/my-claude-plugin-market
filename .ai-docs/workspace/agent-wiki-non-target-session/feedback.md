@@ -16,3 +16,5 @@
 - `constraint` agent-wiki 세션 시작 훅을 생성기가 실패하도록 바꾼 플러그인 복사본으로 등록 레포에서 검증할 때 `config.json`의 `wiki.baseRoot`가 실제 위키(`~/.agent-wiki`)를 가리키면 훅이 제목 한 줄뿐인 색인을 실제 `{baseRoot}/.local/index/{domain}/{slug}.md`에 덮어써 그 레포의 다른 세션이 다음 세션 시작 전까지 빈 색인을 읽으므로, `baseRoot`를 위키 복사본으로 바꿔 돌려야 함
   - evidence: agent-wiki/hooks/session_start.py
 - `context` agent-wiki 비대상 세션 개선이 머지되면 위키 `session-start-hook` 문서의 "origin 판정을 위키 동기화보다 먼저 함", "위키 로드 알림은 git 밖·origin 없는 폴더를 뺀 전 상태를 표시함", "git 밖이거나 origin 없는 폴더의 세션에서는 위키 사본도 최신화되지 않음" 3건이 사실과 달라지므로 `/agent-wiki:update`로 갱신하는 후속 작업이 남음
+- `constraint` agent-wiki 위키 사본(`~/.agent-wiki`)은 세션 프로젝트 폴더 밖이므로 비대상 세션 에이전트의 문서 grep·읽기는 기본 권한 모드에서 권한 확인 대상이며, `claude -p --permission-mode default`에서는 `--add-dir ~/.agent-wiki` 없이 grep·Read가 모두 거부되어 에이전트가 답하지 못함(2026-10-14 실험, `--add-dir`을 주면 description grep → 문서 Read로 4턴 안에 답함)
+  - evidence: agent-wiki/scripts/generate_domain_overview.py
