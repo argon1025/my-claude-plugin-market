@@ -25,3 +25,7 @@
   - source: 사용자 확인 2026-10-12
 - `why` agent-wiki 세션 시작 훅은 위키 동기화(sync_wiki.py)가 3초를 넘기면 자식 프로세스를 죽이지 않고 결과를 "3초 초과"로 처리함 — 죽이면 git checkout·clean이 중간에 끊겨 위키 사본이 반쯤 바뀐 채 남고, 놔두면 자식의 마지막 결과 출력만 닫힌 파이프에 쓰여 실패하며 git 작업은 이미 끝난 뒤임
   - evidence: agent-wiki/hooks/session_start.py
+- `constraint` agent-wiki를 user 스코프와 project 스코프에 함께 설치한 프로젝트에서는 project 스코프 설치본 훅 하나만 실행되므로, my-claude-plugin-market·pigeon-trade처럼 project 스코프에 0.7.0이 남은 레포는 user 스코프 0.10.0을 설치해도 로드 알림(`systemMessage`) 없이 0.7.0 주입만 받음
+  - evidence: ~/.claude/plugins/installed_plugins.json
+- `constraint` agent-wiki 세션 시작 훅은 git 레포라도 origin 리모트가 없으면 알림 없이 끝나므로, user 스코프 설치 뒤 soop-dd처럼 리모트 없는 로컬 레포에서는 "알림이 없으면 훅이 돌지 않았다"는 신호가 성립하지 않으며, Claude Code 세션 기록(jsonl)은 stdout이 빈 SessionStart 훅을 `hook_success`로 남기지 않아 실행 여부는 훅을 직접 돌려 확인해야 함
+  - evidence: agent-wiki/hooks/session_start.py
