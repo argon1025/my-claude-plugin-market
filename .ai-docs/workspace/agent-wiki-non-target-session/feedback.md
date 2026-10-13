@@ -13,3 +13,5 @@
   - source: 사용자 확인 2026-10-14
 - `constraint` agent-wiki add 스킬은 현재 레포 origin이 registry에 없으면 반영할 도메인을 AskUserQuestion으로 고르므로, 비대상 세션 주입에서 `/agent-wiki:add` 반영 제안이 유효함
   - evidence: agent-wiki/skills/add/SKILL.md
+- `constraint` agent-wiki 세션 시작 훅을 생성기가 실패하도록 바꾼 플러그인 복사본으로 등록 레포에서 검증할 때 `config.json`의 `wiki.baseRoot`가 실제 위키(`~/.agent-wiki`)를 가리키면 훅이 제목 한 줄뿐인 색인을 실제 `{baseRoot}/.local/index/{domain}/{slug}.md`에 덮어써 그 레포의 다른 세션이 다음 세션 시작 전까지 빈 색인을 읽으므로, `baseRoot`를 위키 복사본으로 바꿔 돌려야 함
+  - evidence: agent-wiki/hooks/session_start.py
