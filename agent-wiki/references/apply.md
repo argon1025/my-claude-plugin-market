@@ -1,6 +1,6 @@
 # 위키 반영 절차
 
-update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입니다. 스킬이 `{work}/facts.json`·`{work}/graph-candidates.json`을 넘기면 1장부터 실행합니다. `{tmp}`는 위키 clone, `{work}`는 추출 산출물 폴더, `{doc_contract_path}`는 규약(`${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`)의 절대 경로입니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 서브에이전트는 한 메시지에 최대 15개씩 병렬 실행하고 남으면 앞 에이전트가 끝나는 대로 다음 메시지로 띄우며, 어느 서브에이전트도 커밋하지 않습니다. 서브에이전트의 출력 파일이 정해진 경로에 없으면 다음 장 전에 그 에이전트를 다시 실행합니다.
+update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입니다. 스킬이 `{work}/facts.json`·`{work}/graph-candidates.json`을 넘기면 1장부터 실행합니다. `{tmp}`는 위키 clone, `{work}`는 추출 산출물 폴더, `{doc_contract_path}`는 규약(`{PLUGIN_ROOT}/references/doc-contract.md`)의 절대 경로입니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 서브에이전트는 한 메시지에 최대 15개씩 병렬 실행하고 남으면 앞 에이전트가 끝나는 대로 다음 메시지로 띄우며, 어느 서브에이전트도 커밋하지 않습니다. 서브에이전트의 출력 파일이 정해진 경로에 없으면 다음 장 전에 그 에이전트를 다시 실행합니다.
 
 ## 0. 입력 형식
 
@@ -32,7 +32,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 2. 반영
 
-`docs`의 문서마다 Agent 1회를 `model: sonnet`으로 실행합니다.
+`docs`의 문서마다 서브에이전트 1회를 실행 환경 연결에 따라 실행합니다.
 
 ```
 위키 문서 한 장에 사실 여러 건을 반영하라.
@@ -51,7 +51,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 3. 검토
 
-`docs`의 문서마다 Agent 1회를 메인 모델로 실행합니다. 검토가 쓰기 스킬의 유일한 품질 게이트이므로 형식 검사 스크립트로 대신하지 않습니다.
+`docs`의 문서마다 서브에이전트 1회를 실행 환경 연결에 따라 메인 모델로 실행합니다. 검토가 쓰기 스킬의 유일한 품질 게이트이므로 형식 검사 스크립트로 대신하지 않습니다.
 
 ```
 방금 사실을 반영한 위키 문서 한 장을 끝까지 읽고 규약 위반을 고쳐라.
@@ -83,7 +83,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 6. 지도 갱신
 
-`graph-candidates.json`에 후보가 있는 `slug`마다 Agent 1회를 `model: sonnet`으로 실행합니다. 후보가 없으면 이 장을 건너뜁니다.
+`graph-candidates.json`에 후보가 있는 `slug`마다 서브에이전트 1회를 실행 환경 연결에 따라 실행합니다. 후보가 없으면 이 장을 건너뜁니다.
 
 ```
 레포 {slug}의 지도 변경 후보를 코드로 확인해 적용할 변경만 남겨라.
@@ -99,7 +99,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 메인이 `ops`를 `{tmp}/registry.json`·`{tmp}/deps.json`에 Edit으로 반영합니다. 해당 노드·블록 줄만 고치고 서식을 유지하며, 간선 블록이 없으면 `deps.{domain}/{slug}` 키를 만들고 간선이 비면 키를 삭제합니다. 바꾼 slug마다 아래 검증이 `ok`일 때까지 고칩니다.
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify_register_file.py {tmp} {domain}/{slug}
+python3 {PLUGIN_ROOT}/scripts/verify_register_file.py {tmp} {domain}/{slug}
 ```
 
 ## 7. 커밋

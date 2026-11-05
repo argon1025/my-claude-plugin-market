@@ -3,6 +3,8 @@ name: execute
 description: Use when implementing an approved plan snapshot saved as plan.md in the session's workspace folder, typically in a fresh session after planning ("계획 실행", "플랜 실행", "execute the plan") — reads the plan first, one task → verification → one commit, stops and re-plans on deviation, appends feedback.md as facts surface. NOT for writing a plan (that is this plugin's planning skill's job).
 ---
 
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
+
 승인된 계획이 계약이며, 계획에서 벗어나는 결정은 사용자에게 되돌립니다. 기록 규칙은 세션에 주입된 작업 기록 규약을 따릅니다.
 
 ## 1. 사전 확인

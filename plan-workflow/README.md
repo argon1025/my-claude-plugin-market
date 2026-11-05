@@ -65,3 +65,9 @@
 ## 방법론 출처
 
 최소 코드 사다리는 [ponytail](https://github.com/DietrichGebert/ponytail)의 단계별 최소 구현 원칙을 계획 단계의 설계 결정으로 옮긴 것입니다.
+
+## Codex 지원
+
+[마켓플레이스 설치·검증 안내](../README.md#codex-설치)를 따릅니다. 공통 스킬과 규약을 사용하며, Codex의 $ 선택기에서 이 플러그인의 스킬을 선택합니다. 번들 훅이 있는 플러그인은 /hooks에서 검토·신뢰해야 세션 주입이 실행됩니다.
+
+Claude의 PostToolUse(ExitPlanMode) 보조 훅은 Codex에서 등록하지 않습니다. Codex는 planning의 최종 승인·스냅샷·인계 절차를 따르며, 계획 승인만으로 구현을 시작하지 않습니다. 쓰기가 금지된 모드에서는 스냅샷 작업을 대기하고 그 사실을 알립니다.
