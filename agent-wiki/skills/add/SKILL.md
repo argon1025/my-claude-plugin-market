@@ -3,7 +3,9 @@ name: add
 description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, "we agreed X", or a skipped or relocated row in an update PR ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘", "건너뜀 처리"). Lists the extracted facts, asks once where a fact differs from the wiki, then opens a wiki PR. NOT for merged code (that is the update skill).
 ---
 
-`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `${CLAUDE_PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
+
+`{PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `{PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `{PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `{PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `{PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
 인자: `--domain {domain}`(대상 도메인), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음). 그 밖의 인자와 대화 맥락은 2절 입력입니다.
 
@@ -17,7 +19,7 @@ git clone -b {baseBranch} {remote} {tmp}
 
 clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` 실행을 안내하고 중단합니다.
 
-도메인은 `--domain`이고, 없으면 현재 레포의 `git remote get-url origin`이 registry 노드의 `remote`와 같을 때 그 도메인입니다. 둘 다 아니거나 registry `domains`에 없으면 AskUserQuestion 한 질문으로 고릅니다. 옵션은 도메인마다 `{domain} (레포 N개)`이고 4개를 넘으면 나머지는 기타 입력으로 받습니다.
+도메인은 `--domain`이고, 없으면 현재 레포의 `git remote get-url origin`이 registry 노드의 `remote`와 같을 때 그 도메인입니다. 둘 다 아니거나 registry `domains`에 없으면 질문 도구 한 질문으로 고릅니다. 옵션은 도메인마다 `{domain} (레포 N개)`이고 4개를 넘으면 나머지는 기타 입력으로 받습니다.
 
 ## 2. 입력 확정
 
@@ -28,7 +30,7 @@ clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` �
 
 ## 3. 추출
 
-붙여 넣은 텍스트·대화 문장·update PR 행은 메인이 아래 기준으로 직접 추출합니다. 파일·페이지 자료는 합쳐 500줄 이하면 메인이 직접, 넘으면 원문의 장(최상위 제목) 단위로 나눠 장마다 Agent 1회를 `model: sonnet`으로 한 메시지에 병렬 실행합니다. 출력 파일이 없는 장은 4절 전에 다시 실행합니다.
+붙여 넣은 텍스트·대화 문장·update PR 행은 메인이 아래 기준으로 직접 추출합니다. 파일·페이지 자료는 합쳐 500줄 이하면 메인이 직접, 넘으면 원문의 장(최상위 제목) 단위로 나눠 장마다 서브에이전트 1회를 실행 환경 연결에 따라 한 메시지에 병렬 실행합니다. 출력 파일이 없는 장은 4절 전에 다시 실행합니다.
 
 ```
 자료 한 장에서 위키에 남길 사실을 추출하라.
@@ -60,7 +62,7 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 | # | 레포 | 변경 | 원문 |
 ```
 
-- **질문**: 교체 후보(기존 값과 새 값, 코드로 확인되면 현재 값 병기, 옵션 `새 값`·`기존 유지`), 자료 내부 미결 충돌, PR 행의 건너뜀·미해결 충돌(교체 후보와 같음), 위치가 갈리지 않는 사실을 AskUserQuestion으로 묻고 마지막에 `진행`·`수정`(수정 내용은 기타 입력) 한 질문을 둠 — 한 라운드 4질문까지이며 넘치면 같은 정지점에서 라운드를 잇고, 교체 외 행에는 권장안을 첫 옵션으로 둠
+- **질문**: 교체 후보(기존 값과 새 값, 코드로 확인되면 현재 값 병기, 옵션 `새 값`·`기존 유지`), 자료 내부 미결 충돌, PR 행의 건너뜀·미해결 충돌(교체 후보와 같음), 위치가 갈리지 않는 사실을 질문 도구으로 묻고 마지막에 `진행`·`수정`(수정 내용은 기타 입력) 한 질문을 둠 — 한 라운드 4질문까지이며 넘치면 같은 정지점에서 라운드를 잇고, 교체 외 행에는 권장안을 첫 옵션으로 둠
 - **답 반영**: `새 값`은 `quote`를 `사용자 확인 YYYY-MM-DD 새 값 선택`으로 두고, `기존 유지`와 교체 후보의 `모름`은 사실을 빼서 6절 미기록 표로 넘기며, 그 밖의 `모름`은 권장안을 채택함
 - **답 원문**: 질문과 답을 `{work}/input/answers.md`에 Write하고, 답으로 정해진 사실은 `input`에 이 파일을, `source`에 `사용자 확인 YYYY-MM-DD`를 더함 — 검토의 자료 대조가 답을 원문으로 보지 못하면 자료 속 다른 값으로 되돌림
 - **기록**: `apply.md` 0장 형식으로 `{work}/facts.json`·`{work}/graph-candidates.json`을 씀 — `check`는 준비한 `{workspace.root}/{slug}`와 `origin/{defaultBranch}`(등록 레포 파일 근거면 그 sha), `input`은 그 사실을 낸 자료의 원문 파일, `source`는 2절 근거 줄
@@ -72,7 +74,7 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 
 ## 6. 게시·보고
 
-`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
+`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
 
 PR 링크, 요약 집계 한 줄, 미기록 표, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 미기록 표는 `기존 유지` 행, 자료에 없어 기록하지 못한 항목, 검토 `conflicts`(미해결 충돌), 지도 `rejected`를 담습니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
 

@@ -180,7 +180,7 @@ def main():
     for slug, node in sorted(repos.items()):
         path, remote, branch = workspace / slug, node.get("remote"), node.get("defaultBranch") or "main"
         if not remote:
-            work["skipped"][slug] = "remote 없음 — /agent-wiki:register"
+            work["skipped"][slug] = "remote 없음 — agent-wiki의 register 스킬"
             continue
         if reason := prepare(path, remote, branch):
             work["skipped"][slug] = reason

@@ -4,7 +4,9 @@ description: Survey the current repo with subagents and record it in the wiki as
 disable-model-invocation: true
 ---
 
-`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. registry·deps는 1절 임시 clone `{tmp}`의 파일입니다. 지도 값 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약) 9장이며, 서브에이전트에게는 `{doc_contract_path}`로 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로를 넘깁니다. 인자로 범위 지시가 오면 registry의 slug·도메인과 대조해 slug 목록으로 바꾸고, 대조되지 않는 이름은 보고 후 확인받습니다(`인자 없이 진행`·`중단`, 다른 이름은 기타 입력). 인자가 있으면 재등록이어도 인자가 간선 대상을 정하고, 대조된 slug가 0개면 간선 대상은 없습니다.
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
+
+`{PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. registry·deps는 1절 임시 clone `{tmp}`의 파일입니다. 지도 값 기준은 `{PLUGIN_ROOT}/references/doc-contract.md`(이하 규약) 9장이며, 서브에이전트에게는 `{doc_contract_path}`로 `{PLUGIN_ROOT}`를 전개한 절대 경로를 넘깁니다. 인자로 범위 지시가 오면 registry의 slug·도메인과 대조해 slug 목록으로 바꾸고, 대조되지 않는 이름은 보고 후 확인받습니다(`인자 없이 진행`·`중단`, 다른 이름은 기타 입력). 인자가 있으면 재등록이어도 인자가 간선 대상을 정하고, 대조된 slug가 0개면 간선 대상은 없습니다.
 
 ## 1. 위키 clone
 
@@ -20,7 +22,7 @@ clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` �
 
 현재 레포의 `{origin}`은 `git remote get-url origin` 결과이고, slug는 그 마지막 경로에서 `.git`을 뺀 소문자입니다. slug가 registry에 있으면 재등록이므로 이 절을 건너뛰고 기존 도메인과 `defaultBranch`를 씁니다.
 
-신규 slug면 레포 준비 전에 AskUserQuestion 한 라운드로 네 가지를 묻습니다. 질문마다 옵션은 2~4개이고 자유 입력은 기타 입력으로 받습니다. 기존 도메인이 없으면 신규 도메인 후보 이름 2개를 옵션으로 두고, 등록 레포가 없으면 연동 레포 질문을 빼고 간선 대상 없음으로 진행합니다.
+신규 slug면 레포 준비 전에 질문 도구의 한도에 맞춰 네 가지를 묻습니다. 질문마다 옵션은 2~4개이고 자유 입력은 기타 입력으로 받습니다. 기존 도메인이 없으면 신규 도메인 후보 이름 2개를 옵션으로 두고, 등록 레포가 없으면 연동 레포 질문을 빼고 간선 대상 없음으로 진행합니다.
 
 - **도메인**: 기존 도메인 하위에 등록(가까운 기존 도메인 최대 3개) 또는 신규 도메인 생성(`{조직}-{도메인}` 이름과 description 한 줄)
 - **역할**: 이 레포가 하는 일 한 줄(현재 레포 README의 첫 설명 줄을 후보로), 또는 `분석으로 작성`
@@ -38,14 +40,14 @@ git ls-remote --symref {origin} HEAD
 현재 레포와 간선 대상 등록 레포(인자, 연동 레포 답, 둘 다 없으면 현재 레포를 뺀 전체)를 워크스페이스에 원격 기본 브랜치 최신으로 준비합니다. 간선 대상 slug는 모두 나열하며, 없으면 비웁니다.
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {tmp}/registry.json {workspace.root} --current {slug} {origin} {defaultBranch} [target ...]
+python3 {PLUGIN_ROOT}/scripts/sync_register_repositories.py {tmp}/registry.json {workspace.root} --current {slug} {origin} {defaultBranch} [target ...]
 ```
 
 레포마다 `ok`·`fail` 한 줄이 나옵니다. `fail` 줄의 등록 레포는 간선 탐색에서 빼고 보고하며, 현재 레포가 `fail`이면 중단합니다.
 
 ## 4. 분석
 
-노드 에이전트 1개와 간선 대상 레포마다 간선 에이전트 1개를 `model: sonnet` Agent로 한 메시지에 병렬 실행합니다. `{hint}`에는 역할 답이나 재등록의 기존 `summary`·`responsibilities`를(`분석으로 작성`이면 `없음`), 간선의 `{domain}`에는 대상 레포의 도메인을, 대상 정보에는 registry 값을 JSON 그대로 넣습니다.
+노드 에이전트 1개와 간선 대상 레포마다 간선 에이전트 1개를 실행 환경 연결의 서브에이전트로 한 메시지에 병렬 실행합니다. `{hint}`에는 역할 답이나 재등록의 기존 `summary`·`responsibilities`를(`분석으로 작성`이면 `없음`), 간선의 `{domain}`에는 대상 레포의 도메인을, 대상 정보에는 registry 값을 JSON 그대로 넣습니다.
 
 ```
 {workspace.root}/{slug}를 분석하라. 스크립트로 코드를 추출하지 말라.
@@ -75,7 +77,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {tmp}/regist
 
 ## 5. 초안 승인
 
-초안 표를 메시지 본문에 출력한 뒤 AskUserQuestion 한 질문(`알아서`·`수정`, 수정 내용은 기타 입력)으로 확인받습니다. 재등록이면 `기존` 칸을 더합니다.
+초안 표를 메시지 본문에 출력한 뒤 질문 도구 한 질문(`알아서`·`수정`, 수정 내용은 기타 입력)으로 확인받습니다. 재등록이면 `기존` 칸을 더합니다.
 
 ```
 | 항목 | 기존 | 초안 | 근거 |
@@ -90,7 +92,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_register_repositories.py {tmp}/regist
 ```
 mkdir -p {tmp}/knowledge/{domain}/{slug}
 [ -n "$(ls -A {tmp}/knowledge/{domain}/{slug})" ] || touch {tmp}/knowledge/{domain}/{slug}/.gitkeep
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify_register_file.py {tmp} {domain}/{slug}
+python3 {PLUGIN_ROOT}/scripts/verify_register_file.py {tmp} {domain}/{slug}
 git -C {tmp} add registry.json deps.json knowledge/{domain}/{slug}
 git -C {tmp} diff --cached --quiet
 git -C {tmp} commit -m "chore(register): {slug} → {domain}"

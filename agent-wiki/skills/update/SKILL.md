@@ -4,7 +4,9 @@ description: Reflect merged code of one domain's registered repos into the wiki 
 disable-model-invocation: true
 ---
 
-`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `${CLAUDE_PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `${CLAUDE_PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `${CLAUDE_PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
+
+`{PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `{PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `{PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `{PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `{PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
 인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 10), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음).
 
@@ -18,26 +20,26 @@ git clone -b {baseBranch} {remote} {tmp}
 
 clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` 실행을 안내하고 중단합니다.
 
-`--domain`이 없거나 registry `domains`에 없으면 AskUserQuestion 한 질문으로 도메인을 고릅니다. 옵션은 도메인마다 `{domain} (레포 N개)`이고 4개를 넘으면 나머지는 기타 입력으로 받으며, 현재 레포의 `git remote get-url origin`이 registry 노드의 `remote`와 같으면 그 도메인을 첫 옵션으로 둡니다.
+`--domain`이 없거나 registry `domains`에 없으면 질문 도구 한 질문으로 도메인을 고릅니다. 옵션은 도메인마다 `{domain} (레포 N개)`이고 4개를 넘으면 나머지는 기타 입력으로 받으며, 현재 레포의 `git remote get-url origin`이 registry 노드의 `remote`와 같으면 그 도메인을 첫 옵션으로 둡니다.
 
 `--dry-run`이 아니면 `publish.md` 1장으로 열린 update PR을 확인합니다.
 
 ## 2. 범위
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --workspace {workspace.root} --domain {domain} --out {work} [--start {slug}={rev}]... [--max-merges N]
+python3 {PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --workspace {workspace.root} --domain {domain} --out {work} [--start {slug}={rev}]... [--max-merges N]
 ```
 
 마지막 줄이 `{work}/work.json` 경로이며, 종료 코드별로 처리합니다.
 
-- **20**: `work.json` `unset`의 레포마다 AskUserQuestion으로 시작 지점을 묻고(한 라운드 4질문까지, 옵션은 `candidates`의 `{label} ({sha7})`, 다른 sha는 기타 입력) 답마다 `--start {slug}={sha}`를 붙여 다시 실행함 — 시작 지점 이후 머지부터 반영되며 `HEAD`는 반영 없이 커서만 기록함
+- **20**: `work.json` `unset`의 레포마다 질문 도구으로 시작 지점을 묻고(한 라운드 4질문까지, 옵션은 `candidates`의 `{label} ({sha7})`, 다른 sha는 기타 입력) 답마다 `--start {slug}={sha}`를 붙여 다시 실행함 — 시작 지점 이후 머지부터 반영되며 `HEAD`는 반영 없이 커서만 기록함
 - **10**: `미처리 없음` 한 줄과 `skipped` 사유를 보고하고 `rm -rf {tmp} {work}` 후 종료
 - **1**: stderr를 전달하고 중단
 - **0**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-update/{YYYYMMDD-HHMM}`
 
 ## 3. 추출
 
-레포별 `batches`마다(다시 나누지 않음) Agent 1회를 `model: sonnet`으로 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `diffs`, `{slug}`는 묶음의 레포입니다.
+레포별 `batches`마다(다시 나누지 않음) 서브에이전트 1회를 실행 환경 연결에 따라 한 메시지에 최대 15개씩 병렬 실행하고, 출력 파일이 없는 묶음은 4절 전에 다시 실행합니다. `{diff 목록}`은 그 묶음 `diffs`, `{slug}`는 묶음의 레포입니다.
 
 ```
 머지 1건(큰 머지는 조각 묶음)에서 위키에 남길 사실을 추출하라.
@@ -95,4 +97,4 @@ git -C {tmp} commit -m "chore(update): 커서 {N}개 레포 · 머지 {M}건" -m
 
 ## 8. 게시·보고
 
-`${CLAUDE_PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 집계는 레포별 처리 머지·예산 밖 이월·`skipped` 사유와 액션별 건수입니다. `--dry-run`이면 집계와 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 집계, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
+`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 집계는 레포별 처리 머지·예산 밖 이월·`skipped` 사유와 액션별 건수입니다. `--dry-run`이면 집계와 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 집계, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
