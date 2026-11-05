@@ -3,12 +3,14 @@ name: review
 description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, project docs found from the session context, and a falsify pass, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job). Run inside the target repo's checkout.
 ---
 
+이 스킬의 실제 설치 경로에서 두 단계 위를 패키지 루트 `{PLUGIN_ROOT}`로 확정합니다. 아래 경로·명령의 자리표시자는 실행 전에 절대 경로로 바꾸고 셸 인자는 따옴표로 감쌉니다. 셸 환경변수가 자동 제공된다고 가정하지 않습니다.
+
 ## 계약 로드
 
-- `${CLAUDE_PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 보고 필수 항목
-- `${CLAUDE_PLUGIN_ROOT}/references/review-comment.md` — 코멘트 접두사와 요약 상태 줄
-- `${CLAUDE_PLUGIN_ROOT}/references/host.md` — PR 조회, diff 조달, 리뷰 제외 경로, 코멘트 게시
-- **페이로드**: 해당 단계에서만 읽음. `${CLAUDE_PLUGIN_ROOT}/references/checklists/*.md`(Layer 1, 서브에이전트 전용), `${CLAUDE_PLUGIN_ROOT}/references/subagent-prompts.md`(①리뷰 ②반증 ③재앵커)
+- `{PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 보고 필수 항목
+- `{PLUGIN_ROOT}/references/review-comment.md` — 코멘트 접두사와 요약 상태 줄
+- `{PLUGIN_ROOT}/references/host.md` — PR 조회, diff 조달, 리뷰 제외 경로, 코멘트 게시
+- **페이로드**: 해당 단계에서만 읽음. `{PLUGIN_ROOT}/references/checklists/*.md`(Layer 1, 서브에이전트 전용), `{PLUGIN_ROOT}/references/subagent-prompts.md`(①리뷰 ②반증 ③재앵커)
 
 ## 가드레일
 
@@ -36,7 +38,7 @@ description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", 
 ## 3. 적용 룰 결정
 
 - **Layer 1 스택 감지**: 저장소당 1회. 모든 파일에 `checklists/common.md`를 적용하고, `.ts/.tsx/.js/.jsx`는 가장 가까운 `package.json` deps에 react·next가 있으면 `typescript-react.md`, `@nestjs/core`가 있으면 `nestjs.md`를, `.java/.kt`는 `java-spring.md`를 더함
-- **절대 경로**: `${CLAUDE_PLUGIN_ROOT}/references/checklists/<name>.md`를 절대 경로로 1회 확장해 `{CHECKLIST_PATHS}`로 전달함
+- **절대 경로**: `{PLUGIN_ROOT}/references/checklists/<name>.md`를 절대 경로로 1회 확장해 `{CHECKLIST_PATHS}`로 전달함
 - **Layer 2 프로젝트 문서**: 세션에 주입된 사전 정보(위키·문서 목록)에서 이 PR이 만지는 코드·규칙을 다루는 문서를 찾아 읽고 고름. 서브에이전트는 세션 컨텍스트를 물려받지 못하므로 고른 문서를 절대 경로로 `{MATCHED_DOCS}`에 담고, 변경 파일 하나를 다루는 문서는 그 파일의 서브에이전트에, PR 의도를 다루는 문서는 전체에 전달함. 고를 문서가 없으면 Layer 1만 씀
 - **우선순위**: 충돌 시 Layer 2가 Layer 1을 이김
 
