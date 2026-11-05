@@ -6,16 +6,25 @@
 # 브랜치 기반 slug 규칙은 git 저장소 밖에서 의미가 없으므로 그 경우 조용히 끝낸다.
 set -uo pipefail
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"
+PLUGIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(python3 -c '
+import json, os, sys
+try:
+    event = json.load(sys.stdin)
+except (ValueError, TypeError):
+    event = {}
+print((event.get("cwd") if isinstance(event, dict) else None) or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+')"
 git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
+PROJECT_DIR="$(git -C "$PROJECT_DIR" rev-parse --show-toplevel)"
 BRANCH="$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)"
 case "$BRANCH" in
   ""|main|master|develop) SLUG="" ;;
   *) SLUG="${BRANCH//\//-}" ;;
 esac
 
-python3 - "${CLAUDE_PLUGIN_ROOT}" "$PROJECT_DIR" "$SLUG" <<'PY' 2>/dev/null || exit 0
+python3 - "$PLUGIN_DIR" "$PROJECT_DIR" "$SLUG" <<'PY' 2>/dev/null || exit 0
 import json
 import os
 import sys
@@ -46,7 +55,7 @@ if slug:
     feedback_path = os.path.join(workspace, "feedback.md")
 
     if os.path.isfile(plan_path):
-        lines.append(f"- **plan.md**: 있음 — 구현은 `/{name}:execute`, 추가 계획은 `/{name}:planning`으로 기존 계획 끝에 덧붙임")
+        lines.append(f"- **plan.md**: 있음 — 구현은 `{name}`의 execute 스킬, 추가 계획은 `{name}`의 planning 스킬으로 기존 계획 끝에 덧붙임")
     else:
         lines.append("- **plan.md**: 없음")
 
