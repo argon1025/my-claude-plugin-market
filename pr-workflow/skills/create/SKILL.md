@@ -3,7 +3,7 @@ name: create
 description: Use when a finished feature branch needs a pull request ("PR 생성", "PR 올려줘") — derives the PR context from the branch diff, asks when the background is missing, drafts a 4-section Korean body, pushes and creates only after one approval. NOT for reviewing a PR or applying its comments (that is this plugin's review and fix skills).
 ---
 
-이 스킬의 실제 설치 경로에서 두 단계 위를 패키지 루트 `{PLUGIN_ROOT}`로 확정합니다. 아래 경로·명령의 자리표시자는 실행 전에 절대 경로로 바꾸고 셸 인자는 따옴표로 감쌉니다. 셸 환경변수가 자동 제공된다고 가정하지 않습니다.
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
 
 현재 피처 브랜치로 **원본 저장소**의 베이스 브랜치를 대상으로 PR을 만듭니다. 로컬 `origin`이 개인 fork여도 PR 대상은 항상 원본 저장소입니다.
 

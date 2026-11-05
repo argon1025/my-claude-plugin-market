@@ -3,7 +3,7 @@ name: review
 description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, project docs found from the session context, and a falsify pass, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job). Run inside the target repo's checkout.
 ---
 
-이 스킬의 실제 설치 경로에서 두 단계 위를 패키지 루트 `{PLUGIN_ROOT}`로 확정합니다. 아래 경로·명령의 자리표시자는 실행 전에 절대 경로로 바꾸고 셸 인자는 따옴표로 감쌉니다. 셸 환경변수가 자동 제공된다고 가정하지 않습니다.
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
 
 ## 계약 로드
 
@@ -44,7 +44,7 @@ description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", 
 
 ## 4. 리뷰
 
-변경 150라인 이하이고 3파일 이하면 같은 스키마와 같은 반증 단계로 직접 1패스합니다. 그 외에는 파일 1개당 general-purpose 서브에이전트 1개, 배치당 최대 5개로 템플릿 ①을 사용해 팬아웃합니다.
+변경 150라인 이하이고 3파일 이하면 같은 스키마와 같은 반증 단계로 직접 1패스합니다. 그 외에는 파일 1개당 범용 서브에이전트 1개, 배치당 최대 5개로 템플릿 ①을 사용해 팬아웃합니다.
 
 ## 5. 반증
 
