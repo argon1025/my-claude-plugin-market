@@ -4,7 +4,8 @@
 # 한국어 본문의 JSON 이스케이프는 python3에 맡긴다.
 set -euo pipefail
 
-python3 - "${CLAUDE_PLUGIN_ROOT}/rules/agent-guide.md" <<'PY'
+PLUGIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+python3 - "$PLUGIN_DIR/rules/agent-guide.md" <<'PY'
 import json
 import sys
 

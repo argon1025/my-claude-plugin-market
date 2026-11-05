@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "better-communication",
+  "description": "간결하고 이해하기 쉬운 한국어 응답 — 결론·구체적인 동작·검증 상태를 자연스러운 문장으로 전달",
+  "version": "4.3.0",
+  "author": {
+    "name": "argon1025",
+    "email": "argon1025@gmail.com"
+  },
+  "keywords": [
+    "communication",
+    "style",
+    "산출물"
+  ]
+}
