@@ -55,7 +55,7 @@ if slug:
     feedback_path = os.path.join(workspace, "feedback.md")
 
     if os.path.isfile(plan_path):
-        lines.append(f"- **plan.md**: 있음 — 구현은 `{name}`의 execute 스킬, 추가 계획은 `{name}`의 planning 스킬으로 기존 계획 끝에 덧붙임")
+        lines.append(f"- **plan.md**: 있음 — 구현은 `{name}`의 execute 스킬, 추가 계획은 `{name}`의 planning 스킬로 기존 계획 끝에 덧붙임")
     else:
         lines.append("- **plan.md**: 없음")
 

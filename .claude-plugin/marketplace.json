@@ -5,8 +5,8 @@
     "email": "argon1025@gmail.com"
   },
   "metadata": {
-    "description": "argon1025의 개인 Claude Code 플러그인 마켓플레이스",
-    "version": "4.9.0"
+    "description": "Claude Code·Codex 공용 플러그인 마켓플레이스",
+    "version": "4.10.0"
   },
   "plugins": [
     {

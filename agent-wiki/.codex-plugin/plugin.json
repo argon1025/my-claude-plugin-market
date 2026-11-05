@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-wiki",
   "description": "에이전트 위키",
   "version": "0.12.0",
@@ -13,5 +12,7 @@
     "git",
     "위키",
     "에이전트 위키"
-  ]
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
 }

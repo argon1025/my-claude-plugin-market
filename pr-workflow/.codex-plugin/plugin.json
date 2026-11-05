@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "pr-workflow",
   "description": "PR 워크플로 — PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), gh·glab·PR 호스트 MCP 중 세션에 있는 도구 사용",
   "version": "3.3.0",
@@ -13,5 +12,6 @@
     "PR",
     "코드리뷰",
     "리뷰 반영"
-  ]
+  ],
+  "skills": "./skills/"
 }

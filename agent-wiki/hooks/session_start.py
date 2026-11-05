@@ -83,7 +83,7 @@ def main():
     event = read_event()
     project = Path(event.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     sync_fail = None
-    if event.get("source", "startup") in ("startup", "resume", "clear") and (base / ".git").exists():
+    if (event.get("source") or "startup") in ("startup", "resume", "clear") and (base / ".git").exists():
         sync_fail = sync_wiki(base, config["wiki"])
     warnings = [f"위키 최신화 실패 : {sync_fail}"] if sync_fail else []
     if not (base / "registry.json").exists():
