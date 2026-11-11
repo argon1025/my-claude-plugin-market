@@ -201,9 +201,17 @@ class WikiHookTests(HookFixture):
         self.assertIn('sample/demo', result['systemMessage'])
         context = result['hookSpecificOutput']['additionalContext']
         self.assertIn('DEMO_SUMMARY', context)
-        self.assertIn('DEMO_DOCUMENT', context)
-        index = self.wiki / '.local/index/sample/demo.md'
-        self.assertIn('DEMO_RESPONSIBILITY', index.read_text())
+        # Document names and descriptions live in the index file; the context carries only its path and counts.
+        docs_index = self.wiki / '.local/index/sample/demo.md'
+        repos_index = self.wiki / '.local/index/sample/demo.repos.md'
+        self.assertNotIn('DEMO_DOCUMENT', context)
+        self.assertNotIn('contract', context)
+        self.assertIn(str(docs_index), context)
+        self.assertIn(str(repos_index), context)
+        self.assertIn('demo 전용 문서 1건', context)
+        self.assertIn('contract — DEMO_DOCUMENT', docs_index.read_text())
+        self.assertNotIn('DEMO_RESPONSIBILITY', docs_index.read_text())
+        self.assertIn('DEMO_RESPONSIBILITY', repos_index.read_text())
 
     def test_unregistered_and_non_git_context(self):
         run('git', 'remote', 'add', 'origin', 'https://example.invalid/other.git', cwd=self.project)

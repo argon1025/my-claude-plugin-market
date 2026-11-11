@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SessionStart 훅: 새 세션(startup·resume·clear)이면 위키 트리를 강제 정리(최대 3초 대기)한 뒤 등록 레포면 그 레포의 위키 주입 텍스트를, 아니면 도메인 개요 주입 텍스트를 출력한다.
-# 주입 텍스트는 scripts/generate_*.py 출력을 순서대로 합친 것이며, 등록 레포면 같은 생성기의 --full 출력으로 {baseRoot}/.local/index/{domain}/{slug}.md 색인을 세션마다 쓴다.
+# 주입 텍스트는 scripts/generate_*.py 출력을 순서대로 합친 것이며, 등록 레포면 같은 생성기의 --full 출력으로 세션마다 {baseRoot}/.local/index/{domain}/에 문서 색인({slug}.md)과 레포 책임 색인({slug}.repos.md)을 쓴다.
 # 어떤 실패에서도 종료 코드 0으로 끝내고, 로드 상태와 실패는 사용자 알림(systemMessage)으로 알린다.
 import json
 import os
@@ -99,16 +99,20 @@ def main():
         blocks = {"도메인 개요": generate("generate_domain_overview.py", base, shown)}
         first = f"현재 프로젝트({shown})는 위키 대상이 아닙니다. 도메인 개요만 로드되었습니다. (도메인 {len(domains)}개 · {synced_at(base)})"
     else:
-        key, index = f"{domain}/{slug}", base / ".local" / "index" / domain / f"{slug}.md"
-        full = [generate("generate_repository_map.py", base, ws, key, "--full"), generate("generate_document_list.py", base, key, "--full")]
+        key, folder = f"{domain}/{slug}", base / ".local" / "index" / domain
+        # 문서를 고를 때 레포 책임까지 읽지 않도록 색인을 두 파일로 나눈다.
+        index = {"문서 색인": (folder / f"{slug}.md", generate("generate_document_list.py", base, key, "--full")),
+                 "레포 책임": (folder / f"{slug}.repos.md", generate("generate_repository_map.py", base, ws, key, "--full"))}
         try:
-            write_index(index, "\n\n".join([f"# 위키 색인 — {key}", *filter(None, full)]) + "\n")
+            for title, (path, body) in index.items():
+                write_index(path, "\n\n".join(filter(None, [f"# 위키 {title} — {key}", body])) + "\n")
+            paths = [path for path, _ in index.values()]
         except OSError:
-            index = None
-        blocks = {"위키 규칙": generate("generate_wiki_rules.py", key, *([index] if index else [])),
+            paths = []
+        blocks = {"위키 규칙": generate("generate_wiki_rules.py", key, *paths),
                   "레포 지도": generate("generate_repository_map.py", base, ws, key),
-                  "문서 목록": generate("generate_document_list.py", base, key)}
-        index_failed = None in full or index is None
+                  "문서 위치": generate("generate_document_list.py", base, key)}
+        index_failed = not paths or any(body is None for _, body in index.values())
         docs = base / "knowledge" / domain
         counts = [sum(f.is_file() for f in folder.glob("*.md")) for folder in (docs, docs / slug)]
         first = (f"{key} 프로젝트 위키가 로드되었습니다. "
@@ -116,7 +120,7 @@ def main():
     text = "\n\n".join(filter(None, blocks.values()))
     failed = [name for name, b in blocks.items() if b is None] + (["색인 파일"] if index_failed else [])
     if len(text) > LIMIT:
-        warnings.append(f"위키 세션훅 주입 한도 초과 상태({len(text):,}자 / {LIMIT:,}자), 문서를 정리하세요")
+        warnings.append(f"위키 세션훅 주입 한도 초과 상태({len(text):,}자 / {LIMIT:,}자)")
     if failed:
         warnings.append(f"위키 작동 실패 : {'·'.join(failed)} 생성 실패")
     if domain is None and slug:
