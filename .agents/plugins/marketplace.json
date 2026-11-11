@@ -1,0 +1,56 @@
+{
+  "name": "my-claude-plugin-market",
+  "interface": {
+    "displayName": "Personal agent workflows"
+  },
+  "plugins": [
+    {
+      "name": "better-communication",
+      "source": {
+        "source": "local",
+        "path": "./better-communication"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "pr-workflow",
+      "source": {
+        "source": "local",
+        "path": "./pr-workflow"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "plan-workflow",
+      "source": {
+        "source": "local",
+        "path": "./plan-workflow"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "agent-wiki",
+      "source": {
+        "source": "local",
+        "path": "./agent-wiki"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -14,14 +14,15 @@ PLUGIN = Path(__file__).resolve().parent.parent
 SCRIPTS = PLUGIN / "scripts"
 LIMIT = 10000
 FAIL = "위키 로드에 실패했습니다."
-REGISTER = "위키 대상 레포라면 '/agent-wiki:register'로 등록하세요"
+REGISTER = "위키 대상 레포라면 'agent-wiki의 register 스킬'로 등록하세요"
 
 
-def source():
+def read_event():
     try:
-        return json.loads(sys.stdin.read() or "{}").get("source") or "startup"
+        event = json.loads(sys.stdin.read() or "{}")
+        return event if isinstance(event, dict) else {}
     except (ValueError, AttributeError):
-        return "startup"
+        return {}
 
 
 def sync_wiki(base, wiki):
@@ -79,16 +80,17 @@ def label(project):
 def main():
     config = json.loads((PLUGIN / "config.json").read_text())
     base, ws = Path(config["wiki"]["baseRoot"]).expanduser(), Path(config["workspace"]["root"]).expanduser()
-    project = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    event = read_event()
+    project = Path(event.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     sync_fail = None
-    if source() in ("startup", "resume", "clear") and (base / ".git").exists():
+    if (event.get("source") or "startup") in ("startup", "resume", "clear") and (base / ".git").exists():
         sync_fail = sync_wiki(base, config["wiki"])
     warnings = [f"위키 최신화 실패 : {sync_fail}"] if sync_fail else []
     if not (base / "registry.json").exists():
-        return "", notice(FAIL, [*warnings, "'/agent-wiki:init'을 실행해 위키 초기 세팅을 진행하세요"])
+        return "", notice(FAIL, [*warnings, "'agent-wiki의 init 스킬'을 실행해 위키 초기 세팅을 진행하세요"])
     domains = json.loads((base / "registry.json").read_text())["domains"]
     if not domains:
-        return "", notice(FAIL, [*warnings, "위키에 등록된 도메인이 없습니다. 위키 대상 레포라면 '/agent-wiki:register'로 등록하세요"])
+        return "", notice(FAIL, [*warnings, "위키에 등록된 도메인이 없습니다. 위키 대상 레포라면 'agent-wiki의 register 스킬'로 등록하세요"])
     slug = origin_slug(project)
     domain = next((d for d, g in domains.items() if slug in g.get("repos", {})), None)
     index_failed = False

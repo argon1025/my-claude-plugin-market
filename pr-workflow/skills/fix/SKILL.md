@@ -3,11 +3,13 @@ name: fix
 description: Use when applying review comments on a pull request as the PR author ("리뷰 반영", "코멘트 반영", "리뷰 코멘트 처리", right after this plugin's review report) — triages every unresolved comment (AI + human) into 수용/기각/이미 해결 with evidence, gets that triage approved, fixes accepted items as commits, then after one more approval pushes and replies to each thread. NOT for reviewing a PR (that is this plugin's review skill's job). Requires running inside the target repo's checkout.
 ---
 
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
+
 ## 계약 로드
 
-- `${CLAUDE_PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 금지 행동
-- `${CLAUDE_PLUGIN_ROOT}/references/review-comment.md` — 어떤 스레드를 집고 어떤 접두사로 답하는지
-- `${CLAUDE_PLUGIN_ROOT}/references/host.md` — 코멘트 조회, push 리모트, 답글 방식
+- `{PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 금지 행동
+- `{PLUGIN_ROOT}/references/review-comment.md` — 어떤 스레드를 집고 어떤 접두사로 답하는지
+- `{PLUGIN_ROOT}/references/host.md` — 코멘트 조회, push 리모트, 답글 방식
 
 ## 가드레일
 

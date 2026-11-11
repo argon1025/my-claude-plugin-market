@@ -4,7 +4,9 @@ description: Create the wiki skeleton if the configured remote is empty, then fo
 disable-model-invocation: true
 ---
 
-`${CLAUDE_PLUGIN_ROOT}/config.json`의 `wiki` 값(`baseRoot`·`remote`·`baseBranch`)을 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다.
+먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
+
+`{PLUGIN_ROOT}/config.json`의 `wiki` 값(`baseRoot`·`remote`·`baseBranch`)을 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다.
 
 ## 1. 빈 원격 확인
 
@@ -22,7 +24,7 @@ git ls-remote --heads {remote} {baseBranch}
 
 ```
 git clone {remote} {tmp}
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/write_skeleton.sh {tmp}
+bash {PLUGIN_ROOT}/scripts/write_skeleton.sh {tmp}
 git -C {tmp} add -A
 git -C {tmp} commit -m "chore(init): 위키 골격"
 git -C {tmp} branch -M {baseBranch}
@@ -37,7 +39,7 @@ rm -rf {tmp}
 `baseRoot`를 clone하거나 원격 `baseBranch`로 강제 정리합니다.
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sync_wiki.py {baseRoot} {remote} {baseBranch}
+python3 {PLUGIN_ROOT}/scripts/sync_wiki.py {baseRoot} {remote} {baseBranch}
 ```
 
 `fail`이면 원인을 보고하고 중단합니다.
