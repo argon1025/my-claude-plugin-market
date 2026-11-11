@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, and project docs found from the session context, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Accepts a list of PRs; each is reviewed from its own repo checkout. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job).
+description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트·합의와의 어긋남) with stack checklists, the PR's plan record, and project docs found from the session context, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Accepts a list of PRs; each is reviewed from its own repo checkout. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job).
 ---
 
 먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
@@ -40,6 +40,7 @@ description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", 
 - **절대 경로**: `{PLUGIN_ROOT}/references/checklists/<name>.md`를 절대 경로로 1회 확장해 `{CHECKLIST_PATHS}`로 전달함
 - **Layer 2 프로젝트 문서**: 세션에 주입된 사전 정보(위키·문서 목록)에서 이 PR이 만지는 코드·규칙을 다루는 문서를 찾아 읽고 고름. 서브에이전트는 세션 컨텍스트를 물려받지 못하므로 고른 문서를 절대 경로로 `{MATCHED_DOCS}`에 담고, 변경 파일 하나를 다루는 문서는 그 파일의 서브에이전트에, PR 의도를 다루는 문서는 전체에 전달함. 고를 문서가 없으면 Layer 1만 씀
 - **우선순위**: 충돌 시 Layer 2가 Layer 1을 이김
+- **계획 문서**: PR이 바꾼 파일이나 세션 컨텍스트가 알려 준 기록 위치에서 이 PR의 `plan.md`를 찾음. `합의` 절이 있으면 그 파일의 저장소 상대 경로를 `{PLAN_DOC}`로 모든 서브에이전트에 전달하고, 리뷰 의도(`{PR_INTENT}`)를 PR 설명 대신 `의도`와 `합의`에서 가져옴. `합의` 절이 없으면 합의 대조를 하지 않고 PR 설명을 의도로 씀
 
 ## 4. 리뷰
 
@@ -61,7 +62,7 @@ diff 밖에는 앵커하지 않습니다.
 
 파일·라인 ±2·주제가 기존 코멘트(AI·사람)와 일치하는 발견은 "기존 코멘트와 중복"으로 표시하고 제외합니다.
 
-- **적용 룰 소스**: 감지 스택, Layer 1 체크리스트, Layer 2 문서(없으면 `없음`)
+- **적용 룰 소스**: 감지 스택, Layer 1 체크리스트, Layer 2 문서(없으면 `없음`), 계획 문서(없으면 `없음`)
 - **등급 절**: Blocker · Bug · 개선. 건별로 `<등급 이모지> **<title>** — `파일:라인` [구분/등급] 규칙·출처` 다음에 제안 1줄과 상세 근거
 - **표·건수**: 요약표(파일 | 건수 | 구분 | 최고 등급), 스킵 표, 중복 N건, 재리뷰 판정
 - **권장**: `권장:` 머지 가부 1줄. 의견이며 승인 버튼은 누르지 않음
