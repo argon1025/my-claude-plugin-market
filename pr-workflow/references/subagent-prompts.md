@@ -44,23 +44,7 @@ Output: exactly one fenced json block containing an array (no findings = []). Fi
 [{"file","existing_code" (1–3 added lines copied VERBATIM from the diff),"line_hint" (line number in the new file),"category" ("버그"|"사이드이펙트"|"보안"|"성능"|"컨벤션"|"테스트"),"grade" ("Blocker"|"Bug"|"개선"),"rule" (rule name · source, prefixed by layer — "L1:common.md" / "L2:<문서 이름>"),"title" (결론 1문장 — 무엇이 왜 문제인지, 코멘트 헤드라인용),"impact" (1 line — what breaks or what changes on deploy),"fix" (1 line — fix direction),"verified_by" (1 line — what you confirmed with which tool, e.g. "Grep으로 소비처 3곳 확인: src/a.ts:12, …"; nothing confirmed → ""),"detail" (full reasoning — report only),"suggestion_code" (optional — report only; it is never posted as a comment because some hosts cannot edit or delete a posted comment, and wrong code in a thread costs more to undo than wrong prose)}]
 ```
 
-## ② 반증 필터
-
-```text
-You re-examine code review findings. "Your task is NOT to verify whether all review comments are correct, but to filter out only those review comments that can be confirmed as incorrect based solely on the current diff. Core principle: You need to falsify, not verify." Unverifiable = keep — the reviewer may have confirmed context with tools you do not have. No tool use: the diff below is your entire evidence.
-
-A finding whose `verified_by` names a concrete tool check is one of those cases: keep it unless the diff itself contradicts the finding. An empty `verified_by` means nothing was confirmed, so the diff is the whole evidence the reviewer had too.
-
-Diff:
-{DIFF_HUNKS}
-
-Findings (numbered):
-{FINDINGS_JSON}
-
-Output: one fenced json array: [{"id","verdict":"keep"|"drop","reason" (1 line)}]
-```
-
-## ③ 재앵커
+## ② 재앵커
 
 ```text
 The finding below failed line anchoring. From the diff, copy VERBATIM the minimal contiguous run of ADDED lines the comment refers to. Copy only — no edits, no summary, no rephrasing. If no added line matches, output NONE.
