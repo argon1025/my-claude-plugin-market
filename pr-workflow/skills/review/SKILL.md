@@ -1,13 +1,13 @@
 ---
 name: review
-description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, project docs found from the session context, and a falsify pass, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job). Run inside the target repo's checkout.
+description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", PR URL 제시) — PR from the open list or a pasted URL, per-file review (버그·사이드이펙트 중심) with stack checklists, project docs found from the session context, and a falsify pass, Korean findings graded Blocker/Bug/개선, comments posted only after approval; a re-run re-checks its own prior comments first. Accepts a list of PRs; each is reviewed from its own repo checkout. Reviewer only — applying comments is this plugin's fix skill's job. NOT for the local working diff (that is /code-review's job).
 ---
 
 먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
 
 ## 계약 로드
 
-- `{PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 보고 필수 항목
+- `{PLUGIN_ROOT}/references/pr-protocol.md` — 대상, 사전 조건, 저장소·PR 좌표, 승인 게이트, 보고 필수 항목
 - `{PLUGIN_ROOT}/references/review-comment.md` — 코멘트 접두사와 요약 상태 줄
 - `{PLUGIN_ROOT}/references/host.md` — PR 조회, diff 조달, 리뷰 제외 경로, 코멘트 게시
 - **페이로드**: 해당 단계에서만 읽음. `{PLUGIN_ROOT}/references/checklists/*.md`(Layer 1, 서브에이전트 전용), `{PLUGIN_ROOT}/references/subagent-prompts.md`(①리뷰 ②반증 ③재앵커)
@@ -17,7 +17,6 @@ description: Use when reviewing a pull request ("PR 리뷰", "PR 리뷰해줘", 
 - **승인 후 게시**: 명시 승인 전에는 게시하지 않으며, 코드를 수정하지 않는 리뷰 전용임
 - **스냅샷 대상**: 리뷰 대상은 PR 스냅샷(`$REVIEW_SHA`)이고 git 부작용은 `git fetch`만 허용함
 - **Strict Focus**: 파이프라인 불변식이며 다른 파일의 발견을 되살리지 않음
-- **동일 저장소**: 다른 저장소의 PR은 거절하고 그 체크아웃을 안내함
 - **오류 원문**: PR·인증·도구 오류는 원문을 보고하고 중단함
 - **무단 생략 금지**: 스킵·절단·앵커 강등·반증 제외를 전부 보고함
 

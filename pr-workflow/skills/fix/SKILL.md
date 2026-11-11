@@ -1,13 +1,13 @@
 ---
 name: fix
-description: Use when applying review comments on a pull request as the PR author ("리뷰 반영", "코멘트 반영", "리뷰 코멘트 처리", right after this plugin's review report) — triages every unresolved comment (AI + human) into 수용/기각/이미 해결 with evidence, gets that triage approved, fixes accepted items as commits, then after one more approval pushes and replies to each thread. NOT for reviewing a PR (that is this plugin's review skill's job). Requires running inside the target repo's checkout.
+description: Use when applying review comments on a pull request as the PR author ("리뷰 반영", "코멘트 반영", "리뷰 코멘트 처리", right after this plugin's review report) — triages every unresolved comment (AI + human) into 수용/기각/이미 해결 with evidence, gets that triage approved, fixes accepted items as commits, then after one more approval pushes and replies to each thread. Accepts a list of PRs; each is fixed in its own repo checkout. NOT for reviewing a PR (that is this plugin's review skill's job).
 ---
 
 먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
 
 ## 계약 로드
 
-- `{PLUGIN_ROOT}/references/pr-protocol.md` — 사전 조건, 저장소·PR 좌표, 승인 게이트, 금지 행동
+- `{PLUGIN_ROOT}/references/pr-protocol.md` — 대상, 사전 조건, 저장소·PR 좌표, 승인 게이트, 금지 행동
 - `{PLUGIN_ROOT}/references/review-comment.md` — 어떤 스레드를 집고 어떤 접두사로 답하는지
 - `{PLUGIN_ROOT}/references/host.md` — 코멘트 조회, push 리모트, 답글 방식
 
@@ -16,9 +16,8 @@ description: Use when applying review comments on a pull request as the PR autho
 - **force-push 금지**: 어떤 경우에도 하지 않음
 - **검증 실패**: push하지 않고 중단해 보고함. 재시도 루프도 우회도 없음
 - **신규 발견 금지**: 리뷰는 이 플러그인의 `review` 스킬의 일이며, 수정 중 발견한 문제는 코멘트가 아니라 보고로 남김
-- **승인 2회 고정**: 판정 세트 승인과 외부 쓰기 묶음 승인. 항목별로 묻지 않음
+- **승인 2회**: PR마다 판정 세트 승인과 외부 쓰기 묶음 승인을 받음. 항목별로 묻지 않음
 - **무단 생략 금지**: 기각·보류·미실행 검증을 전부 보고함
-- **동일 저장소**: 다른 저장소의 PR은 거절하고 그 체크아웃을 안내함
 
 ## 1. PR 확정·소스 브랜치 체크아웃
 
