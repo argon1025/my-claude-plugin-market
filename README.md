@@ -18,7 +18,7 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 | --- | --- | --- |
 | [better-communication](./better-communication/README.md) | 간결하고 이해하기 쉬운 한국어 응답 규칙을 세션에 자동 주입 | `python3` |
 | [pr-workflow](./pr-workflow/README.md) | PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), 스킬 호출 시에만 동작 | `gh`·`glab`·PR 호스트 MCP 중 1종 |
-| [plan-workflow](./plan-workflow/README.md) | 항목별 요구사항 인터뷰·합의 후 계획 승인·별도 실행을 제공하는 planning·execute 스킬, 기록은 `.ai-docs/workspace/{slug}/` | `python3`, `git` |
+| [plan-workflow](./plan-workflow/README.md) | 이슈 여러 개를 분류해 한 결정씩 합의하고 이슈별 계획 승인 뒤 실행까지 잇는 planning·execute 스킬, 기록은 `.ai-docs/workspace/{이슈 키}/` | `python3`, `git` |
 | [agent-wiki](./agent-wiki/README.md) | 에이전트 위키 | `git`, `python3` |
 
 
@@ -50,7 +50,7 @@ agent-wiki의 init·register·update는 명시 호출 전용입니다. add는 �
 
 - Claude는 .claude-plugin/plugin.json, Codex는 .codex-plugin/plugin.json을 사용하며 skills·references·scripts는 공유합니다.
 - Codex CLI 0.166.0에서 루트 portable plugin.json이 있으면 훅이 누락되는 현상을 재현해, 이 배포에는 루트 manifest를 두지 않습니다. CLI 버전이 바뀌어도 실제 hooks/list 또는 /hooks로 등록을 확인한 뒤 형식을 변경합니다.
-- 계획 플러그인의 Codex 훅은 SessionStart만 사용합니다. 최종 승인·스냅샷·인계는 공통 planning 스킬이 담당하며, 도구 호출을 사용자 승인으로 판정하지 않습니다.
+- 계획 플러그인의 훅은 두 클라이언트 모두 SessionStart만 사용합니다. 계획 승인과 스냅샷은 공통 planning 스킬이 담당하며, 도구 호출이나 계획 모드 전환을 사용자 승인으로 판정하지 않습니다.
 - hooks·git·bash·python3가 있는 로컬 실행 환경이 대상입니다. Cloud·웹과 Windows 셸 호환성은 검증 범위 밖입니다.
 - 자동 검사: python3 -m unittest discover -s tests -p 'test_*.py'
 - 실제 Codex 로더 검사(모델 호출 없음): python3 tests/check_codex.py

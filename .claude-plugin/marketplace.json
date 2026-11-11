@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Claude Code·Codex 공용 플러그인 마켓플레이스",
-    "version": "4.10.0"
+    "version": "4.11.0"
   },
   "plugins": [
     {
@@ -34,7 +34,7 @@
     {
       "name": "plan-workflow",
       "source": "./plan-workflow",
-      "description": "계획 워크플로 — 한 결정씩 인터뷰해 합의한 뒤 계획 승인·스냅샷·별도 실행으로 연결하며 작업 기록을 세션에 주입하는 planning·execute 스킬",
+      "description": "계획 워크플로 — 이슈 여러 개를 분류해 한 결정씩 합의하고 이슈별 계획 승인 뒤 실행까지 잇는 planning·execute 스킬과 작업 기록 규약",
       "category": "workflow",
       "tags": [
         "planning",
