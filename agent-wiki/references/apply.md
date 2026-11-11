@@ -75,7 +75,7 @@ update·add 스킬이 사실을 추출한 뒤 공통으로 따르는 절차입�
 
 ## 4. 재배정
 
-검토가 reason `위치`로 삭제한 항목마다 `fact`는 그 항목 값으로, 나머지 키는 `ids`의 사실 행 그대로 둔 행을 `target` 문서에 배정해(없는 문서는 1장 신규 문서 규칙) `{work}/assign-re.json`에 쓰고, 그 문서에만 2·3장을 다시 실행합니다. 입력은 `{work}/assign-re.json`, 출력은 `{work}/applied/{doc_slug}.re.json`·`{work}/review/{doc_slug}.re.json`입니다. 두 번째 검토도 위치로 삭제한 사실은 `위치 재배정`으로 넘깁니다.
+검토가 reason `위치`로 삭제한 항목마다 `fact`는 그 항목 값으로, 나머지 키는 `ids`의 사실 행 그대로 둔 행을 `target` 문서에 배정해(없는 문서는 1장 신규 문서 규칙) `{work}/assign-re.json`에 쓰고, 그 문서에만 2·3장을 다시 실행합니다. 입력은 `{work}/assign-re.json`, 출력은 `{work}/applied/{doc_slug}.re.json`·`{work}/review/{doc_slug}.re.json`입니다. 이 검토는 위치를 판정하지 않습니다 — 검토 지시에서 `위치:` 줄을 빼고 `기준:` 줄의 `2장 위치·파일명`을 `2장 파일명`으로 바꿔 실행하며, 사실은 첫 검토가 지정한 문서에 남습니다. 덜 맞는 문서에 기록된 사실은 나중에 옮길 수 있지만 기록되지 않은 사실은 되찾을 수 없기 때문입니다.
 
 ## 5. 원복
 
