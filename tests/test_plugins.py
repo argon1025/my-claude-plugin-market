@@ -84,8 +84,9 @@ class PackageTests(unittest.TestCase):
         manifest = json.loads((FLOW / '.codex-plugin/plugin.json').read_text())
         hooks = json.loads((FLOW / manifest['hooks']).read_text())['hooks']
         self.assertEqual(set(hooks), {'SessionStart'})
+        # Approval is the planning skill's question, so neither client registers a plan-mode hook.
         claude = json.loads((FLOW / 'hooks/hooks.json').read_text())['hooks']
-        self.assertEqual(claude['PostToolUse'][0]['matcher'], 'ExitPlanMode')
+        self.assertEqual(set(claude), {'SessionStart'})
 
 
 class HookFixture(unittest.TestCase):
@@ -119,43 +120,58 @@ class HookTests(HookFixture):
         self.assertEqual(reminder['hookEventName'], 'UserPromptSubmit')
         self.assertIn('COMMUNICATION RULES ACTIVE', reminder['additionalContext'])
 
+    def checkout(self, branch):
+        run('git', 'symbolic-ref', 'HEAD', f'refs/heads/{branch}', cwd=self.project)
+
+    def workspace(self, folder):
+        config = json.loads((FLOW / 'config.json').read_text())
+        path = self.project / config['workspace']['root'] / folder
+        path.mkdir(parents=True)
+        return path
+
     def test_plan_payload_cwd_and_nested_project(self):
+        self.checkout('feature/PROJ-12-demo')
         nested = self.project / 'src/deep'
         nested.mkdir(parents=True)
-        config = json.loads((FLOW / 'config.json').read_text())
-        workspace = self.project / config['workspace']['root'] / 'feature-demo'
-        workspace.mkdir(parents=True)
+        workspace = self.workspace('PROJ-12')
         (workspace / 'plan.md').write_text('# Approved plan\n')
-        (workspace / 'feedback.md').write_text('# 기록\n- `context` PAYLOAD_ROOT_MARKER\n')
+        (workspace / 'feedback.md').write_text('# 기록\n- `constraint` PAYLOAD_ROOT_MARKER\n')
         result = self.invoke(FLOW, event={'cwd': str(nested), 'source': 'startup'})
         context = result['hookSpecificOutput']['additionalContext']
-        self.assertIn('feature-demo', context)
-        self.assertIn('PAYLOAD_ROOT_MARKER', context)
-        self.assertIn('**plan.md**: 있음', context)
+        self.assertIn('이슈 키**: `PROJ-12`', context)
+        self.assertIn('/PROJ-12/` — `plan.md`·`feedback.md` 있음', context)
+        self.assertIn('**읽기**', context)
+        # Record bodies are read on demand, never injected.
+        self.assertNotIn('PAYLOAD_ROOT_MARKER', context)
 
     def test_plan_claude_env_fallback_and_non_git(self):
+        self.checkout('feature/PROJ-12-demo')
         env = {**self.env, 'CLAUDE_PROJECT_DIR': str(self.project)}
         result = self.invoke(FLOW, event={}, env=env)
-        self.assertIn('feature-demo', result['hookSpecificOutput']['additionalContext'])
+        context = result['hookSpecificOutput']['additionalContext']
+        self.assertIn('/PROJ-12/` — 아직 없으며', context)
+        self.assertNotIn('**읽기**', context)
         self.assertEqual(self.invoke(FLOW, event={'cwd': str(self.root)}), {})
 
-    def test_plan_default_branch_and_bad_input(self):
-        run('git', 'symbolic-ref', 'HEAD', 'refs/heads/main', cwd=self.project)
-        result = self.invoke(FLOW)
-        self.assertIn('slug**: 미확정', result['hookSpecificOutput']['additionalContext'])
+    def test_plan_branch_without_key_and_bad_input(self):
+        # Lowercase tokens such as utf-8 are not issue keys.
+        for branch in ('main', 'feature/demo', 'fix/utf-8-encoding'):
+            with self.subTest(branch=branch):
+                self.checkout(branch)
+                context = self.invoke(FLOW)['hookSpecificOutput']['additionalContext']
+                self.assertIn('이슈 키**: 브랜치명에 없음', context)
         result = self.invoke(FLOW, event=[], cwd=self.project)
-        self.assertIn('slug**: 미확정', result['hookSpecificOutput']['additionalContext'])
+        self.assertIn('이슈 키**: 브랜치명에 없음', result['hookSpecificOutput']['additionalContext'])
 
-    def test_plan_feedback_keeps_recent_complete_entries(self):
-        config = json.loads((FLOW / 'config.json').read_text())
-        workspace = self.project / config['workspace']['root'] / 'feature-demo'
-        workspace.mkdir(parents=True)
-        (workspace / 'feedback.md').write_text('# 기록\n' + ''.join(
-            f'- `context` ENTRY_{i:03d} ' + '가' * 100 + '\n' for i in range(30)))
+    def test_plan_key_matches_existing_folders_only_as_whole_key(self):
+        self.checkout('feature/PROJ-12-demo')
+        (self.workspace('feature-proj-12-demo') / 'feedback.md').write_text('# 기록\n')
+        self.workspace('PROJ-12-split')
+        (self.workspace('PROJ-123') / 'plan.md').write_text('# Other issue\n')
         context = self.invoke(FLOW)['hookSpecificOutput']['additionalContext']
-        self.assertIn('ENTRY_029', context)
-        self.assertNotIn('ENTRY_000', context)
-        self.assertIn('생략', context)
+        self.assertIn('/feature-proj-12-demo/` — `feedback.md` 있음', context)
+        self.assertIn('/PROJ-12-split/` — 기록 파일 없음', context)
+        self.assertNotIn('PROJ-123', context)
 
 
 class WikiHookTests(HookFixture):

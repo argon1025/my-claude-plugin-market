@@ -1,9 +1,10 @@
 #!/bin/bash
-# 작업 기록 규약(rules/agent-guide.md)과 현재 브랜치 워크스페이스 현황을 세션 컨텍스트로 주입한다.
+# 작업 기록 규약 요약(rules/agent-guide.md)과 현재 브랜치의 기록 위치를 세션 컨텍스트로 주입한다.
 # hooks.json의 SessionStart에 matcher가 없어 startup·resume·clear·compact 모두에서 다시 돈다.
-# slug는 여기서 계산해 값으로 넘기고, 기존 feedback.md는 상한(4,000바이트) 안에서 함께 주입한다.
-# 기록 폴더 상위 경로는 config.json의 workspace.root, 안내 명령의 접두사는 plugin.json의 name에서 읽는다.
-# 브랜치 기반 slug 규칙은 git 저장소 밖에서 의미가 없으므로 그 경우 조용히 끝낸다.
+# 브랜치명에서 대문자 이슈 키(PROJ-123)만 뽑아 그 키가 들어간 폴더를 찾고, 키가 없으면 폴더를 정하지 않는다.
+# 기록 본문은 주입하지 않고 파일 유무와 읽기 지시만 알린다.
+# 기록 폴더 상위 경로는 config.json의 workspace.root, 안내에 쓰는 플러그인 이름은 plugin.json의 name에서 읽는다.
+# git 저장소 밖에서는 조용히 끝낸다.
 set -uo pipefail
 
 PLUGIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,18 +20,14 @@ git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
 PROJECT_DIR="$(git -C "$PROJECT_DIR" rev-parse --show-toplevel)"
 BRANCH="$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)"
-case "$BRANCH" in
-  ""|main|master|develop) SLUG="" ;;
-  *) SLUG="${BRANCH//\//-}" ;;
-esac
 
-python3 - "$PLUGIN_DIR" "$PROJECT_DIR" "$SLUG" <<'PY' 2>/dev/null || exit 0
+python3 - "$PLUGIN_DIR" "$PROJECT_DIR" "$BRANCH" <<'PY' 2>/dev/null || exit 0
 import json
 import os
+import re
 import sys
 
-plugin_root, project_dir, slug = sys.argv[1], sys.argv[2], sys.argv[3]
-BUDGET = 4000
+plugin_root, project_dir, branch = sys.argv[1], sys.argv[2], sys.argv[3]
 
 with open(os.path.join(plugin_root, "config.json"), encoding="utf-8") as handle:
     root = json.load(handle)["workspace"]["root"]
@@ -44,54 +41,38 @@ with open(os.path.join(plugin_root, "rules", "agent-guide.md"), encoding="utf-8"
         .replace("{WORKSPACE_ROOT}", root)
     )
 
+# 소문자 토큰(utf-8, log-4 등)은 이슈 키가 아닌 경우가 많아 대문자 키만 인정한다.
+found = re.search(r"(?<![A-Za-z0-9])[A-Z][A-Z0-9]+-\d+(?![A-Za-z0-9])", branch)
 lines = ["", "## 현재 워크스페이스", ""]
-body = ""
 
-if slug:
-    lines.append(f"- **slug**: `{slug}` (브랜치명 기준)")
-    lines.append(f"- **기록 폴더**: `{root}/{slug}/`")
-    workspace = os.path.join(project_dir, root, slug)
-    plan_path = os.path.join(workspace, "plan.md")
-    feedback_path = os.path.join(workspace, "feedback.md")
-
-    if os.path.isfile(plan_path):
-        lines.append(f"- **plan.md**: 있음 — 구현은 `{name}`의 execute 스킬, 추가 계획은 `{name}`의 planning 스킬로 기존 계획 끝에 덧붙임")
-    else:
-        lines.append("- **plan.md**: 없음")
-
-    if os.path.isfile(feedback_path):
-        with open(feedback_path, encoding="utf-8") as handle:
-            text = handle.read().strip()
-        entries = text.split("\n- `")
-        title, items = entries[0], ["- `" + e for e in entries[1:]]
-        if len(text.encode("utf-8")) <= BUDGET:
-            lines.append(f"- **feedback.md**: {len(items)}항목, 전문 아래")
-            body = text
-        else:
-            kept, used = [], len(title.encode("utf-8"))
-            for item in reversed(items):
-                size = len(item.encode("utf-8")) + 1
-                if used + size > BUDGET:
-                    break
-                kept.insert(0, item)
-                used += size
-            skipped = len(items) - len(kept)
-            lines.append(f"- **feedback.md**: {len(items)}항목 중 최근 {len(kept)}항목 아래 (앞의 {skipped}항목 생략, 전문은 파일 참조)")
-            body = "\n".join([title] + kept)
-    else:
-        lines.append("- **feedback.md**: 없음")
+if found:
+    key = found.group(0)
+    lines.append(f"- **이슈 키**: `{key}` (브랜치명에서 추출)")
+    base = os.path.join(project_dir, root)
+    # 이전 규칙으로 만든 폴더(브랜치명 기반, 소문자 키 포함)도 같은 키면 이어 쓴다.
+    token = re.compile(rf"(?<![A-Za-z0-9]){re.escape(key)}(?![0-9])", re.IGNORECASE)
+    folders = sorted(
+        entry for entry in (os.listdir(base) if os.path.isdir(base) else [])
+        if token.search(entry) and os.path.isdir(os.path.join(base, entry))
+    )
+    has_files = False
+    for folder in folders:
+        files = [f for f in ("plan.md", "feedback.md") if os.path.isfile(os.path.join(base, folder, f))]
+        has_files = has_files or bool(files)
+        state = "·".join(f"`{f}`" for f in files) + " 있음" if files else "기록 파일 없음"
+        lines.append(f"- **기록 폴더**: `{root}/{folder}/` — {state}")
+    if not folders:
+        lines.append(f"- **기록 폴더**: `{root}/{key}/` — 아직 없으며 첫 기록 때 만듦")
+    if has_files:
+        lines.append("- **읽기**: 작업을 시작하기 전에 위 폴더의 기록 파일을 읽음")
 else:
-    lines.append("- **slug**: 미확정 — 기본 브랜치이거나 detached HEAD이므로 첫 기록 시 요청·커밋에 이슈 키(`PROJ-123`)가 있으면 그 키, 없으면 작업 주제의 kebab-case 2~4단어로 폴더를 만들고 세션 안에서 바꾸지 않음")
-    lines.append(f"- **기록 폴더**: `{root}/{{slug}}/`")
-
-context = guide + "\n" + "\n".join(lines)
-if body:
-    context += "\n\n" + body
+    lines.append("- **이슈 키**: 브랜치명에 없음 — 요청에 이슈 키가 있으면 그 키로, 없으면 작업 주제의 kebab-case 이름으로 폴더를 정함")
+    lines.append(f"- **기록 폴더**: `{root}/{{폴더 이름}}/`")
 
 print(json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",
-        "additionalContext": context,
+        "additionalContext": guide + "\n" + "\n".join(lines),
     }
 }, ensure_ascii=False))
 PY
