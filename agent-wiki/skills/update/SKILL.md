@@ -44,7 +44,7 @@ python3 {PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --workspace 
 ```
 머지 1건(큰 머지는 조각 묶음)에서 위키에 남길 사실을 추출하라.
 입력: {diff 목록}을 목록 순서대로 한 파일씩 머리말의 줄 수까지 Read(길면 offset으로 나눔) — 머리말에 PR 제목·커밋 메시지·변경 파일 목록·조각 번호가 있다. 현재 지도는 {tmp}/registry.json의 `domains.{domain}.repos`(이 레포는 `{slug}` 노드의 responsibilities·hosts, 키 목록이 도메인 등록 레포)와 {tmp}/deps.json의 `deps."{domain}/{slug}"` 블록이다.
-대상: 변경 줄, 커밋 메시지, diff 속 작업 기록(계획·결정 기록 문서)이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다.
+대상: 변경 줄, 커밋 메시지, diff 속 작업 기록(계획·결정 기록 문서)이 직접 말하는 사실만 — 바뀌지 않은 문맥에서 추론한 사실(부재 주장 등)은 담지 않는다. 작업 기록 파일은 추가되거나 고쳐진 줄의 현재 문장만 읽고, 기록에서 지워진 줄은 deleted의 근거로 쓰지 않는다.
 기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 1장으로 담을 문장을 고르고 2장으로 scope를 정한다.
 graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 바꾸는 diff는 사실 대신 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`. 현재 responsibilities가 덮지 않는 새 기능 단위(엔드포인트 묶음·메시지 구독·스케줄러)는 responsibilities add이고, 간선 to는 현재 지도의 등록 레포만 쓴다.
 병합: 같은 주장은 하나로 합쳐 shas에 모두 적는다. 값이 다른 두 사실은 둘 다 남기되, 같은 머지의 커밋 메시지·작업 기록이 변경 줄과 다르면 변경 줄 값만 남긴다.
@@ -78,7 +78,16 @@ deleted는 diff가 그 동작·값·코드값을 지우면 true, set_total은 di
 
 `apply.md` 1~5장을 실행합니다.
 
-## 6. 커서
+## 6. 남은 행 확인
+
+5절 결과에서 마지막 판정이 `건너뜀`(2장 `verdicts`)이거나 `미해결 충돌`(3장 `conflicts`)인 사실이 있으면 PR을 만들기 전에 이 자리에서 끝냅니다. update가 끝난 뒤 다른 스킬로 넘기는 행을 남기지 않습니다. 해당 사실이 없으면 이 절을 건너뜁니다.
+
+- **표**: 메시지 본문에 `| # | 사실 | 문서 | 기존 값 | 새 값 | 현재 코드 값 |` 표를 출력함. 기존 값은 건너뜀이면 2장 `old`, 미해결 충돌이면 3장 `code_value`이고, 새 값은 사실이 말하는 값임. 현재 코드 값은 그 사실의 `check` rev를 `git -C {repo_path} grep`·`show`로 읽어 확인되면 적고, 확인하지 못하면 `확인 못 함`으로 둠
+- **질문**: 사실마다 질문 도구로 `새 값`·`기존 유지`를 물음(한 라운드 4질문까지, 넘치면 라운드를 이음). 답이 없거나 판단이 서지 않는다는 답은 `기존 유지`로 확정함
+- **새 값**: 질문과 답을 `{work}/input/answers.md`에 Write하고, 그 사실의 `quote`를 `사용자 확인 YYYY-MM-DD 새 값 선택`으로 바꾸고 `input`에 이 파일을, `source`에 `사용자 확인 YYYY-MM-DD`를 더해 원래 문서에 배정한 `{work}/assign-ask.json`을 씀. 그 문서에만 `apply.md` 2·3장을 다시 실행하고(입력 `{work}/assign-ask.json`, 출력 `{doc_slug}.ask.json`, 4장처럼 위치는 판정하지 않음) 5장 원복을 적용함. 다시 건너뜀이나 미해결 충돌이 나오면 더 묻지 않고 `기존 유지`로 확정함
+- **기존 유지**: 문서를 고치지 않음
+
+## 7. 커서
 
 `repos`의 레포마다 커서 sha를 정합니다.
 
@@ -86,7 +95,7 @@ deleted는 diff가 그 동작·값·코드값을 지우면 true, set_total은 di
 - **부트스트랩**: `bootstrapped`이고 `commits`가 비면 `cursor`(시작 지점)
 - **불변**: 부트스트랩이 아니고 `commits`가 비면 쓰지 않음
 
-## 7. 지도·커밋
+## 8. 지도·커밋
 
 `apply.md` 6·7장을 실행합니다. `--dry-run`이 아니면 이어서 커서를 정한 레포마다 `{tmp}/state/{slug}.json`에 `{"cursor": "{전체 sha}", "at": "YYYY-MM-DD"}`를 Write하고, 모두 쓴 뒤 커밋 한 개로 남깁니다. 본문은 레포마다 `{slug} {sha7}` 한 줄입니다.
 
@@ -95,6 +104,6 @@ git -C {tmp} add state
 git -C {tmp} commit -m "chore(update): 커서 {N}개 레포 · 머지 {M}건" -m "{본문}"
 ```
 
-## 8. 게시·보고
+## 9. 게시·보고
 
-`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 집계는 레포별 처리 머지·예산 밖 이월·`skipped` 사유와 액션별 건수입니다. `--dry-run`이면 집계와 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 집계, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
+`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 집계는 레포별 처리 머지·예산 밖 이월·`skipped` 사유와 액션별 건수, 6절에서 `새 값`·`기존 유지`로 끝낸 건수입니다. `--dry-run`이면 집계와 `{work}/pr.md`·`{tmp}`·`{work}` 경로를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만들고, PR 링크, 집계, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.

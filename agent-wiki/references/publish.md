@@ -29,16 +29,6 @@ gh pr comment {url} --body-file {work}/pr.md
 
 실패하면 단계·브랜치 이름·오류 한 줄을 보고합니다.
 
-## 3. update PR 읽기
-
-add가 update PR의 `사실 목록` 표를 읽을 때 씁니다.
-
-```
-gh pr view {url} --json body,comments
-```
-
-본문에 표가 없으면 첫 코멘트의 표를 읽습니다.
-
-## 4. 인증 실패
+## 3. 인증 실패
 
 `gh` 인증 오류면 사용자가 `! gh auth login`을 마친 뒤 스킬을 다시 실행하도록 안내합니다.

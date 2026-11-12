@@ -1,6 +1,6 @@
 ---
 name: add
-description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, "we agreed X", or a skipped or relocated row in an update PR ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘", "건너뜀 처리"). Lists the extracted facts, asks once where a fact differs from the wiki, then opens a wiki PR. NOT for merged code (that is the update skill).
+description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, or "we agreed X" ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘"). Lists the extracted facts, asks once where a fact differs from the wiki, then opens a wiki PR. NOT for merged code (that is the update skill).
 ---
 
 먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
@@ -23,14 +23,13 @@ clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` �
 
 ## 2. 입력 확정
 
-- **입력 집합**: 붙여 넣은 텍스트, 읽은 파일, 가져온 페이지, 대화에서 사용자가 정한 문장, update PR(링크 또는 붙여 넣은 본문) `사실 목록`에서 마지막 액션이 `건너뜀`·`위치 재배정`·`미해결 충돌`인 행, 작업 기록(커밋 메시지, 저장소에 남은 계획·결정 기록 문서) — 이 밖의 사실 기록 금지, 에이전트의 추론은 대화 문장이 아님
+- **입력 집합**: 붙여 넣은 텍스트, 읽은 파일, 가져온 페이지, 대화에서 사용자가 정한 문장, 작업 기록(커밋 메시지, 저장소에 남은 계획·결정 기록 문서) — 이 밖의 사실 기록 금지, 에이전트의 추론은 대화 문장이 아님
 - **부재 시 질문**: 건넨 것이 없으면 무엇을 기록할지 묻고 추측하지 않음
 - **원문 보관**: 자료마다 번호 `{n}`을 매기고 붙여 넣은 텍스트·대화 문장·가져온 페이지는 `{work}/input/{n}.md`에 원문을 Write, 파일은 경로만 기록하며, 자료마다 규약 8장 근거 줄 값(파일 경로, 등록 레포 파일은 `{slug}@{sha7} {경로}`, 페이지 URL, 자료 제목, 대화 문장은 `사용자 확인 YYYY-MM-DD`)을 정함
-- **update PR**: 링크는 `publish.md` 3장으로 읽고, 붙여 넣은 본문은 그대로 씀
 
 ## 3. 추출
 
-붙여 넣은 텍스트·대화 문장·update PR 행은 메인이 아래 기준으로 직접 추출합니다. 파일·페이지 자료는 합쳐 500줄 이하면 메인이 직접, 넘으면 원문의 장(최상위 제목) 단위로 나눠 장마다 서브에이전트 1회를 실행 환경 연결에 따라 한 메시지에 병렬 실행합니다. 출력 파일이 없는 장은 4절 전에 다시 실행합니다.
+붙여 넣은 텍스트·대화 문장은 메인이 아래 기준으로 직접 추출합니다. 파일·페이지 자료는 합쳐 500줄 이하면 메인이 직접, 넘으면 원문의 장(최상위 제목) 단위로 나눠 장마다 서브에이전트 1회를 실행 환경 연결에 따라 한 메시지에 병렬 실행합니다. 출력 파일이 없는 장은 4절 전에 다시 실행합니다.
 
 ```
 자료 한 장에서 위키에 남길 사실을 추출하라.
@@ -48,7 +47,6 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 응답은 사실·후보 건수만.
 ```
 
-- **update PR 행**: 2절의 PR 행마다 사실·문서(` → `로 이어지면 마지막)·기존 값·출처(`{slug}@{sha7}`)를 그대로 옮기고 `check`를 출처 레포와 sha로 두며 근거 줄은 `{PR 링크} {F번호}`
 
 ## 4. 목록과 질문
 
@@ -62,7 +60,7 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 | # | 레포 | 변경 | 원문 |
 ```
 
-- **질문**: 교체 후보(기존 값과 새 값, 코드로 확인되면 현재 값 병기, 옵션 `새 값`·`기존 유지`), 자료 내부 미결 충돌, PR 행의 건너뜀·미해결 충돌(교체 후보와 같음), 위치가 갈리지 않는 사실을 질문 도구으로 묻고 마지막에 `진행`·`수정`(수정 내용은 기타 입력) 한 질문을 둠 — 한 라운드 4질문까지이며 넘치면 같은 정지점에서 라운드를 잇고, 교체 외 행에는 권장안을 첫 옵션으로 둠
+- **질문**: 교체 후보(기존 값과 새 값, 코드로 확인되면 현재 값 병기, 옵션 `새 값`·`기존 유지`), 자료 내부 미결 충돌, 위치가 갈리지 않는 사실을 질문 도구으로 묻고 마지막에 `진행`·`수정`(수정 내용은 기타 입력) 한 질문을 둠 — 한 라운드 4질문까지이며 넘치면 같은 정지점에서 라운드를 잇고, 교체 외 행에는 권장안을 첫 옵션으로 둠
 - **답 반영**: `새 값`은 `quote`를 `사용자 확인 YYYY-MM-DD 새 값 선택`으로 두고, `기존 유지`와 교체 후보의 `모름`은 사실을 빼서 6절 미기록 표로 넘기며, 그 밖의 `모름`은 권장안을 채택함
 - **답 원문**: 질문과 답을 `{work}/input/answers.md`에 Write하고, 답으로 정해진 사실은 `input`에 이 파일을, `source`에 `사용자 확인 YYYY-MM-DD`를 더함 — 검토의 자료 대조가 답을 원문으로 보지 못하면 자료 속 다른 값으로 되돌림
 - **기록**: `apply.md` 0장 형식으로 `{work}/facts.json`·`{work}/graph-candidates.json`을 씀 — `check`는 준비한 `{workspace.root}/{slug}`와 `origin/{defaultBranch}`(등록 레포 파일 근거면 그 sha), `input`은 그 사실을 낸 자료의 원문 파일, `source`는 2절 근거 줄
@@ -70,7 +68,7 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 
 ## 5. 반영
 
-`apply.md` 1~7장을 실행합니다. 1장 배정은 4절 답을 반영해 다시 쓰며, update PR 행은 옮긴 문서로 배정합니다.
+`apply.md` 1~7장을 실행합니다. 1장 배정은 4절 답을 반영해 다시 씁니다.
 
 ## 6. 게시·보고
 
