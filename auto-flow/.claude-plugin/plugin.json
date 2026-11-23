@@ -1,7 +1,7 @@
 {
   "name": "auto-flow",
   "description": "Jira 계획 작성·검토·독립 검증, 조건별 코드 변경·테스트, PR 게시·결함 리뷰·지적 판정·스레드 회신",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "argon1025",
     "email": "argon1025@gmail.com"
