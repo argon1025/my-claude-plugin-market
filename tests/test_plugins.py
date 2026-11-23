@@ -30,8 +30,8 @@ def write_json(path, value):
 
 class PackageTests(unittest.TestCase):
     def test_catalog_and_manifest_identity(self):
-        self.assertEqual(len(PLUGINS), 4)
-        self.assertEqual(len({p.name for p in PLUGINS}), 4)
+        self.assertEqual(len(PLUGINS), 5)
+        self.assertEqual(len({p.name for p in PLUGINS}), 5)
         claude = json.loads((ROOT / '.claude-plugin/marketplace.json').read_text())
         self.assertEqual(CATALOG['name'], claude['name'])
         for item, plugin in zip(CATALOG['plugins'], PLUGINS):
@@ -49,7 +49,9 @@ class PackageTests(unittest.TestCase):
 
     def test_packaged_references_and_invocation_policy(self):
         skills = [s for p in PLUGINS for s in p.glob('skills/*/SKILL.md')]
-        self.assertEqual(len(skills), 9)
+        self.assertEqual(len(skills), 12)
+        self.assertEqual({s.parent.name for s in skills if s.parents[2].name == 'auto-flow'},
+                         {'plan-issue', 'review-repo', 'verify-plan'})
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
                 text = skill.read_text()

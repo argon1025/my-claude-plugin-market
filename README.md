@@ -9,6 +9,7 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 /plugin install better-communication@my-claude-plugin-market
 /plugin install pr-workflow@my-claude-plugin-market
 /plugin install plan-workflow@my-claude-plugin-market
+/plugin install auto-flow@my-claude-plugin-market
 /plugin install agent-wiki@my-claude-plugin-market
 ```
 
@@ -19,6 +20,7 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 | [better-communication](./better-communication/README.md) | 간결하고 이해하기 쉬운 한국어 응답 규칙을 세션에 자동 주입 | `python3` |
 | [pr-workflow](./pr-workflow/README.md) | PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), 스킬 호출 시에만 동작 | `gh`·`glab`·PR 호스트 MCP 중 1종 |
 | [plan-workflow](./plan-workflow/README.md) | 이슈 여러 개를 분류해 한 결정씩 합의하고 이슈별 계획 승인 뒤 실행까지 잇는 planning·execute 스킬, 기록은 `.ai-docs/workspace/{이슈 키}/` | `python3`, `git` |
+| [auto-flow](./auto-flow/references/plan-record.md) | 한 Jira 이슈의 [계획 작성·조정](./auto-flow/skills/plan-issue/SKILL.md), [담당 영역 검토](./auto-flow/skills/review-repo/SKILL.md), [독립 계획 검증](./auto-flow/skills/verify-plan/SKILL.md)을 각각 호출 | 이슈 본문과 해당 코드·정책 근거. 본문 저장에는 Jira 쓰기 연결 필요 |
 | [agent-wiki](./agent-wiki/README.md) | 에이전트 위키 | `git`, `python3` |
 
 
@@ -31,6 +33,7 @@ codex plugin marketplace add .
 codex plugin add better-communication@my-claude-plugin-market
 codex plugin add pr-workflow@my-claude-plugin-market
 codex plugin add plan-workflow@my-claude-plugin-market
+codex plugin add auto-flow@my-claude-plugin-market
 codex plugin add agent-wiki@my-claude-plugin-market
 ~~~
 

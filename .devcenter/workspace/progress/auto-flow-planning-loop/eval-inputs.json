@@ -1,0 +1,55 @@
+{
+  "issues": {
+    "CASE-10": {
+      "source": {
+        "key": "CASE-10",
+        "updated": "fixture-v1",
+        "description": "## 원래 요청\n회원 목록이 비었을 때 “결과 없음”을 “등록된 회원이 없습니다”로 바꿔 주세요. 주문 목록은 그대로 두고, 검토된 PR까지만 전달해 주세요.\n\n문의 첨부 참조: [기획 원문](fixture:copy-brief)",
+        "labels": [
+          "triaged"
+        ],
+        "status": "Open",
+        "comment": [
+          "문의 원문 보존"
+        ]
+      },
+      "review_plan": "문구. portal의 회원 목록 빈 상태에 새 문구를 표시하고 주문 목록은 “결과 없음”을 유지한다. 두 화면의 실제 빈 상태 진입점에서 결과를 대조한다.\n인계. portal 변경의 최신 커밋에서 두 화면의 결과와 변경 범위를 확인한 PR 리뷰 링크를 전달한다."
+    },
+    "CASE-20": {
+      "source": {
+        "key": "CASE-20",
+        "updated": "fixture-v1",
+        "description": "## 원래 요청\n판매자가 채널별로 전송할 수 있는 값을 최신 채널 계약에 맞춰 주세요. 포털에서 접수한 값이 외부 API에서 수락됐는지도 확인해야 합니다.\n\n기존 문의 참조: [발신 기록](fixture:channel-request)",
+        "labels": [
+          "triaged"
+        ],
+        "status": "Open",
+        "comment": [
+          "문의 원문 보존"
+        ]
+      },
+      "review_plan": "C1 edge의 일반 채널에서 A는 수락, B는 거부. 실제 외부 API에 각각 요청해서 201·422를 확인한다.\nC2 edge의 파트너 채널에서 A·B 모두 수락. 실제 외부 API에서 각각 201이 나오는지 확인한다.\nC3 portal에서 파트너 A·B 전송이 외부 API에 접수된다. portal은 응답을 모의한 테스트에서 성공 화면을 확인하고 edge는 C2 테스트를 수행한다.\nsink 계약은 변경하지 않는다.",
+      "previous_plan": "C1 일반 채널은 A 수락·B 거부. edge 실제 외부 호출에서 201·422를 확인한다.\nC2 파트너 채널도 A 수락·B 거부. edge 외부 호출 결과로 판정한다.\nC3 portal에서 파트너 A 전송 후 같은 요청의 edge 201을 확인한다.\n보관 서비스에는 채널 검사 의존성이 없다(프로젝트 계약 sink/contract.md).",
+      "pending_plan": "일반 A 허용·B 거부와 파트너 A 허용은 운영 계약 r1로 확정했다. 실제 API 상태와 같은 실행의 포털 전송 결과를 확인한다.\n파트너 B는 portal·edge 계약 변경 검토 대상이다. sink는 계약상 채널 정책을 적용하지 않는다."
+    }
+  },
+  "policies": {
+    "confirmed": "채널 계약 r2 · 확정\n일반 채널은 A만 허용한다. 파트너 채널은 A와 B를 허용한다. 적용 경계는 portal 전송과 edge 외부 입력이다. 이전 r1은 두 채널 모두 A만 허용했다.\n",
+    "pending": "r1 유효. 일반 A 허용·B 거부, 파트너 A 허용·B 거부. r2 초안의 유일한 변경은 파트너 B 허용이며 적용 경계는 portal 전송과 edge 외부 입력이다. 계약 변경 결정권은 채널 정책 담당자에게 있으며 아직 답변이 없다.\n"
+  },
+  "repositories": {
+    "edge": {
+      "submit.py": "from sink import receive\n\ndef submit(channel, value):\n    if value != \"A\":\n        return 422\n    receive(value)\n    return 201\n"
+    },
+    "portal": {
+      "channels.py": "def encode(channel, value):\n    if value != \"A\":\n        raise ValueError(\"unsupported\")\n    return {\"channel\": channel, \"value\": value}\n",
+      "members.py": "from text import EMPTY_LIST\n\ndef empty_notice():\n    return EMPTY_LIST\n",
+      "orders.py": "from text import EMPTY_LIST\n\ndef empty_notice():\n    return EMPTY_LIST\n",
+      "text.py": "EMPTY_LIST = \"결과 없음\"\n"
+    },
+    "sink": {
+      "contract.md": "저장 입력은 불투명 문자열이다. 채널별 허용 여부는 외부 진입점이 결정한다.\n",
+      "sink.py": "def receive(value):\n    return {\"stored\": value}\n"
+    }
+  }
+}

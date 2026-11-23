@@ -1,0 +1,16 @@
+{
+  "name": "auto-flow",
+  "description": "Jira 이슈의 공통 계획 작성·조정, 저장소별 실행 가능성 검토, 구현 전 독립 계획 검증",
+  "version": "0.1.0",
+  "author": {
+    "name": "argon1025",
+    "email": "argon1025@gmail.com"
+  },
+  "keywords": [
+    "planning",
+    "workflow",
+    "이슈 계획",
+    "계획 검증"
+  ],
+  "skills": "./skills/"
+}
