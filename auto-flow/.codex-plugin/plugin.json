@@ -1,7 +1,7 @@
 {
   "name": "auto-flow",
-  "description": "Jira 계획과 개발·PR 리뷰, 런타임 시나리오 실행, 완료 조건 독립 판정과 원인 조사",
-  "version": "0.3.0",
+  "description": "문의·Jira 인계부터 개발·독립 검증, 병합·배포 확인과 결과 안내까지 필요한 작업을 개별 호출",
+  "version": "0.4.0",
   "author": {
     "name": "argon1025",
     "email": "argon1025@gmail.com"
