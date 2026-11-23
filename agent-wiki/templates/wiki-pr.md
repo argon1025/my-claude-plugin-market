@@ -9,6 +9,7 @@ update·add가 같은 본문을 쓰며 `--dry-run`에서도 씁니다. 본문은
 - **문서**: 반영하거나 제외한 문서(`knowledge/{domain}` 기준) — 재배정은 거친 문서를 ` → `로 이음, 지도 후보는 `registry.json`·`deps.json`, 배정 전 기각은 —
 - **액션**: 사실이 거친 판정을 장 순서대로 ` → `로 이음 — 아래 액션 표, 검토가 불릿 일부만 지웠어도 같은 표기
 - **기존 값**: 수정·건너뜀은 2장 `old`, 삭제는 지운 문장, 미해결 충돌은 3장 `old`, 지도 수정·삭제는 `old`, 그 밖은 —
+- **프로젝트 사본 정리**: 5장에서 중복 문장이나 폐지된 참조를 고친 문서는 해당 정책 행에 경로와 변경을 함께 적음
 - **출처**: `source`를 쉼표로
 
 액션 표
@@ -35,7 +36,7 @@ update·add가 같은 본문을 쓰며 `--dry-run`에서도 씁니다. 본문은
 | F3 | 취소 요청 DTO는 orderId·cancelReasonCd·memo 필드를 가짐 | order-cancel-reason.md | 추가 → 검토 삭제 · 코드 전사 | — | shop-api@c61a8ab |
 | F4 | 취소 결과 통지는 최대 5회 재시도함 | order-cancel-history.md | 미해결 충돌 | 최대 3회 재시도 | 통지 계약 §2, 재시도 규격 §1 |
 | F5 | 취소 사유 코드 CR09(시스템 취소)를 받음 | order-cancel-reason.md | 삭제 | CR09 시스템 취소 행 | shop-api@c61a8ab, 취소 요청 규격 v3 §3 폐지 조항 |
-| F6 | shop-worker 취소 이력 적재 리스너(CancelHistoryListener)는 새 트랜잭션(REQUIRES_NEW)에서 실행함 | order-cancel-history.md → shop-worker/cancel-history-listener.md | 추가 → 위치 → 추가 | — | shop-worker@3ab7c55 |
+| F6 | shop-worker의 격리된 Jenkins 노드는 빌드 전 도구 목록에 Node 20을 설치해야 함 | shop-worker/jenkins-build.md | 추가 | — | shop-worker@3ab7c55, 빌드 환경 메모 §2 |
 | G1 | shop-api deps {"to": "example-shop/shop-worker", "desc": "취소 이력 적재 토픽을 취소 서비스에서 발행"} | deps.json | 추가 | — | shop-api@c61a8ab |
 | G2 | shop-admin responsibilities 취소 사유 일괄 등록 | registry.json | 기각 · 코드 미확인 | — | shop-admin@9d2e0f1 |
 ````
