@@ -1,6 +1,6 @@
 ---
 name: add
-description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, or "we agreed X" ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘"). Lists the extracted facts, asks once where a fact differs from the wiki, then opens a wiki PR. NOT for merged code (that is the update skill).
+description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, or "we agreed X" ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘"). Record scoped decisions and reusable project knowledge with their sources, then open a wiki PR. Ask only about unresolved decisions. NOT for merged code (that is the update skill).
 ---
 
 먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
@@ -34,15 +34,17 @@ clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` �
 ```
 자료 한 장에서 위키에 남길 사실을 추출하라.
 입력: {input 파일} {장 범위} — 근거 줄 {source}. 현재 지도는 {tmp}/registry.json의 `domains.{domain}.repos`(노드의 responsibilities·hosts, 키 목록이 도메인 등록 레포)와 {tmp}/deps.json의 `deps`에서 `{domain}/`로 시작하는 블록이다.
-기준: `sed -n '/^## 1\./,/^## 2\./p' {doc_contract_path}` — 후보 문장마다 적용한다. 화면 시안, UI 문구 원문, 일정·담당자, "검토 중"·미확정 항목도 담지 않는다.
-작업 기록: 계획·결정 기록의 이유·버린 대안·제약·바로잡은 사실은 후보이고, 의도·범위·후속 작업·작업 현황은 1장 변경 서사로 담지 않는다.
+기준: `sed -n '/^## 1\./,/^## 3\./p' {doc_contract_path}` — 후보 문장마다 적용한다. 화면 시안, UI 문구 원문, 일정·담당자, "검토 중"·미확정 항목도 담지 않는다.
+정책은 적용 대상과 필수 동작을 명시한 규격·확정 결정의 문구를 quote에, 문서 판본과 절 또는 대화 출처를 loc에 적는다. 승인 전 계획이나 코드 설명을 결정으로 해석하지 않는다. 프로젝트 지식은 해당 레포와 반복해서 필요한 이유가 입력에 있어야 한다. 코드 관찰만 있으면 문서 후보에서 빼고, 유효한 정책과 어긋나는지 대조할 경계 동작은 관찰로 따로 반환한다.
 금지: 입력 밖 파일 열기, 사전 지식으로 채우기, 원문 절 구조 옮기기.
+deleted: 규약 7장의 제거 근거가 있으면 true로 두고 제거할 문장을 fact에 쓴다.
 set: 원소의 뜻을 말하는 사실이면 정의 식별자(심볼 또는 공통코드 그룹 이름), 규칙 문장이 코드를 인용할 뿐이면 빈 문자열.
-set_total: 자료가 그 집합의 전체 목록(공통코드 전체 표, enum 전체 정의)을 보여 주면 전 원소 수이고 원소마다 사실을 남긴다, 아니면 0.
-충돌: 같은 대상의 값이 둘이면 개정 일자·판본으로 가려 뒤의 값만 남기고 가린 근거를 conflict에 적는다. 가려지지 않으면 둘 다 남기고 conflict에 상대 사실 번호를 적는다 — 뒤쪽이 최신이라 가정하지 않는다. 복합 사실이면 충돌하는 주장만 떼어 낸다.
+set_total: 해당 사실의 근거가 보장하는 집합 전체를 보여 주면 전 원소 수이고 원소마다 사실을 남긴다, 아니면 0.
+충돌: 대상·조건이 같고 후속 결정이 앞선 값을 대체한 근거가 있으면 현행 값만 남기고 근거를 conflict에 적는다. 가려지지 않으면 둘 다 남기고 conflict에 상대 사실 번호를 적는다 — 뒤쪽이 최신이라 가정하지 않는다. 복합 사실이면 충돌하는 주장만 떼어 낸다.
 graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하는 문장은 사실이 아니라 graph에 담는다 — 기준 `sed -n '/^## 9\./,$p' {doc_contract_path}`. slug와 간선 to는 현재 지도의 등록 레포 키로 쓰고, 등록되지 않은 레포는 이름 그대로 둔다.
 출력: {work}/facts/{n}-{장}.json에 Write —
-{"facts": [{"fact", "topic", "code": "식별자, 없으면 빈 문자열", "slug": "사실이 다루는 등록 레포, 없으면 빈 문자열", "set", "set_total", "loc": "원문 장·절·페이지", "conflict": ""}],
+{"facts": [{"fact", "topic", "code": "식별자, 없으면 빈 문자열", "slug": "사실이 다루는 등록 레포, 없으면 빈 문자열", "scope": "root|repo", "quote": "변경을 뒷받침하는 원문", "deleted": false, "set", "set_total", "loc": "원문 장·절·페이지", "conflict": ""}],
+ "observations": [{"대상", "동작", "loc"}],
  "graph": [{"slug", "key", "op", "value", "old", "loc"}]}
 응답은 사실·후보 건수만.
 ```
@@ -50,31 +52,22 @@ graph: 레포 소관·책임·서빙 호스트·레포 사이 의존을 말하�
 
 ## 4. 목록과 질문
 
-이 스킬의 정지점은 이 절 하나입니다.
-
-- **정리**: 같은 주장을 병합하고 `A1`부터 번호를 매긴 뒤, 사실·후보의 `slug`와 간선 후보 `to`마다 `apply.md` 0장 레포 읽기를 하고 `apply.md` 1장 배정을 먼저 돌려 대상 문서의 기존 값과 다른 사실을 교체 후보로 표시함
-- **목록**: 메시지 본문에 사실 표와 지도 후보 표를 출력함
-
-```
-| # | 사실 | 문서 | 판정 후보 | 원문 |
-| # | 레포 | 변경 | 원문 |
-```
-
-- **질문**: 교체 후보(기존 값과 새 값, 코드로 확인되면 현재 값 병기, 옵션 `새 값`·`기존 유지`), 자료 내부 미결 충돌, 위치가 갈리지 않는 사실을 질문 도구으로 묻고 마지막에 `진행`·`수정`(수정 내용은 기타 입력) 한 질문을 둠 — 한 라운드 4질문까지이며 넘치면 같은 정지점에서 라운드를 잇고, 교체 외 행에는 권장안을 첫 옵션으로 둠
-- **답 반영**: `새 값`은 `quote`를 `사용자 확인 YYYY-MM-DD 새 값 선택`으로 두고, `기존 유지`와 교체 후보의 `모름`은 사실을 빼서 6절 미기록 표로 넘기며, 그 밖의 `모름`은 권장안을 채택함
-- **답 원문**: 질문과 답을 `{work}/input/answers.md`에 Write하고, 답으로 정해진 사실은 `input`에 이 파일을, `source`에 `사용자 확인 YYYY-MM-DD`를 더함 — 검토의 자료 대조가 답을 원문으로 보지 못하면 자료 속 다른 값으로 되돌림
-- **기록**: `apply.md` 0장 형식으로 `{work}/facts.json`·`{work}/graph-candidates.json`을 씀 — `check`는 준비한 `{workspace.root}/{slug}`와 `origin/{defaultBranch}`(등록 레포 파일 근거면 그 sha), `input`은 그 사실을 낸 자료의 원문 파일, `source`는 2절 근거 줄
+- 같은 주장을 병합해 `A1`부터 번호를 매기고, 자료별 `source`에 원문 위치(`loc`)를 포함한다. 레포와 지도 후보는 `apply.md` 0장에 따라 준비한다.
+- 적용 대상과 기존 정책·출처를 대조해 사실, 대상 문서, 판정, 근거를 표로 보인다. 레포 지도 후보도 별도 표에 레포·변경·원문을 보인다. 관찰은 같은 범위의 정책과 실제 차이가 있을 때만 두 값과 출처를 결과에 보고한다. 문서 편집에 넘기지 않는다.
+- 같은 범위의 유효한 규격·결정이 확인되면 바로 반영한다. 두 근거의 관계나 보장할 범위를 확인할 수 없고 이번 요청에서 결정해야 하면, 두 값과 출처를 보여 주고 결정권자에게 한 가지씩 묻는다. 확인되지 않은 항목은 미기록 표에 남긴다. 별도의 일괄 진행 확인은 받지 않는다.
+- 답으로 결정된 사실은 질문과 답을 `{work}/input/answers.md`에 보관하고 `quote`에 결정 문구, `input`에 파일 경로, `source`에 결정 출처를 더한다.
+- `apply.md` 0장 형식으로 `{work}/facts.json`·`{work}/graph-candidates.json`을 쓴다. `check`는 준비한 레포와 `origin/{defaultBranch}`(등록 레포 파일 근거면 그 sha), `input`은 해당 원문 파일이다. 레포 폴더에 쓸 사실의 slug가 불분명하면 자료의 출처로 확인하고 확인되지 않으면 배정하지 않는다.
 - **브랜치**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-add/{YYYYMMDD-HHMM}`
 
 ## 5. 반영
 
-`apply.md` 1~7장을 실행합니다. 1장 배정은 4절 답을 반영해 다시 씁니다.
+`apply.md` 1~7장을 실행합니다.
 
 ## 6. 게시·보고
 
-`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 게시하지 않고 집계만 보고합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
+`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 4절 관찰과 검토 differences에서 확인한 정책 위반은 두 값과 근거를 함께 보고합니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 집계와 미기록 사유를 보고하고 종료합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
 
-PR 링크, 요약 집계 한 줄, 미기록 표, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 미기록 표는 `기존 유지` 행, 자료에 없어 기록하지 못한 항목, 검토 `conflicts`(미해결 충돌), 지도 `rejected`를 담습니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
+게시했으면 PR 링크, 요약 집계 한 줄, 미기록 표, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 미기록 표는 결정 근거를 확인하지 못한 행, 자료에 없어 기록하지 못한 항목, 검토 `conflicts`(미해결 충돌), 지도 `rejected`를 담습니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
 
 ```
 | 사실 | 위치 | 기존 값 | 새 값·사유 |

@@ -20,7 +20,18 @@
 
 ## 검증
 
-두 스킬에서 확정된 정책 변경, 정책을 유지한 리팩터링, 코드에만 있는 편의 기능을 대입해 문서 위치·내용·재질문 여부를 확인한다. 반복되는 레포별 빌드 제약도 확인한다. 저장소 테스트는 python3 -m unittest discover -s tests 로 실행한다.
+가상 shop-api 저장소와 위키 두 사본에서 add의 입력 자료와 update의 머지 1건을 각각 추출·배정하고, 문서별 반영과 검토 결과를 대조했다. update 입력은 scripts/collect_update_merges.py로 수집했다.
+
+| 가상 입력 | 두 스킬의 검토 후 결과 |
+| --- | --- |
+| 책임자가 주문 취소 API 허용 시간을 24시간에서 48시간으로 확정한 규격 v2 §1 | 재질문 없이 공통 cancel-window.md를 48시간으로 교체하고 출처를 남겼다. 실제 가상 API는 36시간 요청을 거부했다. 검토 결과에 정책 48시간과 구현 24시간의 차이가 1건 남았다. |
+| 기존 판정식의 함수 분리 | 내부 함수 이름과 호출 순서는 어느 위키 문장에도 추가되지 않았다. |
+| 코드에만 있는 어드민 목록 정렬 | 정렬되는 동작을 실행해 확인했고 위키 문서에는 추가되지 않았다. |
+| 격리된 Jenkins 빌드 노드에 Node 20을 사전 설치해야 하는 제약 | 두 사본 모두 shop-api/jenkins-node.md에만 설치 조건과 이유를 기록했다. |
+
+두 사본 모두 공통 문서 1장과 프로젝트 문서 1장이며 미결 충돌은 0건이었다. 로컬 저장소 테스트 14개(python3 -m unittest discover -s tests)와 Codex 로더 검사(python3 tests/check_codex.py)를 통과했다. 사례 검증 범위는 문서 검토까지이며 위키 PR 게시는 실행하지 않았다.
+
+다음 세션에서 정책 분류와 근거 우선순위는 [문서 규약](../../../../agent-wiki/references/doc-contract.md), 문서 반영·검토는 [공통 반영 절차](../../../../agent-wiki/references/apply.md), 입력별 판정은 [add](../../../../agent-wiki/skills/add/SKILL.md)와 [update](../../../../agent-wiki/skills/update/SKILL.md)를 참조한다.
 
 ## 범위 밖
 
