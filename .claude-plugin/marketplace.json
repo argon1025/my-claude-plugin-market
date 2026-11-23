@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Claude Code·Codex 공용 플러그인 마켓플레이스",
-    "version": "4.14.0"
+    "version": "4.15.0"
   },
   "plugins": [
     {
@@ -56,7 +56,7 @@
     {
       "name": "auto-flow",
       "source": "./auto-flow",
-      "description": "Jira 이슈의 공통 계획 작성·조정, 저장소별 실행 가능성 검토, 구현 전 독립 계획 검증",
+      "description": "Jira 계획 작성·검토·독립 검증, 조건별 코드 변경·테스트, PR 게시·결함 리뷰·지적 판정·스레드 회신",
       "category": "workflow",
       "tags": [
         "planning",

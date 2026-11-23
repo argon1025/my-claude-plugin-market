@@ -20,9 +20,22 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 | [better-communication](./better-communication/README.md) | 간결하고 이해하기 쉬운 한국어 응답 규칙을 세션에 자동 주입 | `python3` |
 | [pr-workflow](./pr-workflow/README.md) | PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), 스킬 호출 시에만 동작 | `gh`·`glab`·PR 호스트 MCP 중 1종 |
 | [plan-workflow](./plan-workflow/README.md) | 이슈 여러 개를 분류해 한 결정씩 합의하고 이슈별 계획 승인 뒤 실행까지 잇는 planning·execute 스킬, 기록은 `.ai-docs/workspace/{이슈 키}/` | `python3`, `git` |
-| [auto-flow](./auto-flow/references/plan-record.md) | 한 Jira 이슈의 [계획 작성·조정](./auto-flow/skills/plan-issue/SKILL.md), [담당 영역 검토](./auto-flow/skills/review-repo/SKILL.md), [독립 계획 검증](./auto-flow/skills/verify-plan/SKILL.md)을 각각 호출 | 이슈 본문과 해당 코드·정책 근거. 본문 저장에는 Jira 쓰기 연결 필요 |
+| [auto-flow](./auto-flow/skills) | Jira 계획 작성·영역 검토·독립 검증, 코드 변경·테스트, PR 게시·결함 리뷰·지적 판정·회신을 각각 호출 | 지정 조건·코드 판본. Jira·PR 조회 및 게시에는 대상 호스트 연결 필요 |
 | [agent-wiki](./agent-wiki/README.md) | 에이전트 위키 | `git`, `python3` |
 
+
+### auto-flow 직접 호출
+
+| 요청 | 스킬 | 인계할 근거 |
+| --- | --- | --- |
+| Jira 계획 작성·조정 / 레포 실행 가능성 검토 / 독립 착수 판정 | `plan-issue` / `review-repo` / `verify-plan` | 원래 요청, 계획 판본과 조건, 적용 계약·코드 |
+| 조건 구현 / 수용한 지적 수정 | `change-code` | 조건별 착수 근거 또는 PR head·스레드별 수용 판정 |
+| 지정 변경 테스트 | `test-repo` | 커밋 또는 식별 가능한 작업 사본, 조건·환경 |
+| PR 생성 / 기존 PR에 수정본 게시 | `publish-pr` | 준비한 변경, 대상 브랜치 또는 기존 PR, Jira·검증 근거 |
+| 코드 결함 리뷰·재리뷰 | `review-code` | PR과 검토할 head, 적용 계약 |
+| 지적별 판정 / 처리 결과 답글 | `triage-findings` / `reply-thread` | PR·스레드와 현재 판본. 수정 회신에는 PR의 수정 판본·위치, 이미 해결된 지적에는 현재 코드 위치, 이견에는 판단 근거 |
+
+예를 들어 사람이 만든 PR을 리뷰할 때는 Claude에서 `/auto-flow:review-code`에 PR을 지정한다. 게시까지 요청하면 검토한 커밋에 결과를 남긴다. Jira 계획 양식과 판본 확인법은 [계획과 검토 결과](./auto-flow/references/plan-record.md)에 있다.
 
 ## Codex 설치
 
@@ -57,6 +70,7 @@ agent-wiki의 init·register·update는 명시 호출 전용입니다. add는 �
 - hooks·git·bash·python3가 있는 로컬 실행 환경이 대상입니다. Cloud·웹과 Windows 셸 호환성은 검증 범위 밖입니다.
 - 자동 검사: python3 -m unittest discover -s tests -p 'test_*.py'
 - 실제 Codex 로더 검사(모델 호출 없음): python3 tests/check_codex.py
+- `agent-wiki`와 `auto-flow`만 설치한 로더는 `python3 tests/check_codex.py --auto-flow-only`로 확인합니다. [단독 호출과 복구 검증 기록](.devcenter/workspace/progress/auto-flow-development/plan.md#검증)에서 사용한 판본과 모의 호스트 범위를 볼 수 있습니다.
 - 실제 클라이언트 검증과 한계는 [검증 기록](.ai-docs/workspace/codex-plugin-support/validation.md)에 있습니다. 설치 성공을 전체 업무·원격 게시 성공으로 간주하지 않습니다.
 
 ## 라이선스
