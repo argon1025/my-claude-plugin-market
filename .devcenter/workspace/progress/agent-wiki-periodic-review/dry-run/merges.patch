@@ -1,0 +1,35 @@
+diff --git a/knowledge/market/partner-receipt-notice.md b/knowledge/market/partner-receipt-notice.md
+new file mode 100644
+index 0000000..cdbf134
+--- /dev/null
++++ b/knowledge/market/partner-receipt-notice.md
+@@ -0,0 +1,15 @@
++---
++description: 파트너 인수 알림의 보관함 식별자를 다룰 때
++---
++
++# 파트너 인수 알림
++
++## 적용 대상
++
++- batch-api가 파트너에 보내는 인수 알림
++
++## 규칙
++
++- batch-api는 파트너 인수 알림에 보관함 식별자(lockerId)를 반드시 포함함
++
++정책 출처는 batch-api `910ddf6`의 `specs/notice.md` 인수 알림 규격 v1 §1이며, 배송 운영 책임자 문서윤이 승인함.
+diff --git a/registry.json b/registry.json
+index 7daa679..2eba8e1 100644
+--- a/registry.json
++++ b/registry.json
+@@ -16,7 +16,8 @@
+           "defaultBranch": "main",
+           "summary": "정산 파일과 환불 접수",
+           "responsibilities": [
+-            "정산 파일과 환불 접수"
++            "정산 파일과 환불 접수",
++            "파트너 인수 알림 본문 생성"
+           ],
+           "hosts": []
+         },

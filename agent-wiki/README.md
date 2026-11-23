@@ -6,8 +6,10 @@
 | --- | --- | --- |
 | `/agent-wiki:init` | 명시 호출만 | 빈 위키 저장소면 골격 생성, 로컬 위키를 clone 또는 최신화 |
 | `/agent-wiki:register` | 명시 호출만 | 현재 레포를 서브에이전트로 분석해 노드·의존 간선·레포 폴더를 위키에 기록 |
-| `/agent-wiki:update` | 명시 호출만 | 도메인의 미처리 머지에서 확정된 정책과 반복되는 레포 제약을 찾아 위키 PR에 반영하고, 코드가 유효한 정책과 어긋난 부분을 보고한다. |
+| `/agent-wiki:update` | 명시 호출만 | 기존 호출은 미처리 머지를 수집한다. `--topic`은 한 주제를 점검하고, `--periodic`은 머지·결정·위키 변경과 코드·문서 순회를 한 PR로 제안한다. |
 | `/agent-wiki:add` | 명시·모델 호출 | 받은 자료나 대화에서 적용 대상이 분명한 규격·결정은 도메인 공통 문서에, 코드로 알기 어려운 반복 가능한 개발 지식은 프로젝트 폴더에 반영한다. 확정된 결정은 재승인 없이 위키 PR로 올린다. |
+
+예를 들어 `/agent-wiki:update --domain shop --topic "환불 접수" --dry-run`으로 원문·코드와 대조한 문서 변경안과 PR 초안을 볼 수 있다. 정기 실행의 결정 출처 등록, 입력 범위, 분량과 커서 처리는 [정기 실행 안내](references/periodic-review.md)를 따른다.
 
 두 스킬의 기록 기준은 [위키 문서 규약](references/doc-contract.md)에 있다. 레포 책임·의존·호스트는 코드로 확인한 뒤 기존 레포 지도를 갱신한다.
 
@@ -49,7 +51,7 @@
 ├── registry.json    # 레포 노드
 ├── deps.json        # 의존 간선(to·desc)
 ├── knowledge/       # 문서, 레포마다 {domain}/{slug}/
-├── state/           # update 커서, 레포마다 {slug}.json(cursor·at)
+├── state/           # 레포별 머지 커서와 review/{domain}.json의 독립 순회 위치
 ├── .local/index/    # 세션 색인, 훅이 {domain}/{slug}.md(문서)와 {slug}.repos.md(레포 책임) 생성
 └── .gitignore       # .local/
 ```

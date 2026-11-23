@@ -37,8 +37,8 @@ def git(cwd, *args, timeout=300):
         r = subprocess.run(["git", "-C", str(cwd), *args], env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
                            capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.SubprocessError) as e:
-        return 1, str(e)
-    return r.returncode, (r.stdout if r.returncode == 0 else r.stderr).strip()
+        return 128, str(e)
+    return r.returncode, (r.stdout if r.returncode == 0 else r.stderr).rstrip("\n")
 
 
 def first_line(text):
@@ -52,20 +52,30 @@ def prepare(path, remote, branch):
         path.parent.mkdir(parents=True, exist_ok=True)
         code, out = git(path.parent, "clone", "--quiet", remote, str(path), timeout=600)
         return None if code == 0 else f"clone 실패 — {first_line(out)}"
-    git(path, "remote", "set-url", "origin", remote)
+    code, out = git(path, "remote", "set-url", "origin", remote)
+    if code:
+        return f"remote 설정 실패 — {first_line(out)}"
     code, out = git(path, "fetch", "--quiet", "origin", branch, timeout=600)
     return None if code == 0 else f"fetch 실패 — {first_line(out)}"
 
 
+def checked_git(path, *args):
+    code, out = git(path, *args)
+    if code:
+        raise ValueError(f"git {args[0]} 실패 — {first_line(out)}")
+    return out
+
+
 def first_parent(path, span):
-    code, out = git(path, "log", "--first-parent", "--reverse", "--format=%H%x09%P%x09%cI%x09%s", span)
+    out = checked_git(path, "log", "--first-parent", "--reverse", "--format=%H%x09%P%x09%cI%x09%s", span)
     rows = []
-    for line in out.splitlines() if code == 0 else []:
+    for line in out.splitlines():
         parts = line.split("\t", 3)
-        if len(parts) == 4:
-            sha, parents, when, subject = parts
-            rows.append({"sha": sha, "parents": len(parents.split()), "date": when, "subject": subject,
-                         "_parent": parents.split()[0] if parents else ""})
+        if len(parts) != 4:
+            raise ValueError(f"first-parent 이력 형식 오류: {line!r}")
+        sha, parents, when, subject = parts
+        rows.append({"sha": sha, "parents": len(parents.split()), "date": when, "subject": subject,
+                     "_parent": parents.split()[0] if parents else ""})
     return rows
 
 
@@ -103,15 +113,15 @@ def extract_diff(path, slug, row, out_dir):
     merge = row["parents"] >= 2
     head = ["diff"] if merge else ["show", "--format="]
     span = [f"{row['sha']}^1...{row['sha']}"] if merge else [row["sha"]]
-    _, name_status = git(path, *head, "--name-status", *span)
+    name_status = checked_git(path, *head, "--name-status", *span)
     row["files_changed"] = sum(1 for l in name_status.splitlines() if l.strip())
     # 머지 커밋 메시지는 "Merged in ..." 한 줄뿐이라 결정 근거가 적히는 딸린 커밋 메시지를 싣는다.
     if merge:
-        _, message = git(path, "log", f"--max-count={MESSAGE_MAX_COMMITS}", "--format=%h %s%n%b",
+        message = checked_git(path, "log", f"--max-count={MESSAGE_MAX_COMMITS}", "--format=%h %s%n%b",
                          f"{row['sha']}^1..{row['sha']}")
     else:
-        _, message = git(path, "log", "-1", "--format=%s%n%b", row["sha"])
-    _, body = git(path, *head, *span, "--", ".", *EXCLUDE_PATHSPECS)
+        message = checked_git(path, "log", "-1", "--format=%s%n%b", row["sha"])
+    body = checked_git(path, *head, *span, "--", ".", *EXCLUDE_PATHSPECS)
     sha7 = row["sha"][:7]
     # 조각마다 같은 머리말을 둔다 — 둘째 줄 조각 번호·줄 수는 조각을 쓸 때 채움.
     rest = (
@@ -151,7 +161,7 @@ def batches(rows):
     return result
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(description="도메인 레포의 미처리 머지 diff를 꺼내 work.json을 쓴다")
     ap.add_argument("--wiki", required=True, help="위키 clone({tmp})")
     ap.add_argument("--workspace", required=True, help="workspace.root")
@@ -159,7 +169,7 @@ def main():
     ap.add_argument("--out", required=True, help="diff와 work.json을 쓸 디렉터리")
     ap.add_argument("--start", action="append", default=[], metavar="SLUG=REV", help="커서 없는 레포의 시작 지점(HEAD 또는 sha)")
     ap.add_argument("--max-merges", type=int, default=10)
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
 
     wiki, workspace, out = (Path(p).expanduser() for p in (a.wiki, a.workspace, a.out))
     try:
@@ -191,9 +201,17 @@ def main():
             continue
 
         try:
-            cursor = json.loads((wiki / "state" / f"{slug}.json").read_text()).get("cursor")
-        except (OSError, ValueError, AttributeError):
+            state = json.loads((wiki / "state" / f"{slug}.json").read_text())
+            if not isinstance(state, dict):
+                raise ValueError("커서 파일은 JSON 객체여야 함")
+            cursor = state.get("cursor")
+            if cursor is not None and not isinstance(cursor, str):
+                raise ValueError("cursor는 SHA 또는 null이어야 함")
+        except FileNotFoundError:
             cursor = None
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            work["skipped"][slug] = f"머지 커서 읽기 실패 — {e}"
+            continue
         bootstrapped = False
         if not cursor and slug in starts:
             rev = head if starts[slug] == "HEAD" else starts[slug]
@@ -214,7 +232,11 @@ def main():
             work["skipped"][slug] = f"커서 {cursor[:7]}가 origin/{branch} 조상이 아님(force-push 의심) — state/{slug}.json 재설정 필요"
             continue
 
-        rows = first_parent(path, f"{cursor}..{head}")
+        try:
+            rows = first_parent(path, f"{cursor}..{head}")
+        except ValueError as e:
+            work["skipped"][slug] = str(e)
+            continue
         # 커서가 first-parent 위에 있으면 범위 첫 행의 첫 부모가 커서이고, 행이 없으면 커서가 head임.
         if rows and rows[0]["_parent"] != cursor:
             work["skipped"][slug] = f"커서 {cursor[:7]}가 origin/{branch} first-parent 밖 — registry defaultBranch 확인"
@@ -240,10 +262,18 @@ def main():
 
     pool.sort(key=lambda r: r["_key"])
     chosen = pool[: a.max_merges]
+    picked = set()
     for row in chosen:
-        extract_diff(work["repos"][row["_key"][1]]["path"], row["_key"][1], row, out / row["_key"][1])
-        work["order"].append({"slug": row["_key"][1], "sha7": row["sha"][:7], "date": row["date"]})
-    picked = {id(r) for r in chosen}
+        slug = row["_key"][1]
+        if slug in work["skipped"]:
+            continue
+        try:
+            extract_diff(work["repos"][slug]["path"], slug, row, out / slug)
+        except (ValueError, OSError) as e:
+            work["skipped"][slug] = str(e)
+            continue
+        picked.add(id(row))
+        work["order"].append({"slug": slug, "sha7": row["sha"][:7], "date": row["date"]})
     for slug, rows in spans.items():
         entry = work["repos"][slug]
         entry["commits"] = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows if id(r) in picked]
@@ -258,10 +288,10 @@ def main():
         mark = " · 부트스트랩" if entry["bootstrapped"] else ""
         print(f"{slug}: 머지 {len(entry['commits'])}건 · 묶음 {len(entry['batches'])}개{tail}{mark}")
     busy = any(e["commits"] or e["bootstrapped"] for e in work["repos"].values())
-    if not busy:
+    if not busy and not work["skipped"]:
         print("(미처리 없음)")
     print(work_path)
-    return 0 if busy else 10
+    return 1 if work["skipped"] else (0 if busy else 10)
 
 
 if __name__ == "__main__":

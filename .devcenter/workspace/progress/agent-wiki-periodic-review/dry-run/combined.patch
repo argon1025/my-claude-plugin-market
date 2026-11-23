@@ -1,0 +1,132 @@
+diff --git a/knowledge/market/archive-receipt-access.md b/knowledge/market/archive-receipt-access.md
+new file mode 100644
+index 0000000..7c37e97
+--- /dev/null
++++ b/knowledge/market/archive-receipt-access.md
+@@ -0,0 +1,16 @@
++---
++description: 파트너의 보관 작업 영수증 열람 기한을 확인할 때
++---
++
++# 보관 영수증 열람
++
++## 적용 대상
++
++- 외부 파트너가 archive-api에서 완료된 보관 작업의 영수증을 조회하는 API(`GET /archives/{id}/receipt`)
++
++## 규칙
++
++- 완료 후 14일까지 영수증을 조회하면 HTTP `200`을 반환함
++- 완료 후 14일이 지나 영수증을 조회하면 HTTP `410`을 반환함
++
++정책 출처는 계약 책임자 하은이 2026-03-10 승인한 영수증 열람 규격 제4판 §2(`archive-api@68fd090`, `specs/receipt-v4.md`)임.
+diff --git a/knowledge/market/batch-api/delivery-retry.md b/knowledge/market/batch-api/delivery-retry.md
+index ae890a4..01e54e3 100644
+--- a/knowledge/market/batch-api/delivery-retry.md
++++ b/knowledge/market/batch-api/delivery-retry.md
+@@ -6,4 +6,4 @@ description: 정산 배치에서 온라인 증빙을 재전송할 때
+
+ ## 규칙
+
+-- 온라인 가맹점은 생성 후 24시간까지 배송 증빙을 재전송할 수 있다. 배송 증빙 재전송 규격 v2 §1.
++- 온라인 가맹점의 재전송 기한은 [배송 증빙 재전송 공통 규칙](../delivery-window.md#규칙)을 따름
+diff --git a/knowledge/market/batch-api/export-batch.md b/knowledge/market/batch-api/export-batch.md
+index 0f18594..92cefee 100644
+--- a/knowledge/market/batch-api/export-batch.md
++++ b/knowledge/market/batch-api/export-batch.md
+@@ -2,10 +2,13 @@
+ description: 야간 거래 파일의 당직 송신·재처리를 수행할 때
+ ---
+
+-# 야간 거래 파일 송신
++# 야간 거래 파일 송신·재처리
+
+ ## 규칙
+
+-- 야간 거래 파일에는 UTF-8 인코딩을 사용한다. 정산 파일 송신 규격 v1 §2.
+-- 파트너 방화벽을 점검하는 수요일 02:00~03:00에는 파일을 송신하지 않는다. 출처는 ops/nightly.md 야간 송신 당직 인수서 v3 §1이다.
+-- export_batch는 normalize를 호출한 뒤 flush를 호출한다.
++- 파트너 방화벽 점검이 있는 수요일 02:00~03:00에는 야간 거래 파일을 송신하지 않음. 출처는 `ops/nightly.md` 야간 송신 당직 인수서 v3 §1임.
++- 야간 거래 파일의 인코딩은 [정산 파일 인코딩](../export-encoding.md#규칙)을 따름
++
++## 함정
++
++- 전용 회선의 재처리는 당직 2인의 승인이 필요함. 출처는 `ops/nightly.md` 야간 송신 당직 인수서 v3 §2임.
+diff --git a/knowledge/market/batch-api/export-replay.md b/knowledge/market/batch-api/export-replay.md
+deleted file mode 100644
+index afb4757..0000000
+--- a/knowledge/market/batch-api/export-replay.md
++++ /dev/null
+@@ -1,10 +0,0 @@
+----
+-description: 야간 거래 파일의 당직 송신·재처리를 수행할 때
+----
+-
+-# 야간 거래 파일 재처리
+-
+-## 함정
+-
+-- 전용 회선의 재처리에는 당직 2인의 승인이 필요하다. 출처는 ops/nightly.md 야간 송신 당직 인수서 v3 §2다.
+-- 이번 시연에서는 로컬 JAR demo-3.jar로 재처리를 확인했다.
+diff --git a/knowledge/market/batch-api/shift-handover.md b/knowledge/market/batch-api/shift-handover.md
+index b5b05ad..d7f2d04 100644
+--- a/knowledge/market/batch-api/shift-handover.md
++++ b/knowledge/market/batch-api/shift-handover.md
+@@ -6,4 +6,4 @@ description: 야간 당직이 회선 승인 증빙을 넘길 때
+
+ ## 절차
+
+-- 회선 승인 증빙을 보관한다. 송신 시각은 [야간 송신](export-batch.md#규칙), 당직 승인 수는 [야간 재처리](export-replay.md#함정)를 따른다. 출처는 ops/nightly.md 야간 송신 당직 인수서 v3 §3이다.
++- 회선 승인 증빙을 보관한다. 송신 시각은 [야간 송신](export-batch.md#규칙), 당직 승인 수는 [야간 재처리](export-batch.md#함정)를 따른다. 출처는 ops/nightly.md 야간 송신 당직 인수서 v3 §3이다.
+diff --git a/knowledge/market/partner-handoff-notice.md b/knowledge/market/partner-handoff-notice.md
+new file mode 100644
+index 0000000..7c714a4
+--- /dev/null
++++ b/knowledge/market/partner-handoff-notice.md
+@@ -0,0 +1,15 @@
++---
++description: 파트너 인수 알림의 보관함 식별자를 확인할 때
++---
++
++# 파트너 인수 알림
++
++## 적용 대상
++
++- batch-api가 파트너에게 보내는 인수 알림
++
++## 규칙
++
++- batch-api는 파트너 인수 알림에 보관함 식별자(`lockerId`)를 반드시 포함함
++
++정책 출처는 배송 운영 책임자 문서윤이 승인한 인수 알림 규격 v1 §1(`batch-api@910ddf6`, `specs/notice.md`)임.
+diff --git a/knowledge/market/refund-window.md b/knowledge/market/refund-window.md
+index bb3ce52..f6e8ac3 100644
+--- a/knowledge/market/refund-window.md
++++ b/knowledge/market/refund-window.md
+@@ -6,8 +6,10 @@ description: 온라인 주문의 환불 접수 기한을 확인할 때
+
+ ## 적용 대상
+
+-- 온라인 주문의 환불 접수.
++- 온라인 주문 전체의 환불 접수
+
+ ## 규칙
+
+-- 구매 다음 날부터 3일 안에 환불을 접수할 수 있다. 온라인 환불 접수 규격 v1 §1.
++- 2026-06-01부터 구매 다음 날을 첫날로 하여 8일 이내에 환불을 접수할 수 있음
++
++정책 출처는 상품 정책 책임자 오지수의 [최종 결정 MARKET-17#42](https://jira.example.invalid/browse/MARKET-17#42) r4임.
+diff --git a/registry.json b/registry.json
+index 7daa679..b76fbcf 100644
+--- a/registry.json
++++ b/registry.json
+@@ -16,7 +16,8 @@
+           "defaultBranch": "main",
+           "summary": "정산 파일과 환불 접수",
+           "responsibilities": [
+-            "정산 파일과 환불 접수"
++            "정산 파일과 환불 접수",
++            "파트너 인수 알림 페이로드 생성"
+           ],
+           "hosts": []
+         },

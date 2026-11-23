@@ -1,6 +1,6 @@
 ---
 name: update
-description: Inspect a domain’s merges for confirmed decisions and reusable project knowledge. Report policy discrepancies and open a wiki PR with the documents and cursors.
+description: Review unprocessed merges, audit one wiki topic, or run a bounded periodic review of service, decision and wiki changes. Propose confirmed changes in one wiki PR.
 disable-model-invocation: true
 ---
 
@@ -9,6 +9,17 @@ disable-model-invocation: true
 `{PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `{PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `{PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `{PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `{PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
 인자: `--domain {domain}`(대상 도메인), `--max-merges N`(머지 예산, 기본 10), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음).
+
+호출 방식은 아래 표를 따릅니다. 주제나 정기 실행을 자연어로 지정해도 같은 경로를 사용합니다.
+
+| 호출 | 수행 범위 |
+| --- | --- |
+| 기존 인자만 사용 | 아래 1~9절의 머지 전용 실행 |
+| `--topic "주제 또는 문서 경로"` | 해당 주제의 문장·원문·코드를 직접 점검. 모든 커서를 보존 |
+| `--periodic` | 서비스 머지·등록 결정·위키 변경·코드와 문서 순회 |
+| `--paths docs` 등 | 정기 실행의 선택 경로만 수행. 쉼표로 함께 지정 가능 |
+
+직접·정기·선택 경로는 1절에서 위키 사본을 하나 준비한 뒤 [주제 점검과 정기 실행](../../references/periodic-review.md)을 따릅니다. `--topic`과 정기 옵션을 섞지 않습니다. 이들 경로에서는 아래 2절의 머지 전용 종료 조건을 사용하지 않습니다.
 
 ## 1. 준비
 
@@ -33,9 +44,9 @@ python3 {PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --workspace 
 마지막 줄이 `{work}/work.json` 경로이며, 종료 코드별로 처리합니다.
 
 - **20**: `work.json` `unset`의 레포마다 질문 도구으로 시작 지점을 묻고(한 라운드 4질문까지, 옵션은 `candidates`의 `{label} ({sha7})`, 다른 sha는 기타 입력) 답마다 `--start {slug}={sha}`를 붙여 다시 실행함 — 시작 지점 이후 머지부터 반영되며 `HEAD`는 반영 없이 커서만 기록함
-- **10**: `미처리 없음` 한 줄과 `skipped` 사유를 보고하고 `rm -rf {tmp} {work}` 후 종료
-- **1**: stderr를 전달하고 중단
-- **0**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-update/{YYYYMMDD-HHMM}`
+- **10**: 모든 대상 조회가 성공했고 처리할 머지가 없다. 미처리 0건으로 종료
+- **1**: 오류를 보고하고 원본과 결과 폴더를 유지한다. 실패한 조회는 미확인으로 남기고 해당 커서를 보존한다
+- **0**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-update/{domain}-{base 전체 SHA}`
 
 ## 3. 추출
 

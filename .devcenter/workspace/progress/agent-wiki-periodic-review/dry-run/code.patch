@@ -1,0 +1,22 @@
+diff --git a/knowledge/market/receipt-window.md b/knowledge/market/receipt-window.md
+new file mode 100644
+index 0000000..93af66e
+--- /dev/null
++++ b/knowledge/market/receipt-window.md
+@@ -0,0 +1,16 @@
++---
++description: 외부 파트너의 보관 영수증 열람 기한을 확인할 때
++---
++
++# 보관 영수증 열람 기한
++
++## 적용 대상
++
++- 외부 파트너가 완료된 보관 작업의 영수증을 조회하는 archive-api 열람 API(`GET /archives/{id}/receipt`)
++
++## 규칙
++
++- archive-api는 완료 당일부터 완료 후 14일까지 영수증을 조회하면 HTTP `200`을 반환함.
++- archive-api는 완료 후 14일이 지나 영수증을 조회하면 HTTP `410`을 반환함.
++
++두 규칙의 출처는 archive-api의 영수증 열람 규격 제4판 §2(`specs/receipt-v4.md`, 계약 책임자 하은, 2026-03-10 승인)임.
