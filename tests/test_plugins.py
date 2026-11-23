@@ -49,11 +49,15 @@ class PackageTests(unittest.TestCase):
 
     def test_packaged_references_and_invocation_policy(self):
         skills = [s for p in PLUGINS for s in p.glob('skills/*/SKILL.md')]
-        self.assertEqual(len(skills), 21)
+        self.assertEqual(len(skills), 34)
         self.assertEqual({s.parent.name for s in skills if s.parents[2].name == 'auto-flow'},
                          {'plan-issue', 'review-repo', 'verify-plan', 'change-code', 'test-repo',
                           'publish-pr', 'review-code', 'triage-findings', 'reply-thread',
-                          'run-scenario', 'review-goal', 'investigate-cause'})
+                          'run-scenario', 'review-goal', 'investigate-cause',
+                          'classify-inquiry', 'answer-inquiry', 'link-issue', 'check-progress',
+                          'assign-work', 'send-question', 'handoff-reply', 'check-merge',
+                          'merge-pr', 'check-deployment', 'update-status',
+                          'find-notifications', 'send-result'})
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
                 text = skill.read_text()
