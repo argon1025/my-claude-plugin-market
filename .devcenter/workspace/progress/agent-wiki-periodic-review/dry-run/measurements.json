@@ -1,0 +1,240 @@
+{
+  "merges": {
+    "collector_seconds": 0.595,
+    "existing_documents": [
+      "delivery-window.md",
+      "batch-api/delivery-retry.md",
+      "field-console/delivery-retry.md"
+    ],
+    "source_revisions": [
+      "batch-api/910ddf6.diff",
+      "batch-api@910ddf6:specs/delivery.md",
+      "batch-api@910ddf6:specs/notice.md",
+      "batch-api@910ddf6:src/notice.py",
+      "field-console@d2e243c:specs/offline.md"
+    ],
+    "draft_checks": 4,
+    "sessions": {
+      "작성": {
+        "seconds": 80.52,
+        "shell_calls": 15,
+        "input_tokens": 237187,
+        "cached_input_tokens": 195072,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3184,
+        "reasoning_output_tokens": 506
+      },
+      "독립검토": {
+        "seconds": 155.69,
+        "shell_calls": 16,
+        "input_tokens": 311482,
+        "cached_input_tokens": 267520,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 6692,
+        "reasoning_output_tokens": 928
+      }
+    }
+  },
+  "decisions": {
+    "collector_seconds": 0.206,
+    "existing_documents": [
+      "refund-window.md"
+    ],
+    "source_revisions": [
+      "MARKET-17#41@r3",
+      "MARKET-17#42@r4",
+      "MARKET-17#43@r5",
+      "batch-api@910ddf6:specs/refunds.md",
+      "batch-api@910ddf6:src/workflows.py"
+    ],
+    "draft_checks": 4,
+    "sessions": {
+      "작성": {
+        "seconds": 62.77,
+        "shell_calls": 12,
+        "input_tokens": 220192,
+        "cached_input_tokens": 183296,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2120,
+        "reasoning_output_tokens": 125
+      },
+      "독립검토": {
+        "seconds": 99.46,
+        "shell_calls": 13,
+        "input_tokens": 265030,
+        "cached_input_tokens": 223616,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4000,
+        "reasoning_output_tokens": 546
+      }
+    }
+  },
+  "wiki": {
+    "collector_seconds": 0.338,
+    "existing_documents": [
+      "delivery-window.md",
+      "batch-api/delivery-retry.md",
+      "field-console/delivery-retry.md"
+    ],
+    "source_revisions": [
+      "batch-api@910ddf6:specs/delivery.md",
+      "batch-api@910ddf6:src/workflows.py",
+      "field-console@d2e243c:specs/offline.md",
+      "field-console@d2e243c:src/terminal.py",
+      "wiki-diffs/1dfa0d2d7570bcc378ff4e61cc3cff1ee56ff91a.diff"
+    ],
+    "draft_checks": 3,
+    "sessions": {
+      "작성": {
+        "seconds": 70.58,
+        "shell_calls": 12,
+        "input_tokens": 228590,
+        "cached_input_tokens": 188928,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2718,
+        "reasoning_output_tokens": 246
+      },
+      "독립검토": {
+        "seconds": 125.24,
+        "shell_calls": 18,
+        "input_tokens": 274473,
+        "cached_input_tokens": 226560,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5207,
+        "reasoning_output_tokens": 741
+      }
+    }
+  },
+  "code": {
+    "collector_seconds": 0.354,
+    "existing_documents": [],
+    "source_revisions": [
+      "archive-api@68fd090:specs/receipt-v4.md",
+      "archive-api@68fd090:src/archive.py",
+      "archive-api@68fd090:tests/test_receipt.py"
+    ],
+    "draft_checks": 3,
+    "sessions": {
+      "작성": {
+        "seconds": 62.13,
+        "shell_calls": 13,
+        "input_tokens": 223323,
+        "cached_input_tokens": 186624,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2153,
+        "reasoning_output_tokens": 362
+      },
+      "독립검토": {
+        "seconds": 99.47,
+        "shell_calls": 9,
+        "input_tokens": 187754,
+        "cached_input_tokens": 107520,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3921,
+        "reasoning_output_tokens": 532
+      }
+    }
+  },
+  "docs": {
+    "collector_seconds": 0.261,
+    "existing_documents": [
+      "batch-api/export-batch.md",
+      "batch-api/export-replay.md",
+      "batch-api/shift-handover.md",
+      "delivery-window.md",
+      "export-encoding.md",
+      "batch-api/delivery-retry.md",
+      "field-console/delivery-retry.md"
+    ],
+    "source_revisions": [
+      "batch-api@910ddf6:ops/nightly.md",
+      "batch-api@910ddf6:specs/delivery.md",
+      "batch-api@910ddf6:specs/export.md",
+      "batch-api@910ddf6:src/workflows.py",
+      "field-console@d2e243c:specs/offline.md",
+      "field-console@d2e243c:src/terminal.py"
+    ],
+    "draft_checks": 12,
+    "sessions": {
+      "작성": {
+        "seconds": 132.56,
+        "shell_calls": 14,
+        "input_tokens": 333498,
+        "cached_input_tokens": 269056,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5564,
+        "reasoning_output_tokens": 839
+      },
+      "독립검토": {
+        "seconds": 218.35,
+        "shell_calls": 15,
+        "input_tokens": 358787,
+        "cached_input_tokens": 305408,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9315,
+        "reasoning_output_tokens": 1586
+      }
+    }
+  },
+  "combined": {
+    "collector_seconds": 1.032,
+    "existing_documents": [
+      "batch-api/delivery-retry.md",
+      "batch-api/export-batch.md",
+      "batch-api/export-replay.md",
+      "batch-api/shift-handover.md",
+      "delivery-window.md",
+      "export-encoding.md",
+      "field-console/delivery-retry.md",
+      "refund-window.md"
+    ],
+    "source_revisions": [
+      "MARKET-17#41@r3",
+      "MARKET-17#42@r4",
+      "MARKET-17#43@r5",
+      "archive-api@68fd090:specs/receipt-v4.md",
+      "archive-api@68fd090:src/archive.py",
+      "archive-api@68fd090:tests/test_receipt.py",
+      "batch-api/910ddf6.diff",
+      "batch-api@910ddf6:ops/nightly.md",
+      "batch-api@910ddf6:specs/delivery.md",
+      "batch-api@910ddf6:specs/export.md",
+      "batch-api@910ddf6:specs/notice.md",
+      "batch-api@910ddf6:specs/refunds.md",
+      "batch-api@910ddf6:src/notice.py",
+      "batch-api@910ddf6:src/workflows.py",
+      "field-console@d2e243c:specs/offline.md",
+      "field-console@d2e243c:src/terminal.py",
+      "wiki-diffs/1dfa0d2d7570bcc378ff4e61cc3cff1ee56ff91a.diff"
+    ],
+    "draft_checks": 19,
+    "sessions": {
+      "작성": {
+        "seconds": 169.45,
+        "shell_calls": 19,
+        "input_tokens": 248770,
+        "cached_input_tokens": 201472,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 7721,
+        "reasoning_output_tokens": 877
+      },
+      "독립검토": {
+        "seconds": 245.57,
+        "shell_calls": 22,
+        "input_tokens": 425837,
+        "cached_input_tokens": 357632,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10531,
+        "reasoning_output_tokens": 1099
+      }
+    }
+  },
+  "input": {
+    "wiki": "1dfa0d2d7570bcc378ff4e61cc3cff1ee56ff91a",
+    "max_code": 1,
+    "max_docs": 5,
+    "max_merges": 10,
+    "seen_merges": 1,
+    "decision_end": "r5"
+  }
+}

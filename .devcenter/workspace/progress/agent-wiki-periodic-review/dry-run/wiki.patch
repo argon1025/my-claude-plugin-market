@@ -1,0 +1,10 @@
+diff --git a/knowledge/market/batch-api/delivery-retry.md b/knowledge/market/batch-api/delivery-retry.md
+index ae890a4..1870109 100644
+--- a/knowledge/market/batch-api/delivery-retry.md
++++ b/knowledge/market/batch-api/delivery-retry.md
+@@ -6,4 +6,4 @@ description: 정산 배치에서 온라인 증빙을 재전송할 때
+
+ ## 규칙
+
+-- 온라인 가맹점은 생성 후 24시간까지 배송 증빙을 재전송할 수 있다. 배송 증빙 재전송 규격 v2 §1.
++- 온라인 가맹점의 재전송 기한은 [배송 증빙 재전송](../delivery-window.md)을 참조함.
