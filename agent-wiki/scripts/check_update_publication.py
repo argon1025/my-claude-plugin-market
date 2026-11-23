@@ -18,10 +18,18 @@ def main():
     parser.add_argument("--compared", type=Path, help="Ready-stage comparison with other open PR heads")
     args = parser.parse_args()
     response = json.loads(args.open_prs.read_text(encoding="utf-8"))
-    if response["complete"] is not True or not isinstance(response["pulls"], list):
+    if isinstance(response, list):
+        # gh api --paginate --slurp가 성공하면 마지막 페이지까지의 배열이 온다.
+        if not response or not all(isinstance(page, list) for page in response):
+            raise ValueError("GitHub PR 페이지 목록이 비었거나 형식이 잘못됨")
+        pulls = [{"head": pr["head"]["ref"], "sha": pr["head"]["sha"],
+                  "base": pr["base"]["ref"], "url": pr["html_url"]} for page in response for pr in page]
+    elif response["complete"] is True and isinstance(response["pulls"], list):
+        pulls = response["pulls"]
+    else:
         raise ValueError("열린 PR 전체 목록을 확인하지 못함")
     others = []
-    for row in response["pulls"]:
+    for row in pulls:
         if not all(isinstance(row[k], str) and row[k] for k in ("head", "base", "url")):
             raise ValueError("열린 PR의 브랜치 또는 링크가 없음")
         if row["base"] != args.base_branch:

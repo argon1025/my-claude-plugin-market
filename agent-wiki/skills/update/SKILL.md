@@ -44,9 +44,9 @@ python3 {PLUGIN_ROOT}/scripts/collect_update_merges.py --wiki {tmp} --workspace 
 마지막 줄이 `{work}/work.json` 경로이며, 종료 코드별로 처리합니다.
 
 - **20**: `work.json` `unset`의 레포마다 질문 도구으로 시작 지점을 묻고(한 라운드 4질문까지, 옵션은 `candidates`의 `{label} ({sha7})`, 다른 sha는 기타 입력) 답마다 `--start {slug}={sha}`를 붙여 다시 실행함 — 시작 지점 이후 머지부터 반영되며 `HEAD`는 반영 없이 커서만 기록함
-- **10**: 모든 대상 조회가 성공했고 처리할 머지가 없다. 미처리 0건으로 종료
+- **10**: 모든 대상 조회가 성공했고 처리할 머지가 없다. 미처리 0건으로 보고한다. 일반 실행은 이번에 만든 임시 clone과 작업 폴더를 정리하고, dry-run은 수집 결과 경로를 남긴다.
 - **1**: 오류를 보고하고 원본과 결과 폴더를 유지한다. 실패한 조회는 미확인으로 남기고 해당 커서를 보존한다
-- **0**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-update/{domain}-{base 전체 SHA}`
+- **0**: 확인된 레포의 묶음만 진행한다. `skipped` 레포의 오류를 별도로 보고하고 그 커서는 보존한다. `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-update/{domain}-{base 전체 SHA}`
 
 ## 3. 추출
 

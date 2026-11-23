@@ -96,7 +96,7 @@ class UpdateReviewTests(unittest.TestCase):
         first = self.collect(*args)
         first_code = first['proposed']['code']
         first_doc = first['proposed']['docs']
-        self.assertIn('archive', first_code)
+        self.assertEqual(first_code['paths'], {'archive-api': 'src/archive.py'})
         self.assertEqual(first_doc, 'batch-api/export-batch.md')
         self.finalize('code', 'docs')
         cursors = {p.name: p.read_bytes() for p in (self.wiki / 'state').glob('*.json')}
@@ -111,11 +111,71 @@ class UpdateReviewTests(unittest.TestCase):
         self.assertFalse(direct['proposed'])
         self.assertEqual(cursors, {p.name: p.read_bytes() for p in (self.wiki / 'state').glob('*.json')})
         second = self.collect(*args)
-        self.assertEqual(second['proposed']['code'], 'batch-api/src/notice.py')
+        self.assertEqual(second['proposed']['code']['paths']['batch-api'], 'src/notice.py')
         self.assertEqual(second['proposed']['docs'], 'batch-api/export-replay.md')
         for path in ('code', 'docs'):
             self.assertNotEqual(first['proposed'][path], second['proposed'][path], path)
             self.assertEqual(len(second['sources'][path]['items']), 1)
+
+    def test_topic_does_not_depend_on_periodic_state(self):
+        self.state.write_text('{')
+        topic = self.collect('--topic', '환불')
+        self.assertTrue(topic['sources']['topic']['items'])
+        self.assertEqual(topic['proposed'], {})
+        self.assertEqual(self.state.read_text(), '{')
+
+    def test_unavailable_repo_does_not_starve_other_code_and_merges(self):
+        reg = self.wiki / 'registry.json'
+        data = json.loads(reg.read_text())
+        archive = data['domains'][DOMAIN]['repos']['archive-api']
+        original_remote = archive['remote']
+        archive['remote'] = str(self.root / 'offline')
+        json_file(reg, data)
+        args = ('--paths', 'merges,code', '--max-code', '1')
+        first = self.collect(*args, expected=1)
+        self.assertTrue(first['sources']['code']['errors'])
+        self.assertEqual(first['sources']['code']['items'][0]['slug'], 'batch-api')
+        self.assertIn('merges:batch-api', first['proposed'])
+        self.assertNotIn('archive-api', first['proposed']['code']['paths'])
+        self.run_cli(MERGES, '--wiki', self.wiki, '--workspace', self.root / 'workspace',
+                     '--domain', DOMAIN, '--out', self.out)
+        work = json.loads((self.out / 'work.json').read_text())
+        self.assertEqual([row['slug'] for row in work['order']], ['batch-api'])
+        self.assertIn('archive-api', work['skipped'])
+        self.finalize('code', 'merges:batch-api')
+        second = self.collect(*args, expected=1)
+        self.assertEqual(second['sources']['code']['items'][0]['slug'], 'field-console')
+        self.finalize('code')
+        archive['remote'] = original_remote
+        json_file(reg, data)
+        third = self.collect(*args)
+        self.assertEqual(third['sources']['code']['items'][0]['slug'], 'archive-api')
+
+    def test_fetch_refreshes_branch_outside_local_fetch_mapping(self):
+        self.collect('--paths', 'merges')
+        batch = self.root / 'workspace' / 'batch-api'
+        remote_copy = self.root / 'batch-remote'
+        git(self.root, 'clone', '-q', str(self.fixture / 'services' / 'batch-api'), str(remote_copy))
+        git(remote_copy, 'commit', '--allow-empty', '-qm', 'new revision')
+        latest = git(remote_copy, 'rev-parse', 'main')
+        reg = self.wiki / 'registry.json'
+        data = json.loads(reg.read_text())
+        data['domains'][DOMAIN]['repos']['batch-api']['remote'] = str(remote_copy)
+        json_file(reg, data)
+        git(batch, 'config', 'remote.origin.fetch', '+refs/heads/other:refs/remotes/origin/other')
+        result = self.collect('--paths', 'merges,code', '--max-code', '2')
+        self.assertEqual(result['proposed']['merges:batch-api'], latest)
+        self.assertEqual(git(batch, 'rev-parse', 'origin/main'), latest)
+        by_repo = {item['slug']: item['revision'] for item in result['sources']['code']['items']}
+        self.assertEqual(by_repo['batch-api'], latest)
+
+    def test_periodic_collects_known_repos_before_another_repo_bootstraps(self):
+        (self.wiki / 'state' / 'archive-api.json').unlink()
+        result = self.collect('--paths', 'merges,docs', expected=1)
+        self.assertTrue(result['sources']['merges']['errors'])
+        self.assertIn('merges:batch-api', result['proposed'])
+        self.assertNotIn('merges:archive-api', result['proposed'])
+        self.assertIn('docs', result['proposed'])
 
     def test_incomplete_query_preserves_cursor_but_other_sources_continue(self):
         for response in ({'error': 'mock connection lost'},
@@ -170,6 +230,13 @@ class UpdateReviewTests(unittest.TestCase):
             return self.run_cli(PUBLICATION, '--wiki', self.wiki, '--base', base_sha, '--base-branch', 'main',
                                 '--open-prs', pulls, *flags, expected=expected)
 
+        json_file(pulls, [])
+        guard(base, expected=1)
+        json_file(pulls, [[], [{'head': {'ref': 'wiki-update/x', 'sha': base}, 'base': {'ref': 'main'},
+                                'html_url': 'https://host.example.invalid/market/pull/10'}]])
+        self.assertIn('/pull/10', guard(base, expected=10).stdout)
+        json_file(pulls, [[]])
+        guard(base)
         json_file(pulls, {'complete': False, 'pulls': []})
         guard(base, expected=1)
         json_file(pulls, {'complete': True, 'pulls': []})

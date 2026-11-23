@@ -55,7 +55,8 @@ def prepare(path, remote, branch):
     code, out = git(path, "remote", "set-url", "origin", remote)
     if code:
         return f"remote 설정 실패 — {first_line(out)}"
-    code, out = git(path, "fetch", "--quiet", "origin", branch, timeout=600)
+    code, out = git(path, "fetch", "--quiet", "origin",
+                    f"+refs/heads/{branch}:refs/remotes/origin/{branch}", timeout=600)
     return None if code == 0 else f"fetch 실패 — {first_line(out)}"
 
 
@@ -161,7 +162,7 @@ def batches(rows):
     return result
 
 
-def main(argv=None):
+def main(argv=None, *, collect_known=False):
     ap = argparse.ArgumentParser(description="도메인 레포의 미처리 머지 diff를 꺼내 work.json을 쓴다")
     ap.add_argument("--wiki", required=True, help="위키 clone({tmp})")
     ap.add_argument("--workspace", required=True, help="workspace.root")
@@ -253,7 +254,7 @@ def main(argv=None):
                                "bootstrapped": bootstrapped, "commits": [], "batches": [], "remaining": 0}
 
     work_path = out / "work.json"
-    if work["unset"]:
+    if work["unset"] and not collect_known:
         work_path.write_text(json.dumps(work, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         for slug, info in sorted(work["unset"].items()):
             print(f"커서 없음  {slug}: HEAD {info['head']} · 후보 {len(info['candidates'])}개")
@@ -261,9 +262,10 @@ def main(argv=None):
         return 20
 
     pool.sort(key=lambda r: r["_key"])
-    chosen = pool[: a.max_merges]
-    picked = set()
-    for row in chosen:
+    chosen = []
+    for row in pool:
+        if len(chosen) >= a.max_merges:
+            break
         slug = row["_key"][1]
         if slug in work["skipped"]:
             continue
@@ -271,11 +273,14 @@ def main(argv=None):
             extract_diff(work["repos"][slug]["path"], slug, row, out / slug)
         except (ValueError, OSError) as e:
             work["skipped"][slug] = str(e)
+            del work["repos"][slug]
+            chosen = [item for item in chosen if item["_key"][1] != slug]
             continue
-        picked.add(id(row))
-        work["order"].append({"slug": slug, "sha7": row["sha"][:7], "date": row["date"]})
-    for slug, rows in spans.items():
-        entry = work["repos"][slug]
+        chosen.append(row)
+    work["order"] = [{"slug": row["_key"][1], "sha7": row["sha"][:7], "date": row["date"]} for row in chosen]
+    picked = {id(row) for row in chosen}
+    for slug, entry in work["repos"].items():
+        rows = spans[slug]
         entry["commits"] = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows if id(r) in picked]
         entry["remaining"] = len(rows) - len(entry["commits"])
         entry["batches"] = batches(entry["commits"])
@@ -288,10 +293,12 @@ def main(argv=None):
         mark = " · 부트스트랩" if entry["bootstrapped"] else ""
         print(f"{slug}: 머지 {len(entry['commits'])}건 · 묶음 {len(entry['batches'])}개{tail}{mark}")
     busy = any(e["commits"] or e["bootstrapped"] for e in work["repos"].values())
-    if not busy and not work["skipped"]:
+    if not busy and not (work["skipped"] or work["unset"]):
         print("(미처리 없음)")
     print(work_path)
-    return 1 if work["skipped"] else (0 if busy else 10)
+    if busy:
+        return 0
+    return 1 if work["skipped"] or work["unset"] else 10
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """위키 한 사본에서 독립 수집 범위와 검토를 마친 뒤 기록할 커서를 계산한다."""
 import argparse
+from bisect import bisect_right
+from collections import deque
 from datetime import date
 import json
 from pathlib import Path
@@ -70,12 +72,11 @@ def collect_merge_route(args, result, proposed):
            "--domain", args.domain, "--max-merges", str(args.max_merges)]
     for start in args.start:
         cmd.extend(["--start", start])
-    status = collect_merges(cmd)
+    collect_merges(cmd, collect_known=True)
     work = read_json(args.out / "work.json")
     result["errors"].extend(f"{s}: {why}" for s, why in work["skipped"].items())
-    if status == 20:
+    if work["unset"]:
         result["errors"].append("머지 시작 지점 필요: " + ", ".join(work["unset"]))
-        return work
     for slug, info in work["repos"].items():
         for batch in info["batches"]:
             result["items"].append({"slug": slug, "repo": info["path"], "batch": batch["id"],
@@ -192,32 +193,40 @@ def repo_snapshot(args, slug, node, merges):
 
 
 def collect_code(args, repos, merges, prior, result, proposed):
-    cursor = prior.get("code", "")
-    start_slug, _, start_file = cursor.partition("/")
-    # 커서 레포의 나머지 파일 → 다음 레포들 → 한 바퀴 뒤 처음 경로. 경로 목록도 필요한 레포만 읽는다.
+    cursor = prior.get("code", {})
+    if isinstance(cursor, str):
+        # 기존 slug/path 위치에서 이미 확인한 파일 다음으로 이어 간다.
+        last_repo, _, last_path = cursor.partition("/")
+        cursor = {"last_repo": last_repo, "paths": {last_repo: last_path}}
+    last_repo = cursor.get("last_repo", "")
+    positions = {s: path for s, path in cursor.get("paths", {}).items() if s in repos}
     slugs = sorted(repos)
-    order = [s for s in slugs if s >= start_slug] + [s for s in slugs if s < start_slug]
-    if start_slug in repos:
-        order.append(start_slug)
+    start = bisect_right(slugs, last_repo)
+    queue = deque(slugs[start:] + slugs[:start])
     snapshots = {}
-    for i, slug in enumerate(order):
+    while queue and len(result["items"]) < args.max_code:
+        slug = queue.popleft()
         if slug not in snapshots:
-            repo, rev = repo_snapshot(args, slug, repos[slug], merges)
-            snapshots[slug] = (repo, rev, [p for p in tree_paths(repo, rev) if product_entry(p)])
-        repo, rev, paths = snapshots[slug]
-        for path in paths:
-            if slug == start_slug and ((i == 0 and path <= start_file) or (i != 0 and path > start_file)):
+            try:
+                repo, rev = repo_snapshot(args, slug, repos[slug], merges)
+                paths = [p for p in tree_paths(repo, rev) if product_entry(p)]
+            except (ValueError, OSError) as e:
+                result["errors"].append(f"{slug}: {e}")
                 continue
-            result["items"].append({"slug": slug, "repo": str(repo), "revision": rev, "path": path})
-            if len(result["items"]) == args.max_code:
-                break
-        if len(result["items"]) == args.max_code:
-            break
-    if result["items"]:
-        item = result["items"][-1]
-        last = item["slug"] + "/" + item["path"]
-        if last != cursor:
-            proposed["code"] = last
+            start = bisect_right(paths, positions.get(slug, ""))
+            snapshots[slug] = (repo, rev, deque(paths[start:] + paths[:start]))
+        repo, rev, pending = snapshots[slug]
+        if not pending:
+            continue
+        path = pending.popleft()
+        result["items"].append({"slug": slug, "repo": str(repo), "revision": rev, "path": path})
+        positions[slug] = path
+        last_repo = slug
+        if pending:
+            queue.append(slug)
+    next_cursor = {"last_repo": last_repo, "paths": positions}
+    if result["items"] and next_cursor != prior.get("code"):
+        proposed["code"] = next_cursor
 
 
 def matches(repo, rev, text, *paths):
@@ -326,7 +335,7 @@ def main():
     repos = read_json(args.wiki / "registry.json")["domains"][args.domain]["repos"]
     for slug in repos:
         component(slug)
-    prior = state_at(state_path(args.wiki, args.domain))
+    prior = {} if args.topic is not None else state_at(state_path(args.wiki, args.domain))
     proposed, sources, merges = {}, {}, {}
     for route in (["topic"] if args.topic is not None else ROUTES):
         if route != "topic" and route not in selected:
