@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Install packages in a temporary Codex home and check the real loader (no model calls)."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -55,8 +56,15 @@ def inspect(env, cwd, overrides=()):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--auto-flow-only', action='store_true',
+                        help='install just auto-flow and agent-wiki and check the loaded plugin set')
+    args = parser.parse_args()
     catalog = json.loads((ROOT / '.agents/plugins/marketplace.json').read_text())
-    ids = {item['name'] + '@' + catalog['name'] for item in catalog['plugins']}
+    packages = catalog['plugins']
+    if args.auto_flow_only:
+        packages = [item for item in packages if item['name'] in {'auto-flow', 'agent-wiki'}]
+    ids = {item['name'] + '@' + catalog['name'] for item in packages}
     with tempfile.TemporaryDirectory(prefix='codex-loader-') as directory:
         cwd = Path(directory)
         home = cwd / 'codex'
@@ -76,10 +84,19 @@ def main():
         skills, hooks = inspect(env, cwd)
         loaded = [s for row in skills['data'] for s in row['skills'] if s.get('pluginId') in ids]
         expected = {item['name'] + ':' + path.parent.name
-                    for item in catalog['plugins']
+                    for item in packages
                     for path in (ROOT / item['source']['path']).glob('skills/*/SKILL.md')}
         assert {s['name'] for s in loaded} == expected, loaded
         configured = [h for row in hooks['data'] for h in row['hooks'] if h.get('pluginId') in ids]
+        if args.auto_flow_only:
+            plugin_ids = {s['pluginId'] for row in skills['data'] for s in row['skills'] if s.get('pluginId')}
+            assert plugin_ids == {'auto-flow@' + catalog['name'], 'agent-wiki@' + catalog['name']}, plugin_ids
+            all_hooks = [h for row in hooks['data'] for h in row['hooks']]
+            assert [(h.get('pluginId'), h['eventName']) for h in all_hooks] == [
+                ('agent-wiki@' + catalog['name'], 'sessionStart')], all_hooks
+            assert not any(row.get('errors') for row in skills['data'] + hooks['data'])
+            print(f'{version}: auto-flow + agent-wiki, {len(loaded)} skills, 1 wiki hook')
+            return
         assert len(configured) == 4, configured
         assert sorted(h['eventName'] for h in configured) == ['sessionStart'] * 3 + ['userPromptSubmit']
         assert all(h['trustStatus'] == 'untrusted' for h in configured), configured
