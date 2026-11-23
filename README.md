@@ -20,7 +20,7 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 | [better-communication](./better-communication/README.md) | 간결하고 이해하기 쉬운 한국어 응답 규칙을 세션에 자동 주입 | `python3` |
 | [pr-workflow](./pr-workflow/README.md) | PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), 스킬 호출 시에만 동작 | `gh`·`glab`·PR 호스트 MCP 중 1종 |
 | [plan-workflow](./plan-workflow/README.md) | 이슈 여러 개를 분류해 한 결정씩 합의하고 이슈별 계획 승인 뒤 실행까지 잇는 planning·execute 스킬, 기록은 `.ai-docs/workspace/{이슈 키}/` | `python3`, `git` |
-| [auto-flow](./auto-flow/skills) | Jira 계획 작성·영역 검토·독립 검증, 코드 변경·테스트, PR 게시·결함 리뷰·지적 판정·회신을 각각 호출 | 지정 조건·코드 판본. Jira·PR 조회 및 게시에는 대상 호스트 연결 필요 |
+| [auto-flow](./auto-flow/skills) | Jira 계획과 개발·PR 리뷰, 시나리오 실행, 목표 판정, 원인 조사를 각각 호출 | 지정 조건과 판본. Jira·PR 조회나 게시에는 대상 호스트 연결 필요 |
 | [agent-wiki](./agent-wiki/README.md) | 에이전트 위키 | `git`, `python3` |
 
 
@@ -34,20 +34,30 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 | PR 생성 / 기존 PR에 수정본 게시 | `publish-pr` | 준비한 변경, 대상 브랜치 또는 기존 PR, Jira·검증 근거 |
 | 코드 결함 리뷰·재리뷰 | `review-code` | PR과 검토할 head, 적용 계약 |
 | 지적별 판정 / 처리 결과 답글 | `triage-findings` / `reply-thread` | PR·스레드와 현재 판본. 수정 회신에는 PR의 수정 판본·위치, 이미 해결된 지적에는 현재 코드 위치, 이견에는 판단 근거 |
+| 시나리오 실행 | [run-scenario](./auto-flow/skills/run-scenario/SKILL.md) | 진입점, 입력·기대 결과, 환경과 서비스별 실행 판본 |
+| 완료 조건 판정 | [review-goal](./auto-flow/skills/review-goal/SKILL.md) | Jira 계획 판본과 조건, 이미 수집된 산출물·실행 증거 |
+| 원인 조사 | [investigate-cause](./auto-flow/skills/investigate-cause/SKILL.md) | 제보 원문과 확보한 단서. 이슈·계획 작성 전에도 증상과 판본으로 시작 |
 
 예를 들어 사람이 만든 PR을 리뷰할 때는 Claude에서 `/auto-flow:review-code`에 PR을 지정한다. 게시까지 요청하면 검토한 커밋에 결과를 남긴다. Jira 계획 양식과 판본 확인법은 [계획과 검토 결과](./auto-flow/references/plan-record.md)에 있다.
 
 ## Codex 설치
 
-Codex CLI 또는 데스크톱 앱에서 사용합니다. 로컬 개발판은 먼저 저장소 루트에서 등록합니다.
+로컬에서 검증한 개발 경로는 저장소 루트에서 다음 두 플러그인을 설치합니다.
 
 ~~~bash
 codex plugin marketplace add .
+codex plugin add auto-flow@my-claude-plugin-market
+codex plugin add agent-wiki@my-claude-plugin-market
+~~~
+
+새 세션에서 `$` 선택기로 표의 스킬을 지정합니다. 위키 색인에서 적용할 정책 판본을 찾고, `plan-issue`로 계획을 작성한 뒤 `review-repo`와 `verify-plan`으로 조건별 착수 범위를 확인합니다. 변경·테스트·PR 리뷰를 마친 판본에서 `run-scenario`로 실행한 결과는 `review-goal`에 넘깁니다. 예를 들어 화면 연동 증거가 빠졌으면 실행 담당이 그 화면에서 다시 수집하고, 기대와 다른 응답이나 화면을 관찰했으면 조사 담당이 그 기록과 판본을 받습니다. [합성 상점에서 확인한 판정과 인계](.devcenter/workspace/progress/auto-flow-runtime/validation.md)
+
+다른 플러그인도 함께 쓰려면 같은 마켓에서 원하는 패키지를 추가합니다.
+
+~~~bash
 codex plugin add better-communication@my-claude-plugin-market
 codex plugin add pr-workflow@my-claude-plugin-market
 codex plugin add plan-workflow@my-claude-plugin-market
-codex plugin add auto-flow@my-claude-plugin-market
-codex plugin add agent-wiki@my-claude-plugin-market
 ~~~
 
 변경이 원격에 게시된 뒤에는 첫 명령 대신 다음 Git 소스를 등록할 수 있습니다.
