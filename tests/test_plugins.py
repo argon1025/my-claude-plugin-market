@@ -126,6 +126,13 @@ class PackageTests(unittest.TestCase):
                 text = (ROOT / 'auto-flow/skills' / name / 'SKILL.md').read_text()
                 self.assertEqual({Path(ref).name for ref in re.findall(r'\]\(([^)]+)\)', text)}, expected)
 
+    def test_auto_flow_creation_questions_are_marked_for_planning(self):
+        # create-issue writes these questions without deciding to ask; planning finds them by this marker.
+        for path in ('skills/create-issue/SKILL.md', 'references/issue-template.md',
+                     'references/stage-plan.md', 'references/common.md'):
+            with self.subTest(path=path):
+                self.assertIn('"생성 시 확인"', (ROOT / 'auto-flow' / path).read_text())
+
     def test_auto_flow_environment_sections_are_the_replaceable_contract(self):
         text = (ROOT / 'auto-flow/references/environment.md').read_text()
         # Other distributions replace only this file, and the documents cite it by section number.
