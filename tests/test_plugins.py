@@ -121,6 +121,18 @@ class PackageTests(unittest.TestCase):
                 # Every entry point runs the shared start procedure, then only its own stage documents.
                 self.assertEqual(linked, expected | {'common.md'})
 
+    def test_auto_flow_environment_sections_are_the_replaceable_contract(self):
+        text = (ROOT / 'auto-flow/references/environment.md').read_text()
+        # Other distributions replace only this file, and the documents cite it by section number.
+        self.assertEqual(re.findall(r'^## (.+)$', text, re.M),
+                         ['1. 이슈', '2. PR', '3. 대화', '4. 관계자', '5. 이슈 상태'])
+        cited = set()
+        for document in (ROOT / 'auto-flow').rglob('*.md'):
+            for sections in re.findall(r'\]\([^)]*environment\.md\) ((?:\d·)*\d)절', document.read_text()):
+                cited |= {int(number) for number in sections.split('·')}
+        self.assertTrue(cited)
+        self.assertLessEqual(cited, {1, 2, 3, 4, 5})
+
     def test_plan_codex_events_do_not_misidentify_approval(self):
         manifest = json.loads((FLOW / '.codex-plugin/plugin.json').read_text())
         hooks = json.loads((FLOW / manifest['hooks']).read_text())['hooks']
