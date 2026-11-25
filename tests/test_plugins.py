@@ -86,25 +86,29 @@ class PackageTests(unittest.TestCase):
         record = (ROOT / 'auto-flow/references/issue-template.md').read_text()
         template = record.split('```markdown\n', 1)[1].split('\n```', 1)[0]
         lines = template.splitlines()
-        # The status line is the first line under the first section; skills read it to pick the stage.
-        self.assertEqual(lines[:2], ['## 진행', '상태: 검토'])
-        request = lines[lines.index('## 요청') + 1:lines.index('## 스펙')]
+        # Skills find the state and who is being waited on in the first lines of the body.
+        self.assertEqual(lines[:3], ['## 진행', '상태: 검토', '기다리는 것: 없음'])
+        request = lines[lines.index('## 요청') + 1:lines.index('## 미결 사항')]
         self.assertEqual([line for line in request if line.startswith('- ')],
-                         ['- 요청자, 요청일:', '- 요청이 온 곳:', '- 관계자:', '- 원하는 결과:', '- 배경:'])
-        self.assertEqual([line[3:] for line in lines if line.startswith('## ')],
-                         ['진행', '요청', '스펙', '정책 변경', '결정', '미결 사항', '레포별 계획',
-                          '리뷰 기록', '교정 기록'])
+                         ['- 요청자, 요청일:', '- 요청이 온 곳:', '- 관계자:', '- 원하는 결과:',
+                          '- 하지 않을 것:', '- 배경:', '- 기한:', '- 요청자가 본 원인과 해결 방법:',
+                          '- 참고 자료:'])
+        sections = ['진행', '요청', '미결 사항', '완료 조건', '관련 정책', '결정', '레포별 계획',
+                    '리뷰 기록', '에이전트 개선 피드백', '이력']
+        self.assertEqual([line[3:] for line in lines if line.startswith('## ')], sections)
+        # Only short, write-once records stay tables; items other runs fill in later are lists.
         headers = [lines[index - 1] for index, line in enumerate(lines) if line.startswith('| --- |')]
         self.assertEqual(headers, [
-            '| 레포 | 맡은 쪽 | 브랜치 | PR | 단계 |',
-            '| 번호 | 인수 조건 | 근거 | 확인 방법 | 맡는 레포 | 확인 결과 |',
-            '| 기존 | 새 정책 | 근거 | 위키 반영 |',
-            '| 번호 | 질문 | 답할 사람 | 걸린 인수 조건 |',
-            '| 번호 | 회차 | 레포 | 지적과 위치 | 등급 | 판정과 처리 | 상태 |',
-            '| 유형 | 처음 판단 | 바로잡은 내용 | 드러난 지점 |',
+            '| 번호 | 정책 | 출처 | 새 정책 | 위키 반영 |',
+            '| 구분 | 처음 판단 | 바로잡은 내용 | 발견한 곳 |',
         ])
         for header, rule in zip(headers, (line for line in lines if line.startswith('| --- |'))):
             self.assertEqual(header.count('|'), rule.count('|'))
+        # Every section and every numbered item form is explained below the skeleton.
+        guide = record.split('## 절마다 적는 것', 1)[1]
+        self.assertEqual(re.findall(r'^### ([^{\n]+)$', guide, re.M), sections)
+        for prefix in ('Q', 'AC', 'D', 'U', 'R'):
+            self.assertIn(f'- **{prefix}-1**', guide)
 
     def test_auto_flow_stage_documents_resolve_and_are_entered_by_skills(self):
         references = ROOT / 'auto-flow/references'
