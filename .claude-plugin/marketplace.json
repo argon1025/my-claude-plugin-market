@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Claude Code·Codex 공용 플러그인 마켓플레이스",
-    "version": "4.17.0"
+    "version": "4.18.0"
   },
   "plugins": [
     {
@@ -56,7 +56,7 @@
     {
       "name": "auto-flow",
       "source": "./auto-flow",
-      "description": "문의·Jira 인계부터 개발·독립 검증, 병합·배포 확인과 결과 안내까지 필요한 작업을 개별 호출",
+      "description": "이슈 루프 — 요청을 이슈로 만들고, 이슈 본문에 계획과 진행을 기록하며 검토·해결·리뷰·머지 대기까지 잇는 스킬 5종(create-issue·run-issue·plan-issue·resolve-issue·review-issue)",
       "category": "workflow",
       "tags": [
         "planning",

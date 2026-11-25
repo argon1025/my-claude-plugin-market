@@ -1,13 +1,13 @@
 ---
 name: add
-description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, or "we agreed X" ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘"). Record scoped decisions and reusable project knowledge with their sources, then open a wiki PR. Ask only about unresolved decisions. NOT for merged code (that is the update skill).
+description: Use when material the user hands over or a decision settled in conversation must become facts in the wiki — a pasted spec, a read file, a fetched page, work records, or "we agreed X" ("위키에 정리해줘", "위키에 추가", "이거 문서로 남겨줘", "정책으로 기록해줘"). Record scoped decisions and reusable project knowledge with their sources, then push them straight to the wiki's base branch without opening a PR. Ask only about unresolved decisions. NOT for merged code (that is the update skill).
 ---
 
 먼저 [실행 환경 연결](../../references/runtime.md)을 읽고 패키지 경로·질문·위임 도구를 확정합니다.
 
 `{PLUGIN_ROOT}/config.json`의 `wiki` 값(`remote`·`baseBranch`)과 `workspace.root`를 사용합니다. git 명령은 모두 `GIT_TERMINAL_PROMPT=0`을 붙여 실행합니다. 판정 기준은 `{PLUGIN_ROOT}/references/doc-contract.md`(이하 규약), 배정 이후 공통 절차는 `{PLUGIN_ROOT}/references/apply.md`, 위키 원격 호스트 절차는 `{PLUGIN_ROOT}/references/publish.md`이며, 서브에이전트에게는 규약·스크립트 경로를 `{PLUGIN_ROOT}`를 전개한 절대 경로로 넘깁니다. `registry.json`·`deps.json`은 규약 9장 편집 주체 범위만 고칩니다.
 
-인자: `--domain {domain}`(대상 도메인), `--dry-run`(PR 본문 `{work}/pr.md`까지 쓰고 커밋·push·PR 없음). 그 밖의 인자와 대화 맥락은 2절 입력입니다.
+인자: `--domain {domain}`(대상 도메인), `--dry-run`(사실 목록 `{work}/pr.md`까지 쓰고 커밋·push 없음). 그 밖의 인자와 대화 맥락은 2절 입력입니다.
 
 ## 1. 준비
 
@@ -17,7 +17,7 @@ description: Use when material the user hands over or a decision settled in conv
 git clone -b {baseBranch} {remote} {tmp}
 ```
 
-clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` 실행을 안내하고 중단합니다.
+clone이 실패하거나 `{tmp}/registry.json`이 없으면 `/agent-wiki:init` 실행을 안내하고 중단합니다. clone한 HEAD의 전체 SHA를 `{base}`로 보관합니다.
 
 도메인은 `--domain`이고, 없으면 현재 레포의 `git remote get-url origin`이 registry 노드의 `remote`와 같을 때 그 도메인입니다. 둘 다 아니거나 registry `domains`에 없으면 질문 도구 한 질문으로 고릅니다. 옵션은 도메인마다 `{domain} (레포 N개)`이고 4개를 넘으면 나머지는 기타 입력으로 받습니다.
 
@@ -57,7 +57,7 @@ graph: 레포 소관·책임·서빙 호스트·의존의 현황은 graph 후보
 - 같은 범위의 유효한 규격·결정이 확인되면 바로 반영한다. 두 근거의 관계나 보장할 범위를 확인할 수 없고 이번 요청에서 결정해야 하면, 두 값과 출처를 보여 주고 결정권자에게 한 가지씩 묻는다. 확인되지 않은 항목은 미기록 표에 남긴다. 별도의 일괄 진행 확인은 받지 않는다.
 - 관찰에서 처음 확정된 보장은 신규 정책 사실로 배정한다. 답으로 결정된 사실은 질문과 답을 `{work}/input/answers.md`에 보관하고 `quote`에 결정 문구, `input`에 파일 경로, `source`에 결정 출처를 더한다.
 - `apply.md` 0장 형식으로 `{work}/facts.json`·`{work}/graph-candidates.json`을 쓴다. `check`는 준비한 레포와 `origin/{defaultBranch}`(등록 레포 파일 근거면 그 sha), `input`은 해당 원문 파일이다. 레포 폴더에 쓸 사실의 slug가 불분명하면 자료의 출처로 확인하고 확인되지 않으면 배정하지 않는다.
-- **브랜치**: `--dry-run`이 아니면 `git -C {tmp} switch -c wiki-add/{YYYYMMDD-HHMM}`
+- **브랜치**: 새 브랜치를 만들지 않음. `apply.md` 7장의 커밋은 clone한 `{baseBranch}` 위에 쌓임
 
 ## 5. 반영
 
@@ -65,9 +65,9 @@ graph: 레포 소관·책임·서빙 호스트·의존의 현황은 graph 후보
 
 ## 6. 게시·보고
 
-`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 `{work}/pr.md`를 씁니다. 4절 관찰과 검토 differences에서 확인한 정책 위반은 두 값과 근거를 함께 보고합니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 집계와 미기록 사유를 보고하고 종료합니다. 있으면 `publish.md` 2장으로 push·PR을 만듭니다.
+`{PLUGIN_ROOT}/templates/wiki-pr.md`대로 사실 목록을 `{work}/pr.md`에 씁니다. 4절 관찰과 검토 differences에서 확인한 정책 위반은 두 값과 근거를 함께 보고합니다. `--dry-run`이면 `{work}/pr.md`·`{tmp}`·`{work}` 경로와 미기록 표를 보고하고 지우지 않은 채 종료합니다. `{tmp}`에 새 커밋이 없으면 집계와 미기록 사유를 보고하고 종료합니다. 있으면 PR을 만들지 않고 `publish.md` 3장대로 원격 기준 브랜치에 바로 push합니다.
 
-게시했으면 PR 링크, 요약 집계 한 줄, 미기록 표, "머지 후 다음 세션에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 미기록 표는 결정 근거를 확인하지 못한 행, 자료에 없어 기록하지 못한 항목, 검토 `conflicts`(미해결 충돌), 지도 `rejected`를 담습니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
+push한 커밋이 원격 기준 브랜치에 들어간 것을 확인했으면 그 커밋 범위(`{base}` 다음부터 push한 HEAD까지), 요약 집계 한 줄, 사실 목록, 미기록 표, "다음 세션을 시작할 때 로컬 위키에 반영"을 보고한 뒤 `rm -rf {tmp} {work}`로 지웁니다. 미기록 표는 결정 근거를 확인하지 못한 행, 자료에 없어 기록하지 못한 항목, 검토 `conflicts`(미해결 충돌), 지도 `rejected`를 담습니다. 어느 단계든 실패하면 지우지 않고 `{tmp}`·`{work}` 경로와 원인을 보고합니다.
 
 ```
 | 사실 | 위치 | 기존 값 | 새 값·사유 |

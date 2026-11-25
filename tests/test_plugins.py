@@ -49,15 +49,9 @@ class PackageTests(unittest.TestCase):
 
     def test_packaged_references_and_invocation_policy(self):
         skills = [s for p in PLUGINS for s in p.glob('skills/*/SKILL.md')]
-        self.assertEqual(len(skills), 34)
+        self.assertEqual(len(skills), 14)
         self.assertEqual({s.parent.name for s in skills if s.parents[2].name == 'auto-flow'},
-                         {'plan-issue', 'review-repo', 'verify-plan', 'change-code', 'test-repo',
-                          'publish-pr', 'review-code', 'triage-findings', 'reply-thread',
-                          'run-scenario', 'review-goal', 'investigate-cause',
-                          'classify-inquiry', 'answer-inquiry', 'link-issue', 'check-progress',
-                          'assign-work', 'send-question', 'handoff-reply', 'check-merge',
-                          'merge-pr', 'check-deployment', 'update-status',
-                          'find-notifications', 'send-result'})
+                         {'create-issue', 'run-issue', 'plan-issue', 'resolve-issue', 'review-issue'})
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
                 text = skill.read_text()
@@ -88,15 +82,72 @@ class PackageTests(unittest.TestCase):
                                 self.assertTrue(os.access(script, os.X_OK))
                                 run('bash', '-n', str(script))
 
-    def test_auto_flow_jira_plan_table_headers(self):
-        record = (ROOT / 'auto-flow/references/plan-record.md').read_text()
+    def test_auto_flow_issue_template_sections_and_tables(self):
+        record = (ROOT / 'auto-flow/references/issue-template.md').read_text()
         template = record.split('```markdown\n', 1)[1].split('\n```', 1)[0]
         lines = template.splitlines()
+        # Skills find the state and who is being waited on in the first lines of the body.
+        self.assertEqual(lines[:3], ['## 진행', '상태: 검토', '기다리는 것: 없음'])
+        request = lines[lines.index('## 요청') + 1:lines.index('## 미결 사항')]
+        self.assertEqual([line for line in request if line.startswith('- ')],
+                         ['- 요청자, 요청일:', '- 요청이 온 곳:', '- 관계자:', '- 원하는 결과:',
+                          '- 하지 않을 것:', '- 배경:', '- 기한:', '- 요청자가 본 원인과 해결 방법:',
+                          '- 참고 자료:'])
+        sections = ['진행', '요청', '미결 사항', '완료 조건', '관련 정책', '결정', '레포별 계획',
+                    '리뷰 기록', '에이전트 개선 피드백', '이력']
+        self.assertEqual([line[3:] for line in lines if line.startswith('## ')], sections)
+        # Only short, write-once records stay tables; items other runs fill in later are lists.
         headers = [lines[index - 1] for index, line in enumerate(lines) if line.startswith('| --- |')]
         self.assertEqual(headers, [
-            '| 기존 계약 | 새로운 계약 | 출처 |',
-            '| 완료 조건 | 대상과 입력·행동 | 기대 결과와 그 근거 | 검증 방법·필요 환경 | 구현 담당 레포 / 검증 담당 | 기다리는 계약·작업 |',
+            '| 번호 | 정책 | 출처 | 새 정책 | 위키 반영 |',
+            '| 구분 | 처음 판단 | 바로잡은 내용 | 발견한 곳 |',
         ])
+        for header, rule in zip(headers, (line for line in lines if line.startswith('| --- |'))):
+            self.assertEqual(header.count('|'), rule.count('|'))
+        # Every section and every numbered item form is explained below the skeleton.
+        guide = record.split('## 절마다 적는 것', 1)[1]
+        self.assertEqual(re.findall(r'^### ([^{\n]+)$', guide, re.M), sections)
+        for prefix in ('Q', 'AC', 'D', 'U', 'R'):
+            self.assertIn(f'- **{prefix}-1**', guide)
+
+    def test_auto_flow_stage_documents_resolve_and_are_entered_by_skills(self):
+        references = ROOT / 'auto-flow/references'
+        for document in references.rglob('*.md'):
+            for ref in re.findall(r'\]\(([^)]+)\)', document.read_text()):
+                if ref.startswith(('http:', 'https:', '#')):
+                    continue
+                with self.subTest(document=str(document.relative_to(ROOT)), ref=ref):
+                    self.assertTrue((document.parent / ref.split('#')[0]).exists())
+        # Each stage skill runs the shared start procedure and only its own stage documents;
+        # creating an issue happens before any state exists, so it reads the template and environment only.
+        entries = {'create-issue': {'issue-template.md', 'environment.md'},
+                   'run-issue': {'common.md', 'stage-plan.md', 'stage-resolve.md', 'stage-review.md'},
+                   'plan-issue': {'common.md', 'stage-plan.md'},
+                   'resolve-issue': {'common.md', 'stage-resolve.md'},
+                   'review-issue': {'common.md', 'stage-review.md'}}
+        for name, expected in entries.items():
+            with self.subTest(skill=name):
+                text = (ROOT / 'auto-flow/skills' / name / 'SKILL.md').read_text()
+                self.assertEqual({Path(ref).name for ref in re.findall(r'\]\(([^)]+)\)', text)}, expected)
+
+    def test_auto_flow_creation_questions_are_marked_for_planning(self):
+        # create-issue writes these questions without deciding to ask; planning finds them by this marker.
+        for path in ('skills/create-issue/SKILL.md', 'references/issue-template.md',
+                     'references/stage-plan.md', 'references/common.md'):
+            with self.subTest(path=path):
+                self.assertIn('"생성 시 확인"', (ROOT / 'auto-flow' / path).read_text())
+
+    def test_auto_flow_environment_sections_are_the_replaceable_contract(self):
+        text = (ROOT / 'auto-flow/references/environment.md').read_text()
+        # Other distributions replace only this file, and the documents cite it by section number.
+        self.assertEqual(re.findall(r'^## (.+)$', text, re.M),
+                         ['1. 이슈', '2. PR', '3. 대화', '4. 관계자', '5. 이슈 상태'])
+        cited = set()
+        for document in (ROOT / 'auto-flow').rglob('*.md'):
+            for sections in re.findall(r'\]\([^)]*environment\.md\) ((?:\d·)*\d)절', document.read_text()):
+                cited |= {int(number) for number in sections.split('·')}
+        self.assertTrue(cited)
+        self.assertLessEqual(cited, {1, 2, 3, 4, 5})
 
     def test_plan_codex_events_do_not_misidentify_approval(self):
         manifest = json.loads((FLOW / '.codex-plugin/plugin.json').read_text())
@@ -265,6 +316,78 @@ class WikiHookTests(HookFixture):
         with patch.object(module.subprocess, 'Popen') as popen:
             popen.return_value.communicate.side_effect = subprocess.TimeoutExpired('fixture', 3)
             self.assertIn('이전 사본', module.sync_wiki(self.wiki, self.config['wiki']))
+
+
+class WikiAddPublishTests(unittest.TestCase):
+    """add lands its commits on the base branch; the documented commands run against a local remote."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='wiki-add-publish-')
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        identity = {f'GIT_{role}_{key}': value for role in ('AUTHOR', 'COMMITTER')
+                    for key, value in (('NAME', 'fixture'), ('EMAIL', 'fixture@example.invalid'))}
+        self.env = {**os.environ, **identity, 'GIT_TERMINAL_PROMPT': '0'}
+        self.remote = self.root / 'remote.git'
+        run('git', 'init', '-q', '--bare', '-b', 'main', str(self.remote))
+        seed = self.root / 'seed'
+        run('git', 'init', '-q', '-b', 'main', str(seed))
+        self.commit(seed, 'policy.md', '환불 3일\n')
+        self.git(seed, 'push', '-q', str(self.remote), 'main')
+        self.tmp, self.other = self.root / 'tmp', self.root / 'other'
+        for clone in (self.tmp, self.other):
+            run('git', 'clone', '-q', '-b', 'main', str(self.remote), str(clone))
+        section = (WIKI / 'references/publish.md').read_text().split('\n## 3. add의 바로 반영\n', 1)[1]
+        self.push, self.incoming, self.replay, self.landed = re.findall(
+            r'```sh\n(.*?)```', section.split('\n## ', 1)[0], re.S)
+
+    def git(self, cwd, *args):
+        return subprocess.run(['git', '-C', str(cwd), *args], env=self.env, text=True,
+                              capture_output=True, timeout=15, check=True).stdout
+
+    def commit(self, clone, name, text):
+        (clone / name).write_text(text)
+        self.git(clone, 'add', name)
+        self.git(clone, 'commit', '-qm', name)
+
+    def land_elsewhere(self, name, text):
+        self.git(self.other, 'pull', '-q', '--ff-only', 'origin', 'main')
+        self.commit(self.other, name, text)
+        self.git(self.other, 'push', '-q', 'origin', 'main')
+
+    def step(self, block, base):
+        command = block.replace('{tmp}', str(self.tmp)).replace('{baseBranch}', 'main').replace('{base}', base)
+        return subprocess.run(['bash', '-c', command], env=self.env, text=True, capture_output=True, timeout=15)
+
+    def test_skill_pushes_without_a_pull_request(self):
+        skill = (WIKI / 'skills/add/SKILL.md').read_text()
+        self.assertIn('`publish.md` 3장', skill)
+        for removed in ('wiki-add/', 'switch -c', 'PR 링크'):
+            self.assertNotIn(removed, skill)
+
+    def test_replays_on_a_moved_remote_and_confirms_the_landing(self):
+        base = self.git(self.tmp, 'rev-parse', 'HEAD').strip()
+        self.land_elsewhere('shipping.md', '배송 2일\n')
+        self.commit(self.tmp, 'policy.md', '환불 8일\n')
+        self.assertNotEqual(self.step(self.push, base).returncode, 0)
+        self.assertEqual(self.step(self.incoming, base).stdout.split(), ['shipping.md'])
+        self.assertEqual(self.step(self.replay, base).returncode, 0)
+        self.assertEqual(self.step(self.push, base).returncode, 0)
+        self.assertEqual(self.step(self.landed, base).returncode, 0)
+        self.assertEqual(self.git(self.remote, 'show', 'main:policy.md'), '환불 8일\n')
+        self.assertEqual(self.git(self.remote, 'show', 'main:shipping.md'), '배송 2일\n')
+
+    def test_conflicting_document_is_not_pushed(self):
+        base = self.git(self.tmp, 'rev-parse', 'HEAD').strip()
+        self.land_elsewhere('policy.md', '환불 5일\n')
+        self.commit(self.tmp, 'policy.md', '환불 10일\n')
+        self.assertNotEqual(self.step(self.push, base).returncode, 0)
+        # The incoming change touches the document this run edited, so its facts must be applied again.
+        self.assertEqual(self.step(self.incoming, base).stdout.split(), ['policy.md'])
+        self.assertNotEqual(self.step(self.replay, base).returncode, 0)
+        self.git(self.tmp, 'rebase', '--abort')
+        self.assertNotEqual(self.step(self.landed, base).returncode, 0)
+        self.assertEqual(self.git(self.remote, 'show', 'main:policy.md'), '환불 5일\n')
 
 
 if __name__ == '__main__':
