@@ -290,5 +290,77 @@ class WikiHookTests(HookFixture):
             self.assertIn('이전 사본', module.sync_wiki(self.wiki, self.config['wiki']))
 
 
+class WikiAddPublishTests(unittest.TestCase):
+    """add lands its commits on the base branch; the documented commands run against a local remote."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='wiki-add-publish-')
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        identity = {f'GIT_{role}_{key}': value for role in ('AUTHOR', 'COMMITTER')
+                    for key, value in (('NAME', 'fixture'), ('EMAIL', 'fixture@example.invalid'))}
+        self.env = {**os.environ, **identity, 'GIT_TERMINAL_PROMPT': '0'}
+        self.remote = self.root / 'remote.git'
+        run('git', 'init', '-q', '--bare', '-b', 'main', str(self.remote))
+        seed = self.root / 'seed'
+        run('git', 'init', '-q', '-b', 'main', str(seed))
+        self.commit(seed, 'policy.md', '환불 3일\n')
+        self.git(seed, 'push', '-q', str(self.remote), 'main')
+        self.tmp, self.other = self.root / 'tmp', self.root / 'other'
+        for clone in (self.tmp, self.other):
+            run('git', 'clone', '-q', '-b', 'main', str(self.remote), str(clone))
+        section = (WIKI / 'references/publish.md').read_text().split('\n## 3. add의 바로 반영\n', 1)[1]
+        self.push, self.incoming, self.replay, self.landed = re.findall(
+            r'```sh\n(.*?)```', section.split('\n## ', 1)[0], re.S)
+
+    def git(self, cwd, *args):
+        return subprocess.run(['git', '-C', str(cwd), *args], env=self.env, text=True,
+                              capture_output=True, timeout=15, check=True).stdout
+
+    def commit(self, clone, name, text):
+        (clone / name).write_text(text)
+        self.git(clone, 'add', name)
+        self.git(clone, 'commit', '-qm', name)
+
+    def land_elsewhere(self, name, text):
+        self.git(self.other, 'pull', '-q', '--ff-only', 'origin', 'main')
+        self.commit(self.other, name, text)
+        self.git(self.other, 'push', '-q', 'origin', 'main')
+
+    def step(self, block, base):
+        command = block.replace('{tmp}', str(self.tmp)).replace('{baseBranch}', 'main').replace('{base}', base)
+        return subprocess.run(['bash', '-c', command], env=self.env, text=True, capture_output=True, timeout=15)
+
+    def test_skill_pushes_without_a_pull_request(self):
+        skill = (WIKI / 'skills/add/SKILL.md').read_text()
+        self.assertIn('`publish.md` 3장', skill)
+        for removed in ('wiki-add/', 'switch -c', 'PR 링크'):
+            self.assertNotIn(removed, skill)
+
+    def test_replays_on_a_moved_remote_and_confirms_the_landing(self):
+        base = self.git(self.tmp, 'rev-parse', 'HEAD').strip()
+        self.land_elsewhere('shipping.md', '배송 2일\n')
+        self.commit(self.tmp, 'policy.md', '환불 8일\n')
+        self.assertNotEqual(self.step(self.push, base).returncode, 0)
+        self.assertEqual(self.step(self.incoming, base).stdout.split(), ['shipping.md'])
+        self.assertEqual(self.step(self.replay, base).returncode, 0)
+        self.assertEqual(self.step(self.push, base).returncode, 0)
+        self.assertEqual(self.step(self.landed, base).returncode, 0)
+        self.assertEqual(self.git(self.remote, 'show', 'main:policy.md'), '환불 8일\n')
+        self.assertEqual(self.git(self.remote, 'show', 'main:shipping.md'), '배송 2일\n')
+
+    def test_conflicting_document_is_not_pushed(self):
+        base = self.git(self.tmp, 'rev-parse', 'HEAD').strip()
+        self.land_elsewhere('policy.md', '환불 5일\n')
+        self.commit(self.tmp, 'policy.md', '환불 10일\n')
+        self.assertNotEqual(self.step(self.push, base).returncode, 0)
+        # The incoming change touches the document this run edited, so its facts must be applied again.
+        self.assertEqual(self.step(self.incoming, base).stdout.split(), ['policy.md'])
+        self.assertNotEqual(self.step(self.replay, base).returncode, 0)
+        self.git(self.tmp, 'rebase', '--abort')
+        self.assertNotEqual(self.step(self.landed, base).returncode, 0)
+        self.assertEqual(self.git(self.remote, 'show', 'main:policy.md'), '환불 5일\n')
+
+
 if __name__ == '__main__':
     unittest.main()
