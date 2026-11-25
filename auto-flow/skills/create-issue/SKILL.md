@@ -1,0 +1,23 @@
+---
+name: create-issue
+description: Use when asked to register a request as a new issue for this plugin's loop ("이슈 만들어줘", "이 요청 이슈로 등록해줘", "일감 생성해줘"), or when a bot takes a request on someone's behalf — checks that the request states a desired outcome, searches for an open issue with the same request, then creates the issue with the template applied and only the request section filled, and stops. Returns questions instead of creating when the desired outcome is unclear. NOT for writing acceptance criteria or plans (plan-issue).
+---
+
+요청 하나를 루프가 바로 다룰 수 있는 이슈로 만들고 멈춥니다. 계획은 세우지 않고 검토도 시작하지 않습니다.
+
+1. **받는 것**: 요청 원문과 만들 곳을 확인합니다. 원문은 붙여 넣은 글이나 대화이고, 위치로만 받았으면 [환경](../../references/environment.md) 3절대로 읽습니다. 만들 곳은 호출할 때 받은 값, 실행자의 지침, 환경 1절 순으로 찾고 어디에도 없으면 묻습니다. 이슈를 만들 도구가 없으면 시작하지 않고 그 사실을 알립니다.
+2. **원하는 결과**: 요청에서 무엇이 달라지기를 원하는지 찾습니다. 찾을 수 없으면 만들지 않고, 요청자에게 물을 질문을 알린 뒤 멈춥니다. 원하는 결과는 분명한데 세부 정책이나 값이 비어 있으면 채우지 않고 그대로 만듭니다. 빈 부분은 검토 단계가 미결 사항으로 다룹니다.
+3. **중복 확인**: 같은 요청의 열린 이슈를 검색합니다. 대상과 원하는 결과가 같은 이슈가 있으면 만들지 않고 그 이슈를 알린 뒤 멈춥니다.
+4. **관계자**: 환경 4절이 정한 곳에서 요청자, 결정할 사람, 대상 서비스의 담당을 찾습니다. 정한 곳이 없으면 요청 원문에 드러난 사람만 적습니다. 찾지 못한 역할은 "미정"으로 두고, 커밋 이력이나 과거 이슈의 담당자로 추정하지 않습니다.
+5. **만들기**: [이슈 템플릿](../../references/issue-template.md)의 아홉 절로 본문을 쓰고 "요청" 절만 채웁니다. 나머지 절은 템플릿 그대로 둡니다. 제목은 원하는 결과를 한 줄로 쓰고, 프로젝트에 제목 관례가 있으면 따릅니다. `auto-flow` 라벨을 붙이고 상태 줄은 `상태: 검토`로 둡니다.
+6. **확인**: 만든 이슈를 다시 읽어 본문과 라벨이 들어갔는지 확인합니다. 응답이 끊겨 만들어졌는지 알 수 없으면 다시 만들기 전에 3번의 검색으로 확인합니다.
+7. **알림**: 이슈의 키와 위치, 관계자 가운데 "미정"으로 남은 역할을 알리고 멈춥니다.
+
+"요청" 절에는 요청에 있는 것만 적습니다.
+
+- **원하는 결과와 배경**: 요청자의 말에서 옮기고, 요청에 없는 내용을 관행이나 추측으로 채우지 않음
+- **원인과 해결 방법**: 요청자가 적었더라도 원문 인용에만 두고 "원하는 결과"로 옮기지 않음
+- **원문**: 인용으로 그대로 남기고 첨부와 링크를 지우지 않음
+- **쓰지 않는 것**: 인수 조건, 결정, 레포별 계획은 쓰지 않음. 검토 단계가 씀
+
+이 요청이 이슈로 만들 요청인지 가르는 일과 요청자에게 결과를 알리는 일은 이 스킬이 하지 않고 호출한 쪽이 합니다.

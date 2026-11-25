@@ -49,9 +49,9 @@ class PackageTests(unittest.TestCase):
 
     def test_packaged_references_and_invocation_policy(self):
         skills = [s for p in PLUGINS for s in p.glob('skills/*/SKILL.md')]
-        self.assertEqual(len(skills), 13)
+        self.assertEqual(len(skills), 14)
         self.assertEqual({s.parent.name for s in skills if s.parents[2].name == 'auto-flow'},
-                         {'run-issue', 'plan-issue', 'resolve-issue', 'review-issue'})
+                         {'create-issue', 'run-issue', 'plan-issue', 'resolve-issue', 'review-issue'})
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
                 text = skill.read_text()
@@ -88,6 +88,9 @@ class PackageTests(unittest.TestCase):
         lines = template.splitlines()
         # The status line is the first line under the first section; skills read it to pick the stage.
         self.assertEqual(lines[:2], ['## 진행', '상태: 검토'])
+        request = lines[lines.index('## 요청') + 1:lines.index('## 스펙')]
+        self.assertEqual([line for line in request if line.startswith('- ')],
+                         ['- 요청자, 요청일:', '- 요청이 온 곳:', '- 관계자:', '- 원하는 결과:', '- 배경:'])
         self.assertEqual([line[3:] for line in lines if line.startswith('## ')],
                          ['진행', '요청', '스펙', '정책 변경', '결정', '미결 사항', '레포별 계획',
                           '리뷰 기록', '교정 기록'])
@@ -111,15 +114,17 @@ class PackageTests(unittest.TestCase):
                     continue
                 with self.subTest(document=str(document.relative_to(ROOT)), ref=ref):
                     self.assertTrue((document.parent / ref.split('#')[0]).exists())
-        stages = {'run-issue': {'stage-plan.md', 'stage-resolve.md', 'stage-review.md'},
-                  'plan-issue': {'stage-plan.md'}, 'resolve-issue': {'stage-resolve.md'},
-                  'review-issue': {'stage-review.md'}}
-        for name, expected in stages.items():
+        # Each stage skill runs the shared start procedure and only its own stage documents;
+        # creating an issue happens before any state exists, so it reads the template and environment only.
+        entries = {'create-issue': {'issue-template.md', 'environment.md'},
+                   'run-issue': {'common.md', 'stage-plan.md', 'stage-resolve.md', 'stage-review.md'},
+                   'plan-issue': {'common.md', 'stage-plan.md'},
+                   'resolve-issue': {'common.md', 'stage-resolve.md'},
+                   'review-issue': {'common.md', 'stage-review.md'}}
+        for name, expected in entries.items():
             with self.subTest(skill=name):
                 text = (ROOT / 'auto-flow/skills' / name / 'SKILL.md').read_text()
-                linked = {Path(ref).name for ref in re.findall(r'\]\(([^)]+)\)', text)}
-                # Every entry point runs the shared start procedure, then only its own stage documents.
-                self.assertEqual(linked, expected | {'common.md'})
+                self.assertEqual({Path(ref).name for ref in re.findall(r'\]\(([^)]+)\)', text)}, expected)
 
     def test_auto_flow_environment_sections_are_the_replaceable_contract(self):
         text = (ROOT / 'auto-flow/references/environment.md').read_text()
