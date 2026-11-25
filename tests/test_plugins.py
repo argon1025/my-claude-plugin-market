@@ -49,15 +49,9 @@ class PackageTests(unittest.TestCase):
 
     def test_packaged_references_and_invocation_policy(self):
         skills = [s for p in PLUGINS for s in p.glob('skills/*/SKILL.md')]
-        self.assertEqual(len(skills), 34)
+        self.assertEqual(len(skills), 13)
         self.assertEqual({s.parent.name for s in skills if s.parents[2].name == 'auto-flow'},
-                         {'plan-issue', 'review-repo', 'verify-plan', 'change-code', 'test-repo',
-                          'publish-pr', 'review-code', 'triage-findings', 'reply-thread',
-                          'run-scenario', 'review-goal', 'investigate-cause',
-                          'classify-inquiry', 'answer-inquiry', 'link-issue', 'check-progress',
-                          'assign-work', 'send-question', 'handoff-reply', 'check-merge',
-                          'merge-pr', 'check-deployment', 'update-status',
-                          'find-notifications', 'send-result'})
+                         {'run-issue', 'plan-issue', 'resolve-issue', 'review-issue'})
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
                 text = skill.read_text()
@@ -88,15 +82,44 @@ class PackageTests(unittest.TestCase):
                                 self.assertTrue(os.access(script, os.X_OK))
                                 run('bash', '-n', str(script))
 
-    def test_auto_flow_jira_plan_table_headers(self):
-        record = (ROOT / 'auto-flow/references/plan-record.md').read_text()
+    def test_auto_flow_issue_template_sections_and_tables(self):
+        record = (ROOT / 'auto-flow/references/issue-template.md').read_text()
         template = record.split('```markdown\n', 1)[1].split('\n```', 1)[0]
         lines = template.splitlines()
+        # The status line is the first line under the first section; skills read it to pick the stage.
+        self.assertEqual(lines[:2], ['## 진행', '상태: 검토'])
+        self.assertEqual([line[3:] for line in lines if line.startswith('## ')],
+                         ['진행', '요청', '스펙', '정책 변경', '결정', '미결 사항', '레포별 계획',
+                          '리뷰 기록', '교정 기록'])
         headers = [lines[index - 1] for index, line in enumerate(lines) if line.startswith('| --- |')]
         self.assertEqual(headers, [
-            '| 기존 계약 | 새로운 계약 | 출처 |',
-            '| 완료 조건 | 대상과 입력·행동 | 기대 결과와 그 근거 | 검증 방법·필요 환경 | 구현 담당 레포 / 검증 담당 | 기다리는 계약·작업 |',
+            '| 레포 | 맡은 쪽 | 브랜치 | PR | 단계 |',
+            '| 번호 | 인수 조건 | 근거 | 확인 방법 | 맡는 레포 | 확인 결과 |',
+            '| 기존 | 새 정책 | 근거 | 위키 반영 |',
+            '| 번호 | 질문 | 답할 사람 | 걸린 인수 조건 |',
+            '| 번호 | 회차 | 레포 | 지적과 위치 | 등급 | 판정과 처리 | 상태 |',
+            '| 유형 | 처음 판단 | 바로잡은 내용 | 드러난 지점 |',
         ])
+        for header, rule in zip(headers, (line for line in lines if line.startswith('| --- |'))):
+            self.assertEqual(header.count('|'), rule.count('|'))
+
+    def test_auto_flow_stage_documents_resolve_and_are_entered_by_skills(self):
+        references = ROOT / 'auto-flow/references'
+        for document in references.rglob('*.md'):
+            for ref in re.findall(r'\]\(([^)]+)\)', document.read_text()):
+                if ref.startswith(('http:', 'https:', '#')):
+                    continue
+                with self.subTest(document=str(document.relative_to(ROOT)), ref=ref):
+                    self.assertTrue((document.parent / ref.split('#')[0]).exists())
+        stages = {'run-issue': {'stage-plan.md', 'stage-resolve.md', 'stage-review.md'},
+                  'plan-issue': {'stage-plan.md'}, 'resolve-issue': {'stage-resolve.md'},
+                  'review-issue': {'stage-review.md'}}
+        for name, expected in stages.items():
+            with self.subTest(skill=name):
+                text = (ROOT / 'auto-flow/skills' / name / 'SKILL.md').read_text()
+                linked = {Path(ref).name for ref in re.findall(r'\]\(([^)]+)\)', text)}
+                # Every entry point runs the shared start procedure, then only its own stage documents.
+                self.assertEqual(linked, expected | {'common.md'})
 
     def test_plan_codex_events_do_not_misidentify_approval(self):
         manifest = json.loads((FLOW / '.codex-plugin/plugin.json').read_text())
