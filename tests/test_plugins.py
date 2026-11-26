@@ -89,18 +89,21 @@ class PackageTests(unittest.TestCase):
         lines = template.splitlines()
         # Skills find whose turn it is in the first line of the body.
         self.assertEqual(lines[0], '상태(검토중, 검토완료, 개발완료, 완료): 검토중')
-        sections = ['요청', '완료 조건', '진행', '레포별 계획', '확인 방법과 근거', '세부 담당자 정보', '관련 자료']
+        sections = ['요청', '완료 조건', '미결 사항', '진행', '레포별 계획', '확인 방법과 근거', '세부 담당자 정보',
+                    '관련 자료']
         self.assertEqual([line[3:] for line in lines if line.startswith('## ')], sections)
-        # The request is one line; desired outcomes and exclusions are rows of the acceptance table.
+        # The request is one line; desired outcomes and exclusions are rows of the acceptance table,
+        # and what still needs an answer lives in its own table right below it.
         request = lines[lines.index('## 요청') + 1:lines.index('## 완료 조건')]
         self.assertEqual(len([line for line in request if line.strip()]), 1)
         # Fixed-value columns list their values in the header, so a cell holds one of them and nothing else.
         headers = [lines[index - 1] for index, line in enumerate(lines) if line.startswith('| --- |')]
         self.assertEqual(headers, [
-            '| 번호 | 상태(미정, 확정, 통과) | 내용 |',
+            '| 번호 | 상태(확정, 통과) | 내용 |',
+            '| 번호 | 내용 | 권장안 | 답변 | 선택 이유 |',
             '| 순서 | 대상 | 할 일 | 시작 조건 | 상태(대기, 진행 중, PR 올림, 머지됨, 완료) | PR |',
             '| 번호 | 확인 방법 | 기록 |',
-            '| 역할 | 이름 |',
+            '| 역할 | 이름 | 근거 |',
         ])
         for header, rule in zip(headers, (line for line in lines if line.startswith('| --- |'))):
             self.assertEqual(header.count('|'), rule.count('|'))

@@ -10,7 +10,7 @@
 
 - **스냅샷**: PR의 head 커밋과 베이스를 고정하고 그 커밋의 변경을 봄. 작업 트리가 아니라 그 커밋을 읽음
 - **범위**: 재리뷰면 앞 리뷰 요약에 적힌 커밋 이후의 변경과, `[auto-flow 리뷰]` 지적 가운데 `[auto-flow 수정]` 답이 달린 것을 봄. 처음이면 전체 변경을 봄. 바이너리, lockfile, 순수 삭제·개명은 건너뛰고 건너뛴 것을 알림
-- **읽을 것**: 이슈의 완료 조건과 그 기록 칸, 이 레포의 "레포별 계획", PR 본문. 변경이 닿는 주제의 위키 문서(있을 때). [공통 체크리스트](checklists/common.md)와 해당 스택의 체크리스트([Java·Spring](checklists/java-spring.md), [NestJS](checklists/nestjs.md), [TypeScript·React](checklists/typescript-react.md)), 데이터를 바꾸는 산출물이면 [데이터 변경 체크리스트](checklists/data-change.md)
+- **읽을 것**: 이슈의 완료 조건과 "확인 방법과 근거", 이 레포의 "레포별 계획", PR 본문. 변경이 닿는 주제의 위키 문서(있을 때). [공통 체크리스트](checklists/common.md)와 해당 스택의 체크리스트([Java·Spring](checklists/java-spring.md), [NestJS](checklists/nestjs.md), [TypeScript·React](checklists/typescript-react.md)), 데이터를 바꾸는 산출물이면 [데이터 변경 체크리스트](checklists/data-change.md)
 - **검증을 다시 돌릴 때**: head 커밋을 별도의 임시 체크아웃에 꺼내 실행함. 테스트가 잘못된 구현에서 실패하는지 보려고 그 체크아웃에서 변경을 되돌려 볼 수 있으며, 되돌린 것은 커밋하지 않고 체크아웃째 지움
 
 ## 2. 코드

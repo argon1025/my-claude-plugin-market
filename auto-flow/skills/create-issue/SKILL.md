@@ -1,24 +1,25 @@
 ---
 name: create-issue
-description: Use when asked to register a request as a new issue for this plugin's loop ("이슈 만들어줘", "이 요청 이슈로 등록해줘", "일감 생성해줘"), or when a bot takes a request on someone's behalf — checks that the request states a desired outcome, searches for an open issue with the same request, then creates the issue with the template applied, the one-line request, the people involved and a link to the original request, records missing defect details as undecided rows, and stops. Returns questions instead of creating when the desired outcome is unclear. NOT for writing acceptance criteria or plans (plan-issue).
+description: Use when asked to register a request as a new issue for this plugin's loop ("이슈 만들어줘", "이 요청 이슈로 등록해줘", "일감 생성해줘"), or when a bot takes a request on someone's behalf — checks that the request states a desired outcome, searches for an open issue with the same request, then creates the issue with the template applied, the one-line request, the requester's desired outcomes and exclusions as acceptance rows in their own words, the people involved (looked up from the requirement and related issues) and links to related material, records missing defect details as open questions, and stops. Returns questions instead of creating when the desired outcome is unclear. NOT for refining acceptance criteria, verification or plans (plan-issue).
 ---
 
 요청 하나를 루프가 바로 다룰 수 있는 이슈로 만들고 멈춥니다. 계획은 세우지 않고 검토도 시작하지 않습니다.
 
 1. **받는 것**: 요청 원문과 만들 곳을 확인합니다. 원문은 붙여 넣은 글이나 대화이고, 위치로만 받았으면 [환경](../../references/environment.md) 3절대로 읽습니다. 만들 곳은 호출할 때 받은 값, 실행자의 지침, 환경 1절 순으로 찾고 어디에도 없으면 묻습니다. 이슈를 만들 도구가 없으면 시작하지 않고 그 사실을 알립니다.
-2. **원하는 결과**: 요청에서 무엇이 달라지기를 원하는지 찾습니다. 찾을 수 없으면 만들지 않고, 요청자에게 물을 질문을 알린 뒤 멈춥니다. 원하는 결과는 분명한데 세부 정책이나 값이 비어 있으면 채우지 않고 그대로 만듭니다. 빈 부분은 검토 단계가 미정 행으로 다룹니다.
+2. **원하는 결과**: 요청에서 무엇이 달라지기를 원하는지 찾습니다. 찾을 수 없으면 만들지 않고, 요청자에게 물을 질문을 알린 뒤 멈춥니다. 원하는 결과는 분명한데 세부 정책이나 값이 비어 있으면 채우지 않고 그대로 만듭니다. 빈 부분은 검토 단계가 미결 사항으로 다룹니다.
 3. **중복 확인**: 같은 요청의 열린 이슈를 검색합니다. 대상과 원하는 결과가 같은 이슈가 있으면 만들지 않고 그 이슈를 알린 뒤 멈춥니다.
-4. **담당자**: 환경 4절이 정한 곳에서 이 요청에 관계된 사람을 찾아 "세부 담당자 정보"에 역할과 이름으로 적습니다. 정한 곳이 없으면 요청 원문에 드러난 사람만 적습니다. 찾지 못한 역할은 행을 만들지 않고, 커밋 이력이나 과거 이슈의 담당자로 추정하지 않습니다.
-5. **결함 제보의 빠진 정보**: 요청이 결함 제보면 관찰한 현상, 기대한 결과, 발생한 환경과 조건(어느 환경에서, 어떤 계정이나 데이터로, 언제)이 원문에 있는지 봅니다. 빠진 것은 지어내지 않고 "완료 조건"에 미정 행으로 적으며, "확인 방법과 근거"의 같은 번호 행 기록 칸에 "생성 시 확인"이라고 적습니다. 이 질문을 실제로 물을지는 검토 단계가 정합니다.
-6. **만들기**: [이슈 템플릿](../../references/issue-template.md)의 상태 줄과 일곱 절로 본문을 쓰고, "요청"의 한 줄, 5번의 행, "세부 담당자 정보", "관련 자료"만 채웁니다. 나머지 절은 템플릿 그대로 둡니다. 제목은 원하는 결과를 한 줄로 쓰고, 프로젝트에 제목 관례가 있으면 따릅니다. `auto-flow` 라벨을 붙이고 상태는 검토중으로 둡니다.
-7. **원문 남기기**: "관련 자료"의 요청 원문 줄에 원문의 위치를 적습니다. 원문을 다시 볼 곳이 없으면(위치 없이 붙여 넣은 요청) 원문을 `[auto-flow] 요청 원문`으로 시작하는 댓글로 남기고 그 댓글의 위치를 적습니다. 원문에 딸린 링크와 첨부도 "관련 자료"에 적습니다.
+4. **담당자**: 요청에 적힌 요구사항 이슈, 상위 이슈, 관련 이슈의 담당자와 보고자를 환경 4절이 정한 곳에서 찾아 "세부 담당자 정보"에 역할, 이름, 근거로 적습니다. 역할은 그 이슈가 무엇을 다루는지로 추정합니다. 서브에이전트를 쓸 수 있으면 이 탐색을 서브에이전트에 맡기고, 찾을 이슈의 목록과 돌려받을 것(역할, 이름, 근거)만 넘깁니다. 찾지 못한 역할은 행을 만들지 않고, 커밋 이력으로 추정하지 않습니다.
+5. **결함 제보의 빠진 정보**: 요청이 결함 제보면 관찰한 현상, 기대한 결과, 발생한 환경과 조건(어느 환경에서, 어떤 계정이나 데이터로, 언제)이 원문에 있는지 봅니다. 빠진 것은 지어내지 않고 "미결 사항"에 행으로 적으며, 내용을 "생성 시 확인"으로 시작합니다. 이 질문을 실제로 물을지는 검토 단계가 정합니다.
+6. **만들기**: [이슈 템플릿](../../references/issue-template.md)의 상태 줄과 여덟 절로 본문을 쓰고, "요청"의 한 줄, "완료 조건"의 요구 행, 5번의 미결 사항, "세부 담당자 정보", "관련 자료"만 채웁니다. 나머지 절은 템플릿 그대로 둡니다. 제목은 원하는 결과를 한 줄로 쓰고, 프로젝트에 제목 관례가 있으면 따릅니다. `auto-flow` 라벨을 붙이고 상태는 검토중으로 둡니다.
+7. **관련 자료**: 요청에 딸린 링크와 요구사항 이슈, 관련 이슈를 적습니다. 요청 원문이 있는 대화나 문서의 링크가 있으면 함께 적습니다. 원문의 내용은 본문에도 댓글에도 붙이지 않습니다.
 8. **확인**: 만든 이슈를 다시 읽어 본문과 라벨이 들어갔는지 확인합니다. 응답이 끊겨 만들어졌는지 알 수 없으면 다시 만들기 전에 3번의 검색으로 확인합니다.
-9. **알림**: 이슈의 키와 위치, 적은 미정 행을 알리고 멈춥니다.
+9. **알림**: 이슈의 키와 위치, 적은 미결 사항을 알리고 멈춥니다. 루프는 담당자가 자기 자신인 이슈만 다루므로, 만든 이슈의 담당자가 비어 있거나 다른 사람이면 그 사실도 알립니다. 담당자는 바꾸지 않습니다.
 
 본문에는 요청에 있는 것만 적습니다.
 
 - **요청 한 줄**: 무엇을 바꾸는지 요청자의 말로 한 줄에 적음. 요청에 없는 내용을 관행이나 추측으로 채우지 않음
-- **쓰지 않는 것**: 완료 조건의 요구 행, "진행" 표, 레포별 계획은 쓰지 않음. 원하는 결과와 하지 않을 것을 완료 조건으로 옮기는 일은 검토 단계가 원문을 읽고 함
-- **원문**: 본문에 붙이지 않음
+- **완료 조건의 요구 행**: 요청의 원하는 결과와 하지 않을 것을 한 줄에 하나씩 완료 조건의 행으로 옮겨 적고 상태를 확정으로 둠. 값, 문구, 식별자, 오류 메시지는 요청에 적힌 그대로 옮김. 원문을 본문에 남기지 않으므로 요구를 빠뜨리지 않음. 조건 문장으로 다듬고 확인 방법을 붙이는 일은 검토 단계가 함
+- **옮기지 않는 것**: 요청자가 적은 원인 분석, 수정 위치, 구현 방법은 완료 조건으로 옮기지 않음. 그런 내용이 계획에 필요하면 원문의 링크를 "관련 자료"에 적음
+- **쓰지 않는 것**: "확인 방법과 근거", "진행" 표, 레포별 계획은 쓰지 않음
 
 이 요청이 이슈로 만들 요청인지 가르는 일과 요청자에게 결과를 알리는 일은 이 스킬이 하지 않고 호출한 쪽이 합니다.
