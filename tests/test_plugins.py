@@ -49,9 +49,10 @@ class PackageTests(unittest.TestCase):
 
     def test_packaged_references_and_invocation_policy(self):
         skills = [s for p in PLUGINS for s in p.glob('skills/*/SKILL.md')]
-        self.assertEqual(len(skills), 15)
+        self.assertEqual(len(skills), 16)
         self.assertEqual({s.parent.name for s in skills if s.parents[2].name == 'auto-flow'},
-                         {'create-issue', 'run-issue', 'plan-issue', 'plan-issue-detail', 'resolve-issue', 'review-issue'})
+                         {'create-issue', 'run-issue', 'plan-issue', 'resolve-issue', 'fix-issue', 'close-issue',
+                          'review-issue'})
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
                 text = skill.read_text()
@@ -86,29 +87,44 @@ class PackageTests(unittest.TestCase):
         record = (ROOT / 'auto-flow/references/issue-template.md').read_text()
         template = record.split('```markdown\n', 1)[1].split('\n```', 1)[0]
         lines = template.splitlines()
-        # Skills find the state and who is being waited on in the first lines of the body.
-        self.assertEqual(lines[:3], ['## 진행', '상태: 검토', '기다리는 것: 없음'])
-        request = lines[lines.index('## 요청') + 1:lines.index('## 미결 사항')]
-        self.assertEqual([line for line in request if line.startswith('- ')],
-                         ['- 요청자, 요청일:', '- 요청이 온 곳:', '- 관계자:', '- 원하는 결과:',
-                          '- 하지 않을 것:', '- 배경:', '- 기한:', '- 요청자가 본 원인과 해결 방법:',
-                          '- 참고 자료:'])
-        sections = ['진행', '요청', '미결 사항', '완료 조건', '관련 정책', '결정', '레포별 계획',
-                    '리뷰 기록', '에이전트 개선 피드백', '이력']
+        # Skills find whose turn it is in the first line of the body.
+        self.assertEqual(lines[0], '상태(검토중, 검토완료, 개발완료, 완료): 검토중')
+        sections = ['요청', '완료 조건', '진행', '레포별 계획', '확인 방법과 근거', '세부 담당자 정보', '관련 자료']
         self.assertEqual([line[3:] for line in lines if line.startswith('## ')], sections)
-        # Only short, write-once records stay tables; items other runs fill in later are lists.
+        # The request is one line; desired outcomes and exclusions are rows of the acceptance table.
+        request = lines[lines.index('## 요청') + 1:lines.index('## 완료 조건')]
+        self.assertEqual(len([line for line in request if line.strip()]), 1)
+        # Fixed-value columns list their values in the header, so a cell holds one of them and nothing else.
         headers = [lines[index - 1] for index, line in enumerate(lines) if line.startswith('| --- |')]
         self.assertEqual(headers, [
-            '| 번호 | 정책 | 출처 | 새 정책 | 위키 반영 |',
-            '| 구분 | 처음 판단 | 바로잡은 내용 | 발견한 곳 |',
+            '| 번호 | 상태(미정, 확정, 통과) | 내용 |',
+            '| 순서 | 대상 | 할 일 | 시작 조건 | 상태(대기, 진행 중, PR 올림, 머지됨, 완료) | PR |',
+            '| 번호 | 확인 방법 | 기록 |',
+            '| 역할 | 이름 |',
         ])
         for header, rule in zip(headers, (line for line in lines if line.startswith('| --- |'))):
             self.assertEqual(header.count('|'), rule.count('|'))
-        # Every section and every numbered item form is explained below the skeleton.
-        guide = record.split('## 절마다 적는 것', 1)[1]
-        self.assertEqual(re.findall(r'^### ([^{\n]+)$', guide, re.M), sections)
-        for prefix in ('Q', 'AC', 'D', 'U', 'R'):
-            self.assertIn(f'- **{prefix}-1**', guide)
+        # The status line and every section are explained below the skeleton.
+        guide = record.split('## 절마다 적는 것', 1)[1].split('## 템플릿이 없는 이슈', 1)[0]
+        guide = re.sub(r'```.*?```', '', guide, flags=re.S)
+        self.assertEqual(re.findall(r'^### (.+)$', guide, re.M), ['상태 줄'] + sections)
+
+    def test_auto_flow_each_status_is_owned_by_one_skill(self):
+        # The status line decides whose turn it is: each owning skill names its status,
+        # and the shared procedure lists the same owner for it.
+        owners = {'plan-issue': '검토중', 'resolve-issue': '검토완료', 'close-issue': '개발완료'}
+        common = (ROOT / 'auto-flow/references/common.md').read_text()
+        for name, status in owners.items():
+            with self.subTest(skill=name):
+                text = (ROOT / 'auto-flow/skills' / name / 'SKILL.md').read_text()
+                self.assertIn(f'상태가 {status}', text)
+                self.assertIn(f'| {status} | `{name}` |', common)
+        # Review findings and fix replies are told apart by their prefix, not by the author.
+        for path in ('references/common.md', 'references/stage-fix.md', 'references/stage-review.md'):
+            with self.subTest(path=path):
+                text = (ROOT / 'auto-flow' / path).read_text()
+                self.assertIn('[auto-flow 리뷰]', text)
+                self.assertIn('[auto-flow 수정]', text)
 
     def test_auto_flow_stage_documents_resolve_and_are_entered_by_skills(self):
         references = ROOT / 'auto-flow/references'
@@ -120,11 +136,13 @@ class PackageTests(unittest.TestCase):
                     self.assertTrue((document.parent / ref.split('#')[0]).exists())
         # Each stage skill runs the shared start procedure and only its own stage documents;
         # creating an issue happens before any state exists, so it reads the template and environment only.
+        # run-issue plans and develops in one session and never reviews.
         entries = {'create-issue': {'issue-template.md', 'environment.md'},
-                   'run-issue': {'common.md', 'stage-plan.md', 'stage-resolve.md', 'stage-review.md'},
+                   'run-issue': {'common.md', 'stage-plan.md', 'stage-resolve.md'},
                    'plan-issue': {'common.md', 'stage-plan.md'},
-                   'plan-issue-detail': {'common.md', 'stage-plan.md'},
                    'resolve-issue': {'common.md', 'stage-resolve.md'},
+                   'fix-issue': {'common.md', 'stage-fix.md'},
+                   'close-issue': {'common.md', 'stage-close.md'},
                    'review-issue': {'common.md', 'stage-review.md'}}
         for name, expected in entries.items():
             with self.subTest(skill=name):
@@ -132,7 +150,7 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual({Path(ref).name for ref in re.findall(r'\]\(([^)]+)\)', text)}, expected)
 
     def test_auto_flow_creation_questions_are_marked_for_planning(self):
-        # create-issue writes these questions without deciding to ask; planning finds them by this marker.
+        # create-issue writes these rows without deciding to ask; planning finds them by this marker.
         for path in ('skills/create-issue/SKILL.md', 'references/issue-template.md',
                      'references/stage-plan.md', 'references/common.md'):
             with self.subTest(path=path):

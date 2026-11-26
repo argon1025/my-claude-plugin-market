@@ -1,13 +1,14 @@
 ---
 name: run-issue
-description: Use when asked to take one issue forward end to end ("이 이슈 진행해줘", "ABC-123 처리해줘", an issue key or URL with a request to work on it) — reads the issue state, then plans, implements and reviews in order until it must wait for a person (open questions or a PR merge). To run a single stage only, use this plugin's plan-issue, resolve-issue or review-issue.
+description: Use when asked to take one issue forward in a single session ("이 이슈 진행해줘", "ABC-123 처리해줘", an issue key or URL with a request to work on it) — reads the issue's status line, plans while it is 검토중 (asking undecided questions in the session one at a time), then develops the progress table row by row while it is 검토완료, until it must wait for a person (an answer, a step the user runs, or a PR merge). To run a single state only, use this plugin's plan-issue, resolve-issue, fix-issue or close-issue. Does not review; ask for review-issue separately.
 ---
 
-이슈 하나를 받아 사람을 기다리는 지점까지 이어 갑니다. 계획과 진행은 모두 이슈 본문에 기록합니다.
+이슈 하나를 받아 사람을 기다리는 지점까지 한 세션에서 이어 갑니다. 계획과 진행은 이슈 본문에, 구현 결과는 PR에 기록합니다.
 
-1. [공통 절차](../../references/common.md)를 읽고 1절(시작)을 수행합니다.
-2. 공통 절차 2절대로 할 일을 고릅니다. 미결 사항이 있으면 [검토](../../references/stage-plan.md)를 수행합니다. 없으면 레포별 계획의 레포마다 그 단계의 문서를 수행합니다. 해결은 [해결](../../references/stage-resolve.md), 리뷰는 [리뷰](../../references/stage-review.md)입니다.
-3. 한 단계가 끝나면 이슈를 다시 읽고 2번으로 돌아갑니다. 미결 사항이 남았거나, 남은 레포가 모두 머지 대기나 완료이거나, 순서 조건이나 사람의 확인을 기다리는 일만 남았으면 공통 절차 7절대로 알리고 멈춥니다.
+1. [공통 절차](../../references/common.md)를 읽고 1절(시작)을 수행합니다. 이 스킬은 검토중과 검토완료를 맡습니다.
+2. 상태가 검토중이면 [검토](../../references/stage-plan.md)를 수행합니다. 미정 행은 본문에 적은 뒤 세션에서 한 번에 하나씩 묻고, 받은 답을 그 행의 기록 칸에 옮겨 적은 뒤 계속합니다. 답이 없으면 멈춥니다.
+3. 상태가 검토완료면 [개발](../../references/stage-resolve.md)을 수행합니다. 한 행이 끝나면 이슈를 다시 읽고 다음 행으로 갑니다. 다음 행이 다른 레포면 그 레포의 체크아웃에서 수행하고, 체크아웃이 없으면 그 사실을 알리고 멈춥니다.
+4. 미정 행의 답, 사용자의 실행, PR 머지를 기다려야 하거나 상태가 개발완료가 되면 공통 절차 6절대로 알리고 멈춥니다.
 
-- **질문**: 미결 사항에 적은 뒤 세션에서 한 번에 하나씩 묻고, 답을 받으면 반영해 계속합니다.
-- **리뷰**: 이 세션이 구현한 레포의 리뷰는 직접 하지 않고 서브에이전트에 맡깁니다. 서브에이전트에는 이슈 위치, PR, 공통 절차·이슈 템플릿·리뷰 단계 문서의 절대 경로만 넘기고 구현 과정의 설명은 넘기지 않습니다. 서브에이전트를 쓸 수 없으면 리뷰하지 않고, 리뷰가 남았다고 알린 뒤 멈춥니다.
+- **리뷰**: 이 스킬은 리뷰하지 않습니다. 리뷰가 필요하면 구현하지 않은 세션에서 `review-issue`를 따로 호출합니다.
+- **PR 이후**: 코멘트의 반영은 `fix-issue`, 머지 뒤의 정리는 `close-issue`가 합니다.

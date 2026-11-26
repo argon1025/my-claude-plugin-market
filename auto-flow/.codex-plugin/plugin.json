@@ -1,7 +1,7 @@
 {
   "name": "auto-flow",
-  "description": "이슈 루프 — 요청을 이슈로 만들고, 이슈 본문에 계획과 진행을 기록하며 검토·해결·리뷰·머지 대기까지 잇는 스킬 6종(create-issue·run-issue·plan-issue·plan-issue-detail·resolve-issue·review-issue)",
-  "version": "0.6.0",
+  "description": "이슈 루프 — 요청을 이슈로 만들고, 본문 첫 줄의 상태(검토중·검토완료·개발완료·완료)로 차례를 정해 계획은 이슈 본문에, 구현 결과와 리뷰는 PR에 기록하는 스킬 7종(create-issue·run-issue·plan-issue·resolve-issue·fix-issue·close-issue·review-issue)",
+  "version": "0.7.0",
   "author": {
     "name": "argon1025",
     "email": "argon1025@gmail.com"
