@@ -89,7 +89,7 @@ class PackageTests(unittest.TestCase):
         lines = template.splitlines()
         # Skills find whose turn it is in the first line of the body.
         self.assertEqual(lines[0], '상태(검토중, 검토완료, 개발완료, 완료): 검토중')
-        sections = ['요청', '완료 조건', '미결 사항', '진행', '레포별 계획', '확인 방법과 근거', '세부 담당자 정보',
+        sections = ['요청', '완료 조건', '미결 사항', '진행', '할 일', '확인 방법과 근거', '세부 담당자 정보',
                     '관련 자료']
         self.assertEqual([line[3:] for line in lines if line.startswith('## ')], sections)
         # The request is one line; desired outcomes and exclusions are rows of the acceptance table,
@@ -101,7 +101,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(headers, [
             '| 번호 | 상태(확정, 통과) | 내용 |',
             '| 번호 | 내용 | 권장안 | 답변 | 선택 이유 |',
-            '| 순서 | 대상 | 할 일 | 시작 조건 | 상태(대기, 진행 중, PR 올림, 머지됨, 완료) | PR |',
+            '| 번호 | 대상 | 할 일 | 시작 조건 | 상태(대기, 진행 중, PR 올림, 머지됨, 완료) | PR |',
             '| 번호 | 확인 방법 | 기록 |',
             '| 역할 | 이름 | 근거 |',
         ])
@@ -111,6 +111,11 @@ class PackageTests(unittest.TestCase):
         guide = record.split('## 절마다 적는 것', 1)[1].split('## 템플릿이 없는 이슈', 1)[0]
         guide = re.sub(r'```.*?```', '', guide, flags=re.S)
         self.assertEqual(re.findall(r'^### (.+)$', guide, re.M), ['상태 줄'] + sections)
+        # A task's plan stops at its interfaces: ordered units, what crosses each boundary, and the facts relied on.
+        for header in ('| 순서 | 하는 일 | 완료 조건 | 정한 것과 이유 |',
+                       '| 부르는 쪽 | 받는 쪽 | 주고받는 것 | 구분(신규, 변경, 유지) |',
+                       '| 내용 | 근거 |'):
+            self.assertIn(header, record)
 
     def test_auto_flow_each_status_is_owned_by_one_skill(self):
         # The status line decides whose turn it is: each owning skill names its status,
