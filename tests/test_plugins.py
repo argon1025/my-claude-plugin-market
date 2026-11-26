@@ -129,6 +129,16 @@ class PackageTests(unittest.TestCase):
                 self.assertIn('[auto-flow 리뷰]', text)
                 self.assertIn('[auto-flow 수정]', text)
 
+    def test_auto_flow_plan_stage_reflects_policy_changes_to_the_wiki(self):
+        # Policies a plan changes or newly sets reach the wiki before the issue moves to 검토완료.
+        # The shared procedure points at that step and the template names the record line it leaves.
+        plan = (ROOT / 'auto-flow/references/stage-plan.md').read_text()
+        self.assertLess(plan.index('## 5. 끝내는 조건'), plan.index('### 위키 반영'))
+        self.assertLess(plan.index('### 위키 반영'), plan.index('## 6. 검토중으로 돌아온 이슈'))
+        common = (ROOT / 'auto-flow/references/common.md').read_text()
+        self.assertIn('[검토](stage-plan.md) 5절', common.split('## 7. 위키')[1])
+        self.assertIn('`위키 반영:`', (ROOT / 'auto-flow/references/issue-template.md').read_text())
+
     def test_auto_flow_stage_documents_resolve_and_are_entered_by_skills(self):
         references = ROOT / 'auto-flow/references'
         for document in references.rglob('*.md'):
