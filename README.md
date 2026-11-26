@@ -21,7 +21,7 @@ argon1025의 개인 Claude Code·Codex 플러그인 마켓플레이스입니다.
 | [better-communication](./better-communication/README.md) | 간결하고 이해하기 쉬운 한국어 응답 규칙을 세션에 자동 주입 | `python3` |
 | [pr-workflow](./pr-workflow/README.md) | PR 생성·AI 코드리뷰·리뷰 반영 스킬 3종(create·review·fix), 스킬 호출 시에만 동작 | `gh`·`glab`·PR 호스트 MCP 중 1종 |
 | [plan-workflow](./plan-workflow/README.md) | 이슈 여러 개를 분류해 한 결정씩 합의하고 이슈별 계획 승인 뒤 실행까지 잇는 planning·execute 스킬, 기록은 `.ai-docs/workspace/{이슈 키}/` | `python3`, `git` |
-| [auto-flow](./auto-flow/README.md) | 이슈 하나를 검토·해결·리뷰·머지 대기까지 이슈 본문에 기록하며 진행하는 스킬 6종(create-issue·run-issue·plan-issue·plan-issue-detail·resolve-issue·review-issue), 스킬 호출 시에만 동작 | 이슈·PR 호스트 도구(MCP, `gh`, `glab` 등), `git` |
+| [auto-flow](./auto-flow/README.md) | 이슈 하나를 검토중·검토완료·개발완료·완료 순서로 진행하며 계획은 이슈 본문에, 구현 결과와 리뷰는 PR에 기록하는 스킬 7종(create-issue·run-issue·plan-issue·resolve-issue·fix-issue·close-issue·review-issue), 스킬 호출 시에만 동작 | 이슈·PR 호스트 도구(MCP, `gh`, `glab` 등), `git` |
 | [agent-wiki](./agent-wiki/README.md) | 에이전트 위키 | `git`, `python3` |
 
 
@@ -29,22 +29,23 @@ auto-flow는 plan-workflow와 pr-workflow를 설치하지 않은 상태에서 �
 
 ## 이슈 루프
 
-auto-flow는 이슈 하나를 검토, 해결, 리뷰, 머지 대기, 완료 순서로 진행합니다. 계획과 진행을 이슈 본문에 기록하므로 다음 실행자는 사람이든 봇이든 이슈만 읽고 이어 갑니다. 사람을 기다리는 지점은 미결 사항의 답, 계획을 세울 때의 질문, PR 머지 세 곳입니다.
+auto-flow는 이슈 하나를 검토중, 검토완료, 개발완료, 완료 순서로 진행합니다. 계획과 진행은 이슈 본문에, 구현 결과와 리뷰는 PR에 기록하므로 다음 실행자는 사람이든 봇이든 이슈와 PR만 읽고 이어 갑니다. 본문 첫 줄의 상태가 누가 본문을 고칠 차례인지를 정하고, 스킬은 자기 상태가 아닌 이슈를 고치지 않습니다. 사람을 기다리는 지점은 미결 사항의 답, 사용자가 하는 단계, PR 머지, 사람이 확인하기로 한 완료 조건 네 곳입니다.
 
 | 스킬 | 언제 호출하는가 | 한 번의 호출 결과 |
 | --- | --- | --- |
-| [create-issue](./auto-flow/skills/create-issue/SKILL.md) | 받은 요청을 이슈로 등록할 때 | 같은 요청의 열린 이슈가 있으면 그 이슈를 알리고, 없으면 템플릿을 적용한 이슈를 만들어 "요청" 절을 채운 뒤 멈춥니다. 원하는 결과가 불분명하면 만들지 않고 요청자에게 물을 질문을 돌려줍니다. 결함 제보에서 빠진 정보는 미결 사항에 질문으로 적습니다. |
-| [run-issue](./auto-flow/skills/run-issue/SKILL.md) | 이슈 하나를 처음부터 끝까지 맡길 때 | 이슈의 상태를 읽고 검토, 해결, 리뷰를 차례로 이어 가다가 사람을 기다리는 지점에서 멈춥니다. |
-| [plan-issue](./auto-flow/skills/plan-issue/SKILL.md) | 계획을 세우거나 미결 사항의 답을 반영할 때 | 요청을 번호 붙인 완료 조건으로 이슈 본문에 쓰고 레포를 나눕니다. 담당이 따로 없는 레포는 레포별 계획까지 쓰고, 담당이 있는 레포는 계획을 요청한 뒤 멈춥니다. 사람의 판단이 필요한 결정은 미결 사항에 적고, 검토를 끝낼지를 판정합니다. |
-| [plan-issue-detail](./auto-flow/skills/plan-issue-detail/SKILL.md) | 레포 담당자가 자기 레포의 계획을 요청받았을 때 | 그 레포의 코드를 따라가 현재 동작, 작업 단위, 검증을 레포별 계획에 쓰고 요청 줄을 지운 뒤 멈춥니다. 완료 조건을 고쳐야 하면 미결 사항에 적고 멈춥니다. |
-| [resolve-issue](./auto-flow/skills/resolve-issue/SKILL.md) | 계획이 끝난 이슈의 한 레포를 구현하거나 리뷰 지적을 반영할 때 | 계획을 현재 코드와 대조하고, 작업 단위마다 구현·검증·커밋한 뒤 승인 없이 PR을 올립니다. 계획이 맞지 않으면 멈추고 검토로 되돌립니다. |
-| [review-issue](./auto-flow/skills/review-issue/SKILL.md) | 한 레포의 PR을 리뷰할 때 | 코드, 위키와 다른 내용, 계획과 기록의 실수를 점검해 이슈의 리뷰 기록에 적습니다. 차단 지적이 없으면 머지 대기로 넘깁니다. |
+| [create-issue](./auto-flow/skills/create-issue/SKILL.md) | 받은 요청을 이슈로 등록할 때 | 같은 요청의 열린 이슈가 있으면 그 이슈를 알리고, 없으면 템플릿을 적용한 이슈를 만들어 요청 한 줄, 담당자, 관련 자료의 링크를 채운 뒤 멈춥니다. 원하는 결과가 불분명하면 만들지 않고 요청자에게 물을 질문을 돌려줍니다. 결함 제보에서 빠진 정보는 미결 사항에 적습니다. |
+| [run-issue](./auto-flow/skills/run-issue/SKILL.md) | 이슈 하나를 한 세션에서 이어 갈 때 | 검토중이면 계획을 쓰고 미결 사항을 세션에서 하나씩 묻습니다. 검토완료면 "진행" 표의 순서대로 구현해 PR을 올리다가 사람을 기다리는 지점에서 멈춥니다. 리뷰는 하지 않습니다. |
+| [plan-issue](./auto-flow/skills/plan-issue/SKILL.md) | 검토중인 이슈의 계획을 세우거나 미결 사항의 답을 반영할 때 | 요청을 번호 붙인 완료 조건으로 쓰고, 누가 어떤 순서로 무엇을 하는지와 모든 레포의 계획을 씁니다. 사람의 판단이 필요한 결정은 미결 사항에 적고 멈추며, 미결 사항이 없어지면 바뀐 정책을 위키에 반영하고 검토완료로 바꿉니다. |
+| [resolve-issue](./auto-flow/skills/resolve-issue/SKILL.md) | 검토완료인 이슈를 구현할 때 | 계획이 지금도 맞는지 확인하고, "진행" 표의 다음 행을 구현·검증한 뒤 승인 없이 PR을 올립니다. 사람이 직접 할 일은 무엇을 어떤 순서로 실행하는지 적어 요청합니다. 계획이 맞지 않으면 미결 사항에 행을 더해 검토중으로 되돌리고, 마지막 행 뒤 개발완료로 바꿉니다. |
+| [fix-issue](./auto-flow/skills/fix-issue/SKILL.md) | 열린 PR에 코멘트가 달렸을 때 | 변경을 요구하는 의견을 이슈와 PR 본문의 맥락, 코드로 검토해 고치거나 이유를 적어 고치지 않고, 그 코멘트에 답합니다. 이슈 본문은 고치지 않습니다. |
+| [close-issue](./auto-flow/skills/close-issue/SKILL.md) | 개발완료인 이슈를 마무리할 때 | PR의 머지와 사람의 확인을 본문에 반영하고, 모두 끝났으면 완료로 바꿉니다. 리뷰와 코멘트는 보지 않습니다. |
+| [review-issue](./auto-flow/skills/review-issue/SKILL.md) | 한 레포의 PR 리뷰를 직접 요청할 때 | 코드, 완료 조건과 계획, PR 본문의 기록이 사실인지를 점검해 지적을 PR 코멘트로 남깁니다. 다른 스킬이 부르지 않습니다. |
 
-직접 쓸 때는 `run-issue` 하나로 충분합니다. 봇에게 역할을 나눠 맡길 때는 응대 봇이나 이슈 담당 봇에 `create-issue`, 이슈 담당 봇에 `plan-issue`, 레포 담당자 봇에 `plan-issue-detail`과 `resolve-issue`, 구현하지 않은 리뷰 봇에 `review-issue`를 줍니다. 이슈·PR·대화 도구와 관계자를 찾는 곳처럼 환경마다 다른 것은 [환경 문서](./auto-flow/references/environment.md) 한 장에 있으며, 이 배포판의 값은 GitHub 기준입니다. 어떤 이슈를 고를지와 맡은 레포는 봇의 지침에 둡니다. 호출 예와 봇 구성은 [auto-flow 안내](./auto-flow/README.md)에, 이슈를 만들 때 채울 내용은 [이슈 템플릿](./auto-flow/references/issue-template.md)에 있습니다.
+직접 쓸 때는 `run-issue` 하나로 검토와 개발을 이어 갑니다. 봇에게 맡길 때는 계획 봇에 `plan-issue`, 개발 봇에 `resolve-issue`, 수정 봇에 `fix-issue`, 정리 봇에 `close-issue`를 주고 각자의 주기로 돌립니다. 봇끼리 일을 넘기지 않고, 본문의 상태 줄이 차례를 정합니다. 이슈·PR·대화 도구와 담당자를 찾는 곳처럼 환경마다 다른 것은 [환경 문서](./auto-flow/references/environment.md) 한 장에 있으며, 이 배포판의 값은 GitHub 기준입니다. 어떤 이슈를 고를지와 실행 주기는 봇의 지침에 둡니다. 호출 예와 봇 구성은 [auto-flow 안내](./auto-flow/README.md)에, 이슈 본문의 형식은 [이슈 템플릿](./auto-flow/references/issue-template.md)에 있습니다.
 
 ## agent-wiki · 정책과 저장소 지식
 
-이슈에는 그 이슈의 진행을 두고 위키에는 여러 이슈에서 다시 쓸 정책·계약·프로젝트 지식을 둡니다. 이슈 루프는 결정이 확정될 때와 이슈가 완료될 때 `add`로 위키에 반영하고, 머지된 코드의 반영은 `update`의 정기 실행에 맡깁니다.
+이슈에는 그 이슈의 진행을 두고 위키에는 여러 이슈에서 다시 쓸 정책·계약·프로젝트 지식을 둡니다. 이슈 루프는 위키를 계획과 리뷰의 근거로 읽고, 검토 단계가 계획을 끝낼 때 그 계획에서 바뀌거나 새로 정해진 정책을 `add`로 위키에 반영합니다. 머지된 코드의 반영은 `update`의 정기 실행에 맡깁니다.
 
 | 스킬 | 언제 호출하는가 | 한 번의 호출 결과 |
 | --- | --- | --- |

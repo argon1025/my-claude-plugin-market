@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Claude Code·Codex 공용 플러그인 마켓플레이스",
-    "version": "4.19.0"
+    "version": "4.20.0"
   },
   "plugins": [
     {
@@ -56,7 +56,7 @@
     {
       "name": "auto-flow",
       "source": "./auto-flow",
-      "description": "이슈 루프 — 요청을 이슈로 만들고, 이슈 본문에 계획과 진행을 기록하며 검토·해결·리뷰·머지 대기까지 잇는 스킬 6종(create-issue·run-issue·plan-issue·plan-issue-detail·resolve-issue·review-issue)",
+      "description": "이슈 루프 — 요청을 이슈로 만들고, 본문 첫 줄의 상태(검토중·검토완료·개발완료·완료)로 차례를 정해 계획은 이슈 본문에, 구현 결과와 리뷰는 PR에 기록하는 스킬 7종(create-issue·run-issue·plan-issue·resolve-issue·fix-issue·close-issue·review-issue)",
       "category": "workflow",
       "tags": [
         "planning",

@@ -25,7 +25,9 @@
   | 만들기 | `gh issue create --title "{제목}" --body-file {파일} --label auto-flow` |
 
 - **라벨**: 저장소에 `auto-flow` 라벨이 없으면 `gh label create auto-flow`로 만든 뒤 붙임
-- **본문 서식**: 마크다운
+- **루프가 다루는 이슈**: `auto-flow` 라벨이 붙고 담당자가 자기 자신인 열린 이슈(`gh issue list --label auto-flow --assignee @me --state open`). 누가 다룰 차례인지는 본문 첫 줄의 상태로 가림
+- **담당자 확인**: `gh issue view {번호} --json assignees`의 계정에 `gh api user --jq .login`이 있는지 봄
+- **본문 서식**: 마크다운. 표의 칸 안에서 줄을 나눌 때는 `<br>`을 씀
 - **이슈를 만들 곳**: 호출할 때 받은 저장소. 받지 않았으면 현재 체크아웃의 원본 저장소(2절). 이슈 유형은 없음
 
 ## 2. PR
@@ -35,26 +37,33 @@
 
   | 하는 일 | 명령 |
   | --- | --- |
-  | 조회 | `gh pr view {번호} --json state,mergeCommit,headRefOid,baseRefName,comments,reviews` |
+  | 조회 | `gh pr view {번호} --json state,mergeCommit,headRefOid,baseRefName,body,comments,reviews` |
   | 코드 줄에 달린 코멘트 | `gh api repos/{owner}/{repo}/pulls/{번호}/comments` |
   | 같은 브랜치의 열린 PR | `gh pr list --head {브랜치} --state open` |
   | 만들기 | `gh pr create --base {베이스} --head {브랜치} --title "{제목}" --body-file {파일}` |
+  | 본문 고치기 | `gh pr edit {번호} --body-file {파일}` |
   | 코멘트 | `gh pr comment {번호} --body-file {파일}` |
+  | 코드 줄에 코멘트 | `gh api repos/{owner}/{repo}/pulls/{번호}/comments -f body=... -f commit_id={head} -f path={파일} -F line={줄} -f side=RIGHT` |
+  | 코드 줄 코멘트에 답글 | `gh api repos/{owner}/{repo}/pulls/{번호}/comments/{코멘트 id}/replies -f body=...` |
 
+- **답글을 달 수 없는 코멘트**: PR 대화에 달린 일반 코멘트에는 답글이 없음. 대상 코멘트의 링크를 첫 줄에 적은 새 코멘트로 답함
 - **원본 저장소**: `upstream` 리모트가 있으면 `origin`은 개인 fork이고 PR 대상은 `upstream`임. 없으면 `origin`이 원본임
 - **베이스 브랜치**: 프로젝트 문서가 정한 브랜치. 없으면 원본 저장소의 기본 브랜치(`gh repo view --json defaultBranchRef`)
 
 ## 3. 대화
 
 - **요청 원문을 읽는 곳**: 없음. 호출할 때 받은 글이나 이슈 본문이 원문임
-- **확인을 요청하는 수단**: 이슈 댓글. 답할 사람의 GitHub 계정을 알면 댓글에서 멘션함
+- **사람에게 알리는 수단**: 없음. 스킬은 미결 사항이나 사용자가 할 일을 알리려고 댓글이나 멘션을 남기지 않음. 알림은 실행자의 지침이 수단을 정했을 때만 그 수단으로 함
 
 ## 4. 관계자
 
-- **요청자**: 요청한 사람. 다른 사람이 대신 전했으면 원문에 적힌 사람
-- **결정할 사람**: 요청 원문이 지목한 사람. 없으면 "미정"
-- **대상 서비스의 담당**: 저장소의 `CODEOWNERS`에 전체 경로(`*`)의 소유자가 있으면 그 사람. 없으면 "미정"
+"세부 담당자 정보"에 적을 사람을 찾는 곳입니다. 역할은 그 이슈가 무엇을 다루는지로 추정하고, 어느 이슈의 어느 필드에서 봤는지를 근거로 적습니다.
+
+- **이 이슈**: 작성자와 담당자(`gh issue view {번호} --json author,assignees`)
+- **요구사항 이슈, 상위 이슈, 관련 이슈**: 요청과 본문에 적힌 이슈 번호와 링크를 따라가 그 이슈의 작성자와 담당자를 봄
+- **개발**: 저장소의 `CODEOWNERS`에 전체 경로(`*`)의 소유자가 있으면 그 사람
+- **요청이 지목한 사람**: 요청에 역할과 함께 적힌 사람
 
 ## 5. 이슈 상태
 
-- 스킬은 이슈를 닫거나 다시 열지 않음. 이슈가 완료되면 사람이 닫음
+- 스킬이 바꾸는 것은 본문 첫 줄의 상태임. 이슈를 닫거나 다시 열지 않으며, 본문의 상태가 완료가 되면 사람이 닫음
